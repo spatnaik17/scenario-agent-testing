@@ -114,7 +114,7 @@ def travel_agent(message, context=None):
 
 
 # Configure the testing agent
-config(model="gpt-3.5-turbo")
+config(model="openai/gpt-4o-mini")
 
 
 @pytest.mark.agent_test

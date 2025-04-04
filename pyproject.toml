@@ -25,6 +25,8 @@ classifiers = [
 dependencies = [
     "pytest>=7.0.0",
     "litellm>=1.10.0",
+    "python-dotenv>=1.0.1",
+    "termcolor>=2.4.0",
 ]
 
 [project.optional-dependencies]

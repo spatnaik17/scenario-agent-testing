@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+setup.py
+scenario.egg-info/PKG-INFO
+scenario.egg-info/SOURCES.txt
+scenario.egg-info/dependency_links.txt
+scenario.egg-info/entry_points.txt
+scenario.egg-info/requires.txt
+scenario.egg-info/top_level.txt

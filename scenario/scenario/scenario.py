@@ -1,11 +1,12 @@
 """
 Scenario module: defines the core Scenario class for agent testing.
 """
+
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Optional, Union, Callable
+from typing import List, Dict, Any, Optional, Callable
 
 from .result import ScenarioResult
-from .testing_agent import DEFAULT_TESTING_AGENT
+from .testing_agent import DEFAULT_TESTING_AGENT, TestingAgent
 
 
 @dataclass
@@ -22,10 +23,10 @@ class Scenario:
     """
 
     description: str
+    agent: Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]]
     success_criteria: List[str]
     failure_criteria: List[str]
-    agent: Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]]
-    testing_agent: Any = None  # Will use DEFAULT_TESTING_AGENT if None
+    testing_agent: TestingAgent = DEFAULT_TESTING_AGENT
     strategy: Optional[str] = None
     max_turns: int = 10
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -38,11 +39,11 @@ class Scenario:
         if not self.success_criteria:
             raise ValueError("Scenario must have at least one success criterion")
 
-        if not self.failure_criteria:
-            raise ValueError("Scenario must have at least one failure criterion")
-
         if self.max_turns < 1:
             raise ValueError("max_turns must be a positive integer")
+
+        if not self.failure_criteria:
+            self.failure_criteria = []
 
         # Ensure agent is callable
         if not callable(self.agent):
@@ -58,11 +59,8 @@ class Scenario:
         Returns:
             ScenarioResult containing the test outcome
         """
-        # Use the provided testing agent or the default
-        testing_agent = self.testing_agent or DEFAULT_TESTING_AGENT
-
         # Run the scenario using the testing agent
-        return testing_agent.run_scenario(self.agent, self, context)
+        return self.testing_agent.run_scenario(self.agent, self, context)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert scenario to a dictionary representation."""
@@ -76,7 +74,9 @@ class Scenario:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any], agent: Callable, testing_agent: Any = None) -> "Scenario":
+    def from_dict(
+        cls, data: Dict[str, Any], agent: Callable, testing_agent: Any = None
+    ) -> "Scenario":
         """Create a scenario from a dictionary representation."""
         return cls(
             description=data["description"],

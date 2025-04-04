@@ -399,7 +399,7 @@ def validate_code_functionality(result: ScenarioResult, function_type: str) -> b
 
 
 # Configure the testing agent
-config(model="gpt-3.5-turbo")
+config(model="openai/gpt-4o-mini")
 
 
 @pytest.mark.agent_test

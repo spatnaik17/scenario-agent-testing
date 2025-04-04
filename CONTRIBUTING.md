@@ -105,6 +105,7 @@ graph TD
     ExamplesDir --> TravelEx[test_travel_agent.py]
     ExamplesDir --> WebsiteEx[test_website_builder.py]
     ExamplesDir --> CodeEx[test_code_assistant.py]
+    ExamplesDir --> EarlyStopEx[test_early_stopping.py]
     ExamplesDir --> ExReadMe[README.md]
     ExamplesDir --> TestData[test_data/]
 
@@ -145,15 +146,15 @@ sequenceDiagram
 
     S->>TA: Run scenario with agent
 
-    TA->>LLM: Generate initial message
-    LLM-->>TA: Initial message content
+    TA->>LLM: Generate message (initial or next)
+    LLM-->>TA: Message content
 
     loop For each turn (until conclusion or max_turns)
         TA->>A: Send message to agent
         A-->>TA: Agent response
         TA->>TA: Store conversation turn
 
-        TA->>LLM: Generate next message or evaluate completion
+        TA->>LLM: Generate next message with evaluation
         LLM-->>TA: Next message or evaluation result via function call
 
         alt LLM uses finish_test tool with verdict="success"
@@ -184,20 +185,22 @@ sequenceDiagram
 
 2. **Test Execution**:
    - The `Scenario.run()` method is called, which delegates to a TestingAgent
-   - TestingAgent generates an initial message based on the scenario description and strategy
+   - TestingAgent generates messages based on the scenario description and strategy
    - TestingAgent manages a multi-turn conversation with the agent under test
 
-3. **Evaluation Process**:
+3. **Message Generation and Evaluation**:
+   - A single method `_generate_next_message` handles both initial and subsequent messages
+   - The method adapts its behavior based on whether it's generating the first message or evaluating responses
+   - For the first message, it creates a simple prompt to start the conversation
+   - For subsequent messages, it performs evaluation and can either continue the conversation or end the test
+
+4. **Evaluation Process**:
    - After each agent response, the TestingAgent evaluates the conversation against success/failure criteria
    - The TestingAgent can decide to:
      - Continue the conversation with a new message
      - Complete the test as a success with a detailed explanation
      - Complete the test as a failure with a detailed explanation (especially when failure criteria are met)
    - The decision is facilitated through a function-calling mechanism where the LLM can invoke a `finish_test` tool
-
-4. **Result Generation**:
-   - ScenarioResult collects conversation history, success/failure status, and artifacts
-   - Artifacts can include any data produced by the agent during testing
 
 5. **Early Stopping**:
    - A key feature is early stopping when failure criteria are met, preventing unnecessary conversation turns

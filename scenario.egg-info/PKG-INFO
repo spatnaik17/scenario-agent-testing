@@ -1,3 +1,31 @@
+Metadata-Version: 2.4
+Name: scenario
+Version: 0.1.0
+Summary: A testing library for conversational agents
+Author-email: Scenario Team <info@scenario.dev>
+License: MIT
+Project-URL: Homepage, https://github.com/scenario-testing/scenario
+Project-URL: Bug Tracker, https://github.com/scenario-testing/scenario/issues
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: pytest>=7.0.0
+Requires-Dist: litellm>=1.10.0
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: termcolor>=2.4.0
+Provides-Extra: dev
+Requires-Dist: black; extra == "dev"
+Requires-Dist: isort; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"
+
 # Scenario: Use an Agent to test your Agent
 
 Scenario is a comprehensive library for testing conversational AI agents, designed to define natural language testing scenarios, interact with agents, and evaluate their performance.

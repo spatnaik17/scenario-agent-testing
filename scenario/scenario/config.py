@@ -1,6 +1,7 @@
 """
 Configuration module for Scenario.
 """
+
 from typing import Dict, Any, Optional
 
 
@@ -24,13 +25,12 @@ class ScenarioConfig:
     def _init_defaults(self) -> None:
         """Initialize default configuration values."""
         self._config = {
-            "model": "gpt-3.5-turbo",         # Default model
-            "llm_provider": "openai",         # Default provider
-            "api_key": None,                  # API key (defaults to env var)
-            "temperature": 0.1,               # Low temperature for consistency
-            "max_tokens": 1000,               # Default token limit
-            "verbose": False,                 # Verbose output mode
-            "timeout": 60,                    # Timeout in seconds
+            "model": "openai/gpt-4o-mini",  # Default model
+            "api_key": None,  # API key (defaults to env var)
+            "temperature": 0,  # Low temperature for consistency
+            "max_tokens": 1000,  # Default token limit
+            "verbose": True,  # Verbose output mode
+            "timeout": 60,  # Timeout in seconds
         }
 
     def __call__(self, **kwargs) -> "ScenarioConfig":

@@ -251,7 +251,7 @@ def validate_no_unintended_changes(result, original_code: str) -> bool:
 
 
 # Configure the testing agent
-config(model="gpt-3.5-turbo")
+config(model="openai/gpt-4o-mini")
 
 
 @pytest.mark.agent_test

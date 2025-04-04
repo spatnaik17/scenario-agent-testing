@@ -12,7 +12,7 @@ def basic_configuration():
     """Basic configuration example."""
     # Configure with default OpenAI model
     config(
-        model="gpt-3.5-turbo",
+        model="openai/gpt-4o-mini",
         temperature=0.1,
         max_tokens=1000,
     )
@@ -25,7 +25,6 @@ def advanced_configuration():
     # Configure with a different model provider and custom settings
     config(
         model="anthropic/claude-3-haiku-20240307",
-        llm_provider="anthropic",
         api_key=os.environ.get("ANTHROPIC_API_KEY"),
         temperature=0,  # Zero temperature for maximum determinism
         max_tokens=2000,
@@ -40,8 +39,7 @@ def azure_openai_configuration():
     """Configuration for Azure OpenAI."""
     # Configure for Azure OpenAI
     config(
-        model="gpt-4",
-        llm_provider="azure",
+        model="azure/gpt-4",
         api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
         api_base=os.environ.get("AZURE_OPENAI_ENDPOINT"),
         api_version="2023-05-15",

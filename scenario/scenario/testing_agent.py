@@ -4,12 +4,12 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 
 import json
 import logging
-from typing import Dict, List, Any, Optional, Callable, Tuple, Union, cast
+from typing import Dict, List, Any, Optional, Callable, Union, cast
 import time
-import re
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
+import termcolor
 
 # Fix imports for local modules
 from .config import config
@@ -68,7 +68,12 @@ class TestingAgent:
         self._artifacts = {}
 
         # Run the initial testing agent prompt to get started
-        initial_message = self._generate_initial_message(scenario)
+        initial_message = self._generate_next_message(scenario)
+
+        if isinstance(initial_message, ScenarioResult):
+            raise Exception(
+                "Unexpectedly generated a ScenarioResult for the initial message"
+            )
 
         # Execute the conversation
         current_turn = 0
@@ -83,6 +88,15 @@ class TestingAgent:
             start_time = time.time()
             try:
                 agent_response = agent_fn(initial_message, context)
+                if "message" in agent_response and self._config["verbose"]:
+                    print(
+                        termcolor.colored("Agent: ", "blue"), agent_response["message"]
+                    )
+                if self._config["verbose"]:
+                    response_copy = agent_response.copy()
+                    del response_copy["message"]
+                    if len(response_copy.keys()) > 0:
+                        print(termcolor.colored(json.dumps(response_copy), "magenta"))
                 response_time = time.time() - start_time
             except Exception as e:
                 logger.error(f"Agent function raised an exception: {e}")
@@ -125,53 +139,6 @@ class TestingAgent:
             failure_reason=f"Reached maximum turns ({max_turns}) without conclusion",
         )
 
-    def _generate_initial_message(self, scenario) -> str:
-        """Generate the initial message to send to the agent under test."""
-        # Create a system prompt for the testing agent
-        system_prompt = f"""
-You are a Testing Agent evaluating another AI Agent based on a scenario.
-
-Your goal is to interact with the Agent Under Test to see if it can complete the scenario successfully.
-
-SCENARIO DESCRIPTION:
-{scenario.description}
-
-TESTING STRATEGY:
-{scenario.strategy or "Approach this naturally, as a human user would. Use context from the conversation."}
-
-SUCCESS CRITERIA:
-{json.dumps(scenario.success_criteria, indent=2)}
-
-FAILURE CRITERIA:
-{json.dumps(scenario.failure_criteria, indent=2)}
-
-Generate an initial message to the Agent Under Test that starts the scenario.
-"""
-
-        try:
-            response = cast(
-                ModelResponse,
-                completion(
-                    model=self._config["model"],
-                    messages=[{"role": "system", "content": system_prompt}],
-                    temperature=self._config["temperature"],
-                    max_tokens=self._config["max_tokens"],
-                ),
-            )
-
-            # Extract the content from the response
-            if hasattr(response, "choices") and len(response.choices) > 0:
-                message_content = cast(Choices, response.choices[0]).message.content
-                if message_content is None:
-                    raise Exception(f"No response from LLM: {response.__repr__()}")
-                return message_content
-            else:
-                raise Exception(
-                    f"Unexpected response format from LLM: {response.__repr__()}"
-                )
-        except Exception as e:
-            raise Exception(f"Error generating initial message: {e}")
-
     def _generate_next_message(self, scenario) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
@@ -188,7 +155,7 @@ Generate an initial message to the Agent Under Test that starts the scenario.
                 "content": f"""
 You are a Testing Agent evaluating another AI Agent based on a scenario.
 
-Your goal is to interact with the Agent Under Test to see if it can complete the scenario successfully.
+Your goal is to interact with the Agent Under Test as if you were a human user to see if it can complete the scenario successfully.
 
 SCENARIO DESCRIPTION:
 {scenario.description}
@@ -203,19 +170,19 @@ FAILURE CRITERIA:
 {json.dumps(scenario.failure_criteria, indent=2)}
 
 You have two responsibilities:
-1. Evaluate the conversation to determine if success or failure criteria have been met
-2. If the test should continue, generate the next message to send to the Agent Under Test
+1. Generate the next message to send to the Agent Under Test
+2. Evaluate the conversation to determine if success or failure criteria have been met
 
 After each response from the Agent Under Test, decide whether:
-- SUCCESS: All success criteria have been met and the test is successful
-- FAILURE: Any failure criteria have been triggered and the test has failed
-- CONTINUE: The test should continue with a new message
+- success: All success criteria have been met and the test is successful
+- failure: Any failure criteria have been triggered and the test has failed
+- continue: The test should continue with a new message
 
 Failure criteria should be evaluated first, and if any are triggered, the test should END IMMEDIATELY as a failure.
 Success criteria should be evaluated next, and if all are met, the test should END as a success.
 If neither has been met conclusively, the test should CONTINUE.
 
-You have access to a special tool: finish_test(verdict, reasoning, details)
+You have access to a special tool: finish_test(verdict, reasoning)
 - Use this tool ONLY if you've determined the test should conclude (success or inconclusive)
 - If you use this tool, do NOT also return a next message
 - If the test should continue, do NOT use this tool and instead provide a next message
@@ -250,6 +217,28 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                             "reasoning": {
                                 "type": "string",
                                 "description": "Explanation of why this verdict was reached",
+                            },
+                            "details": {
+                                "type": "object",
+                                "properties": {
+                                    "met_criteria": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "List of success criteria that have been met",
+                                    },
+                                    "unmet_criteria": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "List of success criteria that have not been met",
+                                    },
+                                    "triggered_failures": {
+                                        "type": "array",
+                                        "items": {"type": "string"},
+                                        "description": "List of failure criteria that have been triggered",
+                                    },
+                                },
+                                "required": ["met_criteria"],
+                                "description": "Detailed information about criteria evaluation",
                             },
                         },
                         "required": ["verdict", "reasoning"],
@@ -321,6 +310,10 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                 message_content = message.content
                 if message_content is None:
                     raise Exception(f"No response from LLM: {response.__repr__()}")
+
+                if self._config["verbose"]:
+                    print(termcolor.colored("User: ", "green"), message_content)
+
                 return message_content
             else:
                 raise Exception(
