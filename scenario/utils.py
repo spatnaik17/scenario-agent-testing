@@ -11,21 +11,6 @@ if TYPE_CHECKING:
     from scenario.scenario import Scenario
 
 
-class SerializableAndPydanticEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, BaseModel):
-            return o.model_dump(exclude_unset=True)
-        return super().default(o)
-
-
-class SerializableWithStringFallback(SerializableAndPydanticEncoder):
-    def default(self, o):
-        try:
-            return super().default(o)
-        except:
-            return str(o)
-
-
 memory = get_cache()
 
 
@@ -66,3 +51,33 @@ def scenario_cache(ignore=[]):
 @memory.cache(ignore=["func", "args", "kwargs"])
 def _cached_call(func: Callable, args, kwargs, cache_key):
     return func(*args, **kwargs)
+
+
+class SerializableAndPydanticEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, BaseModel):
+            return o.model_dump(exclude_unset=True)
+        return super().default(o)
+
+
+class SerializableWithStringFallback(SerializableAndPydanticEncoder):
+    def default(self, o):
+        try:
+            return super().default(o)
+        except:
+            return str(o)
+
+
+def safe_list_at(list, index, default=None):
+    try:
+        return list[index]
+    except:
+        return default
+
+
+def safe_attr_or_key(obj, attr_or_key, default=None):
+    return getattr(obj, attr_or_key, obj.get(attr_or_key))
+
+
+def title_case(string):
+    return " ".join(word.capitalize() for word in string.split("_"))

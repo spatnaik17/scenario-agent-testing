@@ -3,7 +3,7 @@ Scenario module: defines the core Scenario class for agent testing.
 """
 
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional, Callable
+from typing import Awaitable, List, Dict, Any, Optional, Callable, TypedDict, Union
 
 from scenario.config import ScenarioConfig, TestingAgentConfig
 from scenario.scenario_executor import ScenarioExecutor
@@ -11,6 +11,13 @@ from scenario.scenario_executor import ScenarioExecutor
 from .result import ScenarioResult
 from .testing_agent import DEFAULT_TESTING_AGENT, TestingAgent
 from .error_messages import default_config_error_message
+from openai.types.chat import ChatCompletionMessageParam
+
+
+class AgentResult(TypedDict, total=False):
+    message: str
+    messages: List[ChatCompletionMessageParam]
+    extra: Dict[str, Any]
 
 
 @dataclass
@@ -27,7 +34,10 @@ class Scenario:
     """
 
     description: str
-    agent: Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]]
+    agent: Union[
+        Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]],
+        Callable[[str, Optional[Dict[str, Any]]], Awaitable[Dict[str, Any]]],
+    ]
     success_criteria: List[str]
     failure_criteria: List[str]
     testing_agent: TestingAgent = DEFAULT_TESTING_AGENT
@@ -62,7 +72,7 @@ class Scenario:
         else:
             self.config = self.config.merge(Scenario.default_config)
 
-    def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
+    async def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
         Run the scenario against the agent under test.
 
@@ -73,7 +83,7 @@ class Scenario:
             ScenarioResult containing the test outcome
         """
         # Run the scenario using the testing agent
-        return ScenarioExecutor(self).run(context)
+        return await ScenarioExecutor(self).run(context)
 
     @classmethod
     def configure(

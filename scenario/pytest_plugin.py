@@ -3,17 +3,22 @@ Pytest plugin for Scenario testing library.
 """
 
 import pytest
-from typing import Dict, List, Any, Optional
+from typing import Awaitable, Dict, List, Any, Optional, TypedDict
 import functools
 from termcolor import colored
 
+from scenario.result import ScenarioResult
+
 from .scenario import Scenario
 
+class ScenarioReporterResults(TypedDict):
+    scenario: Scenario
+    result: ScenarioResult
 
 # ScenarioReporter class definition moved outside the fixture for global use
 class ScenarioReporter:
     def __init__(self):
-        self.results = []
+        self.results : list[ScenarioReporterResults] = []
 
     def add_result(self, scenario, result):
         """Add a test result to the reporter."""
@@ -89,7 +94,7 @@ class ScenarioReporter:
                 )
                 print(
                     colored(
-                        f"   Met Criteria: {criteria_count}/{total_criteria}",
+                        f"   Success Criteria: {criteria_count}/{total_criteria}",
                         criteria_color,
                     )
                 )
@@ -97,7 +102,7 @@ class ScenarioReporter:
             if hasattr(result, "triggered_failures") and result.triggered_failures:
                 print(
                     colored(
-                        f"   Triggered Failures: {len(result.triggered_failures)}",
+                        f"   Failures Criteria: {len(result.triggered_failures)}",
                         "red",
                     )
                 )
@@ -120,8 +125,8 @@ def pytest_configure(config):
 
     # Create a patched version of Scenario.run that auto-reports
     @functools.wraps(original_run)
-    def auto_reporting_run(self, *args, **kwargs):
-        result = original_run(self, *args, **kwargs)
+    async def auto_reporting_run(self, *args, **kwargs):
+        result = await original_run(self, *args, **kwargs)
 
         # Always report to the global reporter
         config._scenario_reporter.add_result(self, result)

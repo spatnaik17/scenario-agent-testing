@@ -4,14 +4,15 @@ ScenarioExecutor module: holds the scenario execution logic and state, orchestra
 
 from contextvars import ContextVar
 import json
-from typing import TYPE_CHECKING, Dict, List, Any, Optional, Union
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional, Union
 import time
 from copy import deepcopy
 import termcolor
 
 from scenario.config import get_cache
 from scenario.error_messages import message_return_error_message
-from scenario.utils import scenario_cache
+from scenario.utils import safe_attr_or_key, safe_list_at, scenario_cache, title_case
+from openai.types.chat import ChatCompletionMessageParam
 
 from .result import ScenarioResult
 
@@ -30,7 +31,7 @@ class ScenarioExecutor:
         self.testing_agent = scenario.testing_agent
         self.conversation: List[Dict[str, Any]] = []
 
-    def run(
+    async def run(
         self,
         context: Optional[Dict[str, Any]] = None,
     ) -> ScenarioResult:
@@ -74,56 +75,81 @@ class ScenarioExecutor:
 
             # Get response from the agent under test
             start_time = time.time()
-            try:
-                context_scenario.set(self.scenario)
-                agent_response = self.scenario.agent(initial_message, context)
-                if (
-                    "message" not in agent_response
-                    or type(agent_response["message"]) is not str
-                    or agent_response["message"] is None
-                ) and (
-                    "messages" not in agent_response
-                    or not isinstance(agent_response["messages"], list)
-                    or not all(
-                        "role" in msg or hasattr(msg, "role")
-                        for msg in agent_response["messages"]
-                    )
-                ):
-                    raise Exception(message_return_error_message)
-                if "messages" in agent_response and self.scenario.config.verbose:
-                    for msg in agent_response["messages"]:
-                        role = msg.get("role", getattr(msg, "role", None))
-                        content = msg.get("content", getattr(msg, "content", None))
-                        if role == "assistant":
-                            print(termcolor.colored("Agent:", "blue"), content)
-                        else:
-                            print(
-                                termcolor.colored(f"{role}:", "magenta"),
-                                msg.__repr__(),
-                            )
 
-                if (
-                    self.scenario.config.verbose
-                    and "extra" in agent_response
-                    and len(agent_response["extra"].keys()) > 0
-                ):
-                    print(
-                        termcolor.colored(
-                            "Extra:" + json.dumps(agent_response["extra"]),
-                            "magenta",
-                        )
-                    )
-                response_time = time.time() - start_time
-                agent_time += response_time
-            except Exception as e:
-                return ScenarioResult.failure_result(
-                    conversation=self.conversation,
-                    failure_reason=f"Agent function raised an exception: {str(e)}",
-                    total_time=time.time() - start_time,
-                    agent_time=agent_time,
+            context_scenario.set(self.scenario)
+            agent_response = self.scenario.agent(initial_message, context)
+            if isinstance(agent_response, Awaitable):
+                agent_response = await agent_response
+
+            has_valid_message = (
+                "message" in agent_response
+                and type(agent_response["message"]) is str
+                and agent_response["message"] is not None
+            )
+            has_valid_messages = (
+                "messages" in agent_response
+                and isinstance(agent_response["messages"], list)
+                and all(
+                    "role" in msg or hasattr(msg, "role")
+                    for msg in agent_response["messages"]
                 )
+            )
+            if not has_valid_message and not has_valid_messages:
+                raise Exception(message_return_error_message)
 
-            if "messages" in agent_response:
+            messages: list[ChatCompletionMessageParam] = []
+            if has_valid_messages:
+                messages = agent_response["messages"]
+
+                # Drop the first messages both if they are system or user messages
+                if safe_attr_or_key(safe_list_at(messages, 0), "role") == "system":
+                    messages = messages[1:]
+                if safe_attr_or_key(safe_list_at(messages, 0), "role") == "user":
+                    messages = messages[1:]
+
+            if messages and self.scenario.config.verbose:
+                for msg in messages:
+                    role = safe_attr_or_key(msg, "role")
+                    content = safe_attr_or_key(msg, "content")
+                    if role == "assistant":
+                        tool_calls = safe_attr_or_key(msg, "tool_calls")
+                        if not content and tool_calls:
+                            for tool_call in tool_calls:
+                                function = safe_attr_or_key(tool_call, "function")
+                                name = safe_attr_or_key(function, "name")
+                                args = safe_attr_or_key(function, "arguments")
+                                print(
+                                    termcolor.colored(f"ToolCall({name}):", "blue"),
+                                    args,
+                                )
+                        else:
+                            print(termcolor.colored("Agent:", "blue"), content)
+                    elif role == "tool":
+                        print(
+                            termcolor.colored(f"ToolResult:", "blue"),
+                            content or msg.__repr__(),
+                        )
+                    else:
+                        print(
+                            termcolor.colored(f"{title_case(role)}:", "magenta"),
+                            msg.__repr__(),
+                        )
+
+            if (
+                self.scenario.config.verbose
+                and "extra" in agent_response
+                and len(agent_response["extra"].keys()) > 0
+            ):
+                print(
+                    termcolor.colored(
+                        "Extra:" + json.dumps(agent_response["extra"]),
+                        "magenta",
+                    )
+                )
+            response_time = time.time() - start_time
+            agent_time += response_time
+
+            if messages:
                 self.conversation.extend(agent_response["messages"])
             if "message" in agent_response:
                 self.conversation.append(

@@ -15,10 +15,12 @@ load_dotenv()
 
 from scenario import Scenario
 
-Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"}, cache_key="42")
+Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
+
 
 @pytest.mark.agent_test
-def test_vegetarian_recipe_agent():
+@pytest.mark.asyncio
+async def test_vegetarian_recipe_agent():
     # Define the agent under test
     history = []
 
@@ -63,7 +65,7 @@ def test_vegetarian_recipe_agent():
     )
 
     # Run the scenario and get results
-    result = scenario.run()
+    result = await scenario.run()
 
     # Assert for pytest to know whether the test passed
     assert result.success

@@ -50,7 +50,7 @@ class TestingAgent:
           - A string message to send to the agent (if conversation should continue)
           - A ScenarioResult (if the test should conclude)
         """
-        # Prepare the conversation history for the LLM
+
         messages = [
             {
                 "role": "system",
@@ -91,15 +91,9 @@ Your goal is to interact with the Agent Under Test as if you were a human user t
 3. DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
 </rules>
 """,
-            }
+            },
+            *conversation
         ]
-
-        # Add the conversation history
-        for msg in conversation:
-            if msg["role"] == "user":
-                messages.append({"role": "assistant", "content": msg["content"]})
-            else:
-                messages.append({"role": "user", "content": msg["content"]})
 
         # Define the tool
         tools = [
