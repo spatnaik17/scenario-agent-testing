@@ -153,7 +153,7 @@ class TestingAgent:
             {
                 "role": "system",
                 "content": f"""
-You are a Testing Agent evaluating another AI Agent based on a scenario.
+You are pretending to be a user, you are testing an AI Agent based on a scenario.
 
 Your goal is to interact with the Agent Under Test as if you were a human user to see if it can complete the scenario successfully.
 

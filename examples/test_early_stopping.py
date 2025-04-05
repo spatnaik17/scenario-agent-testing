@@ -11,8 +11,8 @@ import litellm
 
 load_dotenv()
 
-from scenario.scenario import Scenario
-from scenario.scenario.config import config
+from scenario import Scenario
+from scenario.config import config
 
 
 def buggy_calculator_agent(

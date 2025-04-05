@@ -10,6 +10,7 @@ Scenario is a comprehensive library for testing conversational AI agents, design
 - Support for custom validation functions
 - Early stopping when failure criteria are detected
 - Function calling for efficient test execution
+- Automatic test result reporting with detailed insights
 
 ## Installation
 
@@ -89,9 +90,9 @@ The TestingAgent actively evaluates agent responses against success and failure 
 
 This is implemented using function calling within the LLM, where it can choose to continue the conversation or invoke a tool to finalize the test with a verdict.
 
-### Pytest Integration
+### Pytest Integration with Automatic Reporting
 
-Scenario provides test fixtures and custom markers for pytest:
+Scenario provides seamless pytest integration with automatic reporting:
 
 ```python
 import pytest
@@ -110,6 +111,27 @@ def test_weather_agent():
     assert result.success
 ```
 
+When you run your tests with pytest, you'll automatically get a comprehensive report:
+
+```
+=== Scenario Test Report ===
+Total Scenarios: 2
+Passed: 1
+Failed: 1
+Success Rate: 50.0%
+
+Detailed Results:
+1. Test weather information - PASSED
+   Met Criteria: 1/1
+
+2. Test complex weather interactions - FAILED
+   Failure Reason: Agent failed to remember the previously mentioned city
+   Met Criteria: 0/2
+   Triggered Failures: 1
+```
+
+No manual configuration is needed - just create your scenarios and run them with pytest!
+
 ## Examples
 
 The library includes examples for testing various types of agents:
@@ -118,6 +140,7 @@ The library includes examples for testing various types of agents:
 - Website builder agents
 - Code assistant agents
 - Calculator agents (demonstrating early stopping)
+- Recipe agents
 
 Check the `examples/` directory for complete examples.
 
