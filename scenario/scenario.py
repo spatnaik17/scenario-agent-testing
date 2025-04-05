@@ -5,9 +5,7 @@ Scenario module: defines the core Scenario class for agent testing.
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Callable
 
-import termcolor
-
-from scenario.config import ScenarioConfig
+from scenario.config import ScenarioConfig, TestingAgentConfig
 
 from .result import ScenarioResult
 from .testing_agent import DEFAULT_TESTING_AGENT, TestingAgent
@@ -55,9 +53,17 @@ class Scenario:
             raise ValueError("Agent must be a callable function")
 
         if self.config is None:
-            if not hasattr(Scenario, "default_config"):
+            if not hasattr(
+                Scenario, "default_config"
+            ) or not Scenario.default_config.testing_agent.get("model"):
                 raise Exception(default_config_error_message)
             self.config = Scenario.default_config
+        else:
+            # Merge the default config with the user-provided config
+            self.config = ScenarioConfig(
+                testing_agent=Scenario.default_config.testing_agent
+                | self.config.testing_agent
+            )
 
     def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
@@ -75,18 +81,11 @@ class Scenario:
     @classmethod
     def configure(
         cls,
-        testing_agent_model: str,
-        api_key: Optional[str] = None,
-        temperature: float = 0,
-        max_tokens: int = 1000,
-        verbose: bool = True,
-        timeout: int = 60,
+        testing_agent: Optional[TestingAgentConfig] = None,
     ) -> None:
+        existing_config = getattr(cls, "default_config", ScenarioConfig())
+
+        # Merge the default config with the new provided config
         cls.default_config = ScenarioConfig(
-            testing_agent_model=testing_agent_model,
-            api_key=api_key,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            verbose=verbose,
-            timeout=timeout,
+            testing_agent=existing_config.testing_agent | (testing_agent or {}),
         )

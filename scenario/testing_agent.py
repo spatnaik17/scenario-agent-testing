@@ -104,9 +104,7 @@ class TestingAgent:
                         for msg in agent_response["messages"]
                     )
                 ):
-                    raise Exception(
-                        message_return_error_message
-                    )
+                    raise Exception(message_return_error_message)
                 if "messages" in agent_response and scenario.config.verbose:
                     for msg in agent_response["messages"]:
                         role = msg.get("role", getattr(msg, "role", None))
@@ -179,7 +177,9 @@ class TestingAgent:
             agent_time=agent_time,
         )
 
-    def _generate_next_message(self, scenario: "Scenario") -> Union[str, ScenarioResult]:
+    def _generate_next_message(
+        self, scenario: "Scenario"
+    ) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
         return a ScenarioResult if the test should conclude.
@@ -291,10 +291,10 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
             response = cast(
                 ModelResponse,
                 completion(
-                    model=scenario.config.testing_agent_model,
+                    model=scenario.config.testing_agent.get("model", "invalid"),
                     messages=messages,
-                    temperature=scenario.config.temperature,
-                    max_tokens=scenario.config.max_tokens,
+                    temperature=scenario.config.testing_agent.get("temperature"),
+                    max_tokens=scenario.config.testing_agent.get("max_tokens"),
                     tools=tools,
                 ),
             )

@@ -2,8 +2,19 @@
 Configuration module for Scenario.
 """
 
-from typing import Optional
-from dataclasses import dataclass
+from typing import Optional, TypedDict
+from dataclasses import dataclass, field
+
+
+class TestingAgentConfig(TypedDict, total=False):
+    """
+    Configuration class for the TestingAgent.
+    """
+
+    model: str
+    api_key: Optional[str]
+    temperature: float
+    max_tokens: Optional[int]
 
 
 @dataclass
@@ -15,9 +26,10 @@ class ScenarioConfig:
     such as the LLM provider and model to use for the testing agent.
     """
 
-    testing_agent_model: str = "openai/gpt-4o-mini"
-    api_key: Optional[str] = None
-    temperature: float = 0
-    max_tokens: int = 1000
+    testing_agent: TestingAgentConfig = field(
+        default_factory=lambda: TestingAgentConfig(
+            temperature=0,
+        )
+    )
     verbose: bool = True
     timeout: int = 60

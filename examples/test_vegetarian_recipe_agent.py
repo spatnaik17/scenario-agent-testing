@@ -13,12 +13,12 @@ load_dotenv()
 
 from scenario import Scenario
 
-Scenario.configure(testing_agent_model="openai/gpt-4o-mini")
+Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
 
 
 @pytest.mark.agent_test
 def test_vegetarian_recipe_agent():
-    """Test if the recipe agent can correctly generate a vegetarian recipe."""
+    # Define the agent under test
     history = []
 
     def vegetarian_recipe_agent(
@@ -44,7 +44,7 @@ def test_vegetarian_recipe_agent():
 
         return {"messages": [message]}
 
-    # Configure with more specific criteria and strategy
+    # Define the scenario
     scenario = Scenario(
         description="Test if the recipe agent can correctly generate a vegetarian recipe.",
         agent=vegetarian_recipe_agent,
@@ -58,17 +58,11 @@ def test_vegetarian_recipe_agent():
             "The agent fails to provide a complete recipe",
             "The agent asks more than two follow-up questions",
         ],
-        strategy="Ask for a quick vegetarian pasta recipe with vegetables. If asked for preferences, mention bell peppers and zucchini.",
-        max_turns=5,  # Increase max turns to give the agent more chances to complete
+        max_turns=5,
     )
 
-    # Run the scenario and get results - reporting is now automatic
+    # Run the scenario and get results
     result = scenario.run()
 
     # Assert for pytest to know whether the test passed
-    assert result.success, f"Test failed: {result.failure_reason}"
-
-
-if __name__ == "__main__":
-    """Direct execution will still work but won't show the full report"""
-    test_vegetarian_recipe_agent()
+    assert result.success
