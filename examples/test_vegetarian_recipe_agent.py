@@ -38,10 +38,10 @@ def test_vegetarian_recipe_agent():
                 *history,
             ],
         )
-        message = response.choices[0].message.content # type: ignore
-        history.append({"role": "assistant", "content": message})
+        message = response.choices[0].message  # type: ignore
+        history.append(message)
 
-        return {"message": message}
+        return {"messages": [message]}
 
     # Configure with more specific criteria and strategy
     scenario = Scenario(
@@ -50,15 +50,15 @@ def test_vegetarian_recipe_agent():
         success_criteria=[
             "Recipe agent generates a complete vegetarian recipe",
             "Recipe includes a list of ingredients",
-            "Recipe includes step-by-step cooking instructions"
+            "Recipe includes step-by-step cooking instructions",
         ],
         failure_criteria=[
             "The recipe is not vegetarian or includes meat",
             "The agent fails to provide a complete recipe",
-            "The agent asks more than two follow-up questions"
+            "The agent asks more than two follow-up questions",
         ],
         strategy="Ask for a quick vegetarian pasta recipe with vegetables. If asked for preferences, mention bell peppers and zucchini.",
-        max_turns=5  # Increase max turns to give the agent more chances to complete
+        max_turns=5,  # Increase max turns to give the agent more chances to complete
     )
 
     # Run the scenario and get results - reporting is now automatic

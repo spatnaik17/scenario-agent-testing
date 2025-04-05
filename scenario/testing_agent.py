@@ -93,15 +93,55 @@ class TestingAgent:
             start_time = time.time()
             try:
                 agent_response = agent_fn(initial_message, context)
-                if "message" in agent_response and self._config["verbose"]:
-                    print(
-                        termcolor.colored("Agent: ", "blue"), agent_response["message"]
+                if (
+                    "messages" not in agent_response
+                    or not isinstance(agent_response["messages"], list)
+                    or not all(
+                        "role" in msg or hasattr(msg, "role")
+                        for msg in agent_response["messages"]
                     )
-                if self._config["verbose"]:
-                    response_copy = agent_response.copy()
-                    del response_copy["message"]
-                    if len(response_copy.keys()) > 0:
-                        print(termcolor.colored(json.dumps(response_copy), "magenta"))
+                ):
+                    raise Exception(
+                        f"""
+
+ {termcolor.colored("->", "cyan")} Your agent should return a dict with a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
+
+    def my_agent_under_test(message, context):
+        response = call_my_agent(message)
+
+        return {{
+            "messages": [
+                {{"role": "assistant", "content": response}},
+                {termcolor.colored("^" * 42, "green")}
+            ],
+            "extra": {{
+                # ... optional extra artifacts
+            }}
+        }}
+                          """
+                    )
+                if "messages" in agent_response and self._config["verbose"]:
+                    for msg in agent_response["messages"]:
+                        role = msg.get("role", getattr(msg, "role", None))
+                        content = msg.get("content", getattr(msg, "content", None))
+                        if role == "assistant":
+                            print(termcolor.colored("Agent:", "blue"), content)
+                        else:
+                            print(
+                                termcolor.colored(f"{role}:", "magenta"),
+                                msg.__repr__(),
+                            )
+
+                if (
+                    self._config["verbose"]
+                    and "extra" in agent_response
+                    and len(agent_response["extra"].keys()) > 0
+                ):
+                    print(
+                        termcolor.colored(
+                            "Extra:" + json.dumps(agent_response["extra"]), "magenta"
+                        )
+                    )
                 response_time = time.time() - start_time
                 agent_time += response_time
             except Exception as e:
@@ -114,18 +154,14 @@ class TestingAgent:
                     agent_time=agent_time,
                 )
 
-            # Extract the message and any artifacts
-            if isinstance(agent_response, dict):
-                agent_message = agent_response.get("message", "")
-                # Store any additional artifacts returned by the agent
-                for key, value in agent_response.items():
-                    if key != "message":
-                        self._artifacts[key] = value
-            else:
-                agent_message = str(agent_response)
-
-            # Record the agent's response
-            self._conversation.append({"role": "assistant", "content": agent_message})
+            self._conversation.extend(agent_response["messages"])
+            if "extra" in agent_response:
+                self._conversation.append(
+                    {
+                        "role": "assistant",
+                        "content": json.dumps(agent_response["extra"]),
+                    }
+                )
 
             # Generate the next message OR finish the test based on the agent's evaluation
             result = self._generate_next_message(scenario)
@@ -324,7 +360,7 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                     raise Exception(f"No response from LLM: {response.__repr__()}")
 
                 if self._config["verbose"]:
-                    print(termcolor.colored("User: ", "green"), message_content)
+                    print(termcolor.colored("User:", "green"), message_content)
 
                 return message_content
             else:

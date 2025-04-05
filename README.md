@@ -15,11 +15,13 @@ Scenario is a comprehensive library for testing conversational AI agents, design
 ## Installation
 
 Using uv (recommended):
+
 ```bash
 uv pip install scenario
 ```
 
 Or with pip:
+
 ```bash
 pip install scenario
 ```
@@ -32,9 +34,12 @@ from scenario import Scenario
 # Define an agent to test
 def weather_agent(message, context=None):
     """A simple agent that responds to weather inquiries."""
-    if "weather" in message.lower():
-        return {"message": "The weather is sunny and 75°F."}
-    return {"message": "I can provide weather information. Ask me about the weather!"}
+
+    return {
+        "messages": [
+            {"role": "assistant", "content": "The weather is sunny and 75°F."},
+        ],
+    }
 
 # Create a test scenario
 scenario = Scenario(
