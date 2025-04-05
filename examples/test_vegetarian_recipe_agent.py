@@ -12,7 +12,8 @@ import litellm
 load_dotenv()
 
 from scenario import Scenario
-from scenario.config import config
+
+Scenario.configure(testing_agent_model="openai/gpt-4o-mini")
 
 
 @pytest.mark.agent_test

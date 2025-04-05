@@ -4,16 +4,21 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 
 import json
 import logging
-from typing import Dict, List, Any, Optional, Callable, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Any, Optional, Callable, Union, cast
 import time
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 import termcolor
 
+from scenario.config import ScenarioConfig
+from scenario.error_messages import message_return_error_message
+
 # Fix imports for local modules
-from .config import config
 from .result import ScenarioResult
+
+if TYPE_CHECKING:
+    from scenario.scenario import Scenario
 
 
 # Set up logging
@@ -31,16 +36,10 @@ class TestingAgent:
     4. Determining when to end the test and return a result
     """
 
-    def __init__(self, custom_config: Optional[Dict[str, Any]] = None):
+    def __init__(self):
         """
         Initialize the testing agent.
-
-        Args:
-            custom_config: Custom configuration overrides
         """
-        self._config = config.to_dict()
-        if custom_config:
-            self._config.update(custom_config)
 
         # Initialize conversation history
         self._conversation: List[Dict[str, str]] = []
@@ -49,7 +48,7 @@ class TestingAgent:
     def run_scenario(
         self,
         agent_fn: Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]],
-        scenario,  # Type annotation omitted to avoid circular imports
+        scenario: "Scenario",
         context: Optional[Dict[str, Any]] = None,
     ) -> ScenarioResult:
         """
@@ -67,7 +66,7 @@ class TestingAgent:
         self._conversation = []
         self._artifacts = {}
 
-        if self._config["verbose"]:
+        if scenario.config.verbose:
             print("")  # new line
 
         # Run the initial testing agent prompt to get started
@@ -106,35 +105,9 @@ class TestingAgent:
                     )
                 ):
                     raise Exception(
-                        f"""
-
- {termcolor.colored("->", "cyan")} Your agent should return a dict with either a "message" string key or a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
-
-    def my_agent_under_test(message, context):
-        response = call_my_agent(message)
-
-        return {{
-            "message": response.output_text
-            {termcolor.colored("^" * 31, "green")}
-        }}
-
- {termcolor.colored("->", "cyan")} Alternatively, you can return a list of messages in OpenAI messages format, you can also optionally provide extra artifacts:
-
-    def my_agent_under_test(message, context):
-        response = call_my_agent(message)
-
-        return {{
-            "messages": [
-                {{"role": "assistant", "content": response}}
-                {termcolor.colored("^" * 42, "green")}
-            ],
-            "extra": {{
-                # ... optional extra artifacts
-            }}
-        }}
-                          """
+                        message_return_error_message
                     )
-                if "messages" in agent_response and self._config["verbose"]:
+                if "messages" in agent_response and scenario.config.verbose:
                     for msg in agent_response["messages"]:
                         role = msg.get("role", getattr(msg, "role", None))
                         content = msg.get("content", getattr(msg, "content", None))
@@ -147,7 +120,7 @@ class TestingAgent:
                             )
 
                 if (
-                    self._config["verbose"]
+                    scenario.config.verbose
                     and "extra" in agent_response
                     and len(agent_response["extra"].keys()) > 0
                 ):
@@ -206,7 +179,7 @@ class TestingAgent:
             agent_time=agent_time,
         )
 
-    def _generate_next_message(self, scenario) -> Union[str, ScenarioResult]:
+    def _generate_next_message(self, scenario: "Scenario") -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
         return a ScenarioResult if the test should conclude.
@@ -318,10 +291,10 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
             response = cast(
                 ModelResponse,
                 completion(
-                    model=self._config["model"],
+                    model=scenario.config.testing_agent_model,
                     messages=messages,
-                    temperature=self._config["temperature"],
-                    max_tokens=self._config["max_tokens"],
+                    temperature=scenario.config.temperature,
+                    max_tokens=scenario.config.max_tokens,
                     tools=tools,
                 ),
             )
@@ -378,7 +351,7 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                 if message_content is None:
                     raise Exception(f"No response from LLM: {response.__repr__()}")
 
-                if self._config["verbose"]:
+                if scenario.config.verbose:
                     print(termcolor.colored("User:", "green"), message_content)
 
                 return message_content

@@ -4,7 +4,7 @@ Scenario: A testing library for conversational agents.
 
 # First import non-dependent modules
 from .result import ScenarioResult
-from .config import config
+from .config import ScenarioConfig
 
 # Then import modules with dependencies
 from .testing_agent import TestingAgent, DEFAULT_TESTING_AGENT
@@ -17,7 +17,7 @@ __all__ = [
     "Scenario",
     "TestingAgent",
     "ScenarioResult",
-    "config",
+    "ScenarioConfig",
     "DEFAULT_TESTING_AGENT",
     "pytest_configure",
     "scenario_reporter"
