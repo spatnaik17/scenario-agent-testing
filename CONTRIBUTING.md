@@ -230,6 +230,33 @@ pip install -e ".[dev]"
 pytest
 ```
 
+### Running Examples
+
+The project includes a Makefile with commands to simplify running examples and tests:
+
+1. **Running a specific example**:
+```bash
+# Run a specific example
+make example examples/test_vegetarian_recipe_agent.py
+```
+
+2. **Running tests**:
+```bash
+# Run all tests
+make test
+
+# Run a specific test
+make test tests/test_scenario.py
+```
+
+3. **Installing dependencies with uv**:
+```bash
+# Install all dependencies
+make install
+```
+
+The examples will produce a colorized report showing test results, success criteria met, and any failures.
+
 ## Coding Standards
 
 - Follow PEP 8 guidelines for Python code

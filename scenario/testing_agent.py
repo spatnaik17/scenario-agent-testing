@@ -67,7 +67,11 @@ class TestingAgent:
         self._conversation = []
         self._artifacts = {}
 
+        if self._config["verbose"]:
+            print("")  # new line
+
         # Run the initial testing agent prompt to get started
+        start_time = time.time()
         initial_message = self._generate_next_message(scenario)
 
         if isinstance(initial_message, ScenarioResult):
@@ -78,6 +82,7 @@ class TestingAgent:
         # Execute the conversation
         current_turn = 0
         max_turns = scenario.max_turns
+        agent_time = 0
 
         # Start the test with the initial message
         while current_turn < max_turns:
@@ -98,12 +103,15 @@ class TestingAgent:
                     if len(response_copy.keys()) > 0:
                         print(termcolor.colored(json.dumps(response_copy), "magenta"))
                 response_time = time.time() - start_time
+                agent_time += response_time
             except Exception as e:
                 logger.error(f"Agent function raised an exception: {e}")
                 return ScenarioResult.failure_result(
                     conversation=self._conversation,
                     artifacts=self._artifacts,
                     failure_reason=f"Agent function raised an exception: {str(e)}",
+                    total_time=time.time() - start_time,
+                    agent_time=agent_time,
                 )
 
             # Extract the message and any artifacts
@@ -124,6 +132,8 @@ class TestingAgent:
 
             # Check if the result is a ScenarioResult (indicating test completion)
             if isinstance(result, ScenarioResult):
+                result.total_time = time.time() - start_time
+                result.agent_time = agent_time
                 return result
 
             # Otherwise, it's the next message to send to the agent
@@ -137,6 +147,8 @@ class TestingAgent:
             conversation=self._conversation,
             artifacts=self._artifacts,
             failure_reason=f"Reached maximum turns ({max_turns}) without conclusion",
+            total_time=time.time() - start_time,
+            agent_time=agent_time,
         )
 
     def _generate_next_message(self, scenario) -> Union[str, ScenarioResult]:

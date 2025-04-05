@@ -27,43 +27,22 @@ class ScenarioResult:
     met_criteria: List[str] = field(default_factory=list)
     unmet_criteria: List[str] = field(default_factory=list)
     triggered_failures: List[str] = field(default_factory=list)
+    total_time: Optional[float] = None
+    agent_time: Optional[float] = None
 
     def __post_init__(self) -> None:
         """Validate the result after initialization."""
         if not self.success and not self.failure_reason:
             raise ValueError("Failed scenarios must have a failure reason")
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert result to a dictionary representation."""
-        return {
-            "success": self.success,
-            "conversation": self.conversation,
-            "artifacts": self.artifacts,
-            "failure_reason": self.failure_reason,
-            "met_criteria": self.met_criteria,
-            "unmet_criteria": self.unmet_criteria,
-            "triggered_failures": self.triggered_failures,
-        }
-
-    @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ScenarioResult":
-        """Create a result from a dictionary representation."""
-        return cls(
-            success=data["success"],
-            conversation=data["conversation"],
-            artifacts=data.get("artifacts", {}),
-            failure_reason=data.get("failure_reason"),
-            met_criteria=data.get("met_criteria", []),
-            unmet_criteria=data.get("unmet_criteria", []),
-            triggered_failures=data.get("triggered_failures", []),
-        )
-
     @classmethod
     def success_result(
         cls,
         conversation: List[Dict[str, str]],
         artifacts: Dict[str, Any],
-        met_criteria: List[str]
+        met_criteria: List[str],
+        total_time: Optional[float] = None,
+        agent_time: Optional[float] = None,
     ) -> "ScenarioResult":
         """Create a successful result."""
         return cls(
@@ -73,6 +52,8 @@ class ScenarioResult:
             met_criteria=met_criteria,
             unmet_criteria=[],
             triggered_failures=[],
+            total_time=total_time,
+            agent_time=agent_time,
         )
 
     @classmethod
@@ -84,6 +65,8 @@ class ScenarioResult:
         met_criteria: Optional[List[str]] = None,
         unmet_criteria: Optional[List[str]] = None,
         triggered_failures: Optional[List[str]] = None,
+        total_time: Optional[float] = None,
+        agent_time: Optional[float] = None,
     ) -> "ScenarioResult":
         """Create a failed result."""
         return cls(
@@ -94,4 +77,6 @@ class ScenarioResult:
             met_criteria=met_criteria if met_criteria is not None else [],
             unmet_criteria=unmet_criteria if unmet_criteria is not None else [],
             triggered_failures=triggered_failures if triggered_failures is not None else [],
+            total_time=total_time,
+            agent_time=agent_time,
         )

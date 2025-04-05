@@ -2,7 +2,7 @@
 Scenario module: defines the core Scenario class for agent testing.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Callable
 
 from .result import ScenarioResult
@@ -29,7 +29,6 @@ class Scenario:
     testing_agent: TestingAgent = DEFAULT_TESTING_AGENT
     strategy: Optional[str] = None
     max_turns: int = 10
-    metadata: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate scenario configuration after initialization."""
@@ -70,7 +69,6 @@ class Scenario:
             "failure_criteria": self.failure_criteria,
             "strategy": self.strategy,
             "max_turns": self.max_turns,
-            "metadata": self.metadata,
         }
 
     @classmethod
@@ -86,5 +84,4 @@ class Scenario:
             testing_agent=testing_agent,
             strategy=data.get("strategy"),
             max_turns=data.get("max_turns", 10),
-            metadata=data.get("metadata", {}),
         )

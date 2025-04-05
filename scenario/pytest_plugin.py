@@ -1,9 +1,11 @@
 """
 Pytest plugin for Scenario testing library.
 """
+
 import pytest
 from typing import Dict, List, Any, Optional
 import functools
+from termcolor import colored
 
 from .scenario import Scenario
 
@@ -15,10 +17,7 @@ class ScenarioReporter:
 
     def add_result(self, scenario, result):
         """Add a test result to the reporter."""
-        self.results.append({
-            "scenario": scenario,
-            "result": result
-        })
+        self.results.append({"scenario": scenario, "result": result})
 
     def get_summary(self):
         """Get a summary of all test results."""
@@ -30,7 +29,7 @@ class ScenarioReporter:
             "total": total,
             "passed": passed,
             "failed": failed,
-            "success_rate": round(passed / total * 100, 2) if total else 0
+            "success_rate": round(passed / total * 100, 2) if total else 0,
         }
 
     def print_report(self):
@@ -40,28 +39,68 @@ class ScenarioReporter:
 
         summary = self.get_summary()
 
-        print("\n=== Scenario Test Report ===")
-        print(f"Total Scenarios: {summary['total']}")
-        print(f"Passed: {summary['passed']}")
-        print(f"Failed: {summary['failed']}")
-        print(f"Success Rate: {summary['success_rate']}%")
+        print("\n" + colored("=== Scenario Test Report ===", "cyan", attrs=["bold"]))
+        print(colored(f"Total Scenarios: {summary['total']}", "white"))
+        print(
+            colored(
+                f"Passed: {summary['passed']}",
+                "green" if summary["passed"] > 0 else "white",
+            )
+        )
+        print(
+            colored(
+                f"Failed: {summary['failed']}",
+                "red" if summary["failed"] > 0 else "white",
+            )
+        )
 
-        print("\nDetailed Results:")
+        # Color the success rate based on its value
+        success_rate = summary["success_rate"]
+        rate_color = (
+            "green"
+            if success_rate == 100
+            else "yellow" if success_rate >= 70 else "red"
+        )
+        print(colored(f"Success Rate: {success_rate}%", rate_color))
+
         for idx, item in enumerate(self.results, 1):
             scenario = item["scenario"]
             result = item["result"]
 
             status = "PASSED" if result.success else "FAILED"
-            print(f"\n{idx}. {scenario.description} - {status}")
+            status_color = "green" if result.success else "red"
+
+            time = ""
+            if result.total_time and result.agent_time:
+                time = f" in {result.total_time:.2f}s (agent: {result.agent_time:.2f}s)"
+
+            print(
+                f"\n{idx}. {scenario.description} - {colored(status, status_color, attrs=['bold'])}{time}"
+            )
 
             if not result.success:
-                print(f"   Failure Reason: {result.failure_reason}")
+                print(colored(f"   Failure Reason: {result.failure_reason}", "red"))
 
-            if hasattr(result, 'met_criteria') and result.met_criteria:
-                print(f"   Met Criteria: {len(result.met_criteria)}/{len(scenario.success_criteria)}")
+            if hasattr(result, "met_criteria") and result.met_criteria:
+                criteria_count = len(result.met_criteria)
+                total_criteria = len(scenario.success_criteria)
+                criteria_color = (
+                    "green" if criteria_count == total_criteria else "yellow"
+                )
+                print(
+                    colored(
+                        f"   Met Criteria: {criteria_count}/{total_criteria}",
+                        criteria_color,
+                    )
+                )
 
-            if hasattr(result, 'triggered_failures') and result.triggered_failures:
-                print(f"   Triggered Failures: {len(result.triggered_failures)}")
+            if hasattr(result, "triggered_failures") and result.triggered_failures:
+                print(
+                    colored(
+                        f"   Triggered Failures: {len(result.triggered_failures)}",
+                        "red",
+                    )
+                )
 
 
 # Store the original run method
@@ -73,8 +112,7 @@ def pytest_configure(config):
     """Register the agent_test marker and set up automatic reporting."""
     # Register the marker
     config.addinivalue_line(
-        "markers",
-        "agent_test: mark test as an agent scenario test"
+        "markers", "agent_test: mark test as an agent scenario test"
     )
 
     # Create a global reporter instance
