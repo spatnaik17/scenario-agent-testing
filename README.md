@@ -36,9 +36,7 @@ def weather_agent(message, context=None):
     """A simple agent that responds to weather inquiries."""
 
     return {
-        "messages": [
-            {"role": "assistant", "content": "The weather is sunny and 75°F."},
-        ],
+        "message": "The weather is sunny and 75°F."
     }
 
 # Create a test scenario

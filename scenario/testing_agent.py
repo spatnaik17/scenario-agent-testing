@@ -94,6 +94,10 @@ class TestingAgent:
             try:
                 agent_response = agent_fn(initial_message, context)
                 if (
+                    "message" not in agent_response
+                    or type(agent_response["message"]) is not str
+                    or agent_response["message"] is None
+                ) and (
                     "messages" not in agent_response
                     or not isinstance(agent_response["messages"], list)
                     or not all(
@@ -104,14 +108,24 @@ class TestingAgent:
                     raise Exception(
                         f"""
 
- {termcolor.colored("->", "cyan")} Your agent should return a dict with a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
+ {termcolor.colored("->", "cyan")} Your agent should return a dict with either a "message" string key or a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
+
+    def my_agent_under_test(message, context):
+        response = call_my_agent(message)
+
+        return {{
+            "message": response.output_text
+            {termcolor.colored("^" * 31, "green")}
+        }}
+
+ {termcolor.colored("->", "cyan")} Alternatively, you can return a list of messages in OpenAI messages format, you can also optionally provide extra artifacts:
 
     def my_agent_under_test(message, context):
         response = call_my_agent(message)
 
         return {{
             "messages": [
-                {{"role": "assistant", "content": response}},
+                {{"role": "assistant", "content": response}}
                 {termcolor.colored("^" * 42, "green")}
             ],
             "extra": {{
@@ -154,7 +168,12 @@ class TestingAgent:
                     agent_time=agent_time,
                 )
 
-            self._conversation.extend(agent_response["messages"])
+            if "messages" in agent_response:
+                self._conversation.extend(agent_response["messages"])
+            if "message" in agent_response:
+                self._conversation.append(
+                    {"role": "assistant", "content": agent_response["message"]}
+                )
             if "extra" in agent_response:
                 self._conversation.append(
                     {
