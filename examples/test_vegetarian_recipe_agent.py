@@ -9,18 +9,20 @@ import pytest
 from dotenv import load_dotenv
 import litellm
 
+from scenario.utils import scenario_cache
+
 load_dotenv()
 
 from scenario import Scenario
 
-Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
-
+Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"}, cache_key="42")
 
 @pytest.mark.agent_test
 def test_vegetarian_recipe_agent():
     # Define the agent under test
     history = []
 
+    @scenario_cache()
     def vegetarian_recipe_agent(
         message: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:

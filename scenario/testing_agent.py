@@ -4,14 +4,12 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 
 import json
 import logging
-from typing import TYPE_CHECKING, Dict, List, Any, Optional, Callable, Union, cast
-import time
+from typing import TYPE_CHECKING, Dict, List, Any, Union, cast
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
-import termcolor
 
-from scenario.error_messages import message_return_error_message
+from scenario.utils import scenario_cache
 
 # Fix imports for local modules
 from .result import ScenarioResult
@@ -40,8 +38,9 @@ class TestingAgent:
         """
         pass
 
+    @scenario_cache(ignore=["scenario"])
     def generate_next_message(
-        self, conversation: List[Dict[str, Any]], scenario: "Scenario", first_message: bool = False
+        self, scenario: "Scenario", conversation: List[Dict[str, Any]], first_message: bool = False
     ) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
@@ -210,9 +209,6 @@ Your goal is to interact with the Agent Under Test as if you were a human user t
                 message_content = message.content
                 if message_content is None:
                     raise Exception(f"No response from LLM: {response.__repr__()}")
-
-                if scenario.config.verbose:
-                    print(termcolor.colored("User:", "green"), message_content)
 
                 return message_content
             else:

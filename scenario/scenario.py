@@ -60,11 +60,7 @@ class Scenario:
                 raise Exception(default_config_error_message)
             self.config = Scenario.default_config
         else:
-            # Merge the default config with the user-provided config
-            self.config = ScenarioConfig(
-                testing_agent=Scenario.default_config.testing_agent
-                | self.config.testing_agent
-            )
+            self.config = self.config.merge(Scenario.default_config)
 
     def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
@@ -84,11 +80,37 @@ class Scenario:
         cls,
         testing_agent: Optional[TestingAgentConfig] = None,
         verbose: Optional[bool] = None,
+        cache_key: Optional[str] = None,
     ) -> None:
         existing_config = getattr(cls, "default_config", ScenarioConfig())
 
-        # Merge the default config with the new provided config
-        cls.default_config = ScenarioConfig(
-            testing_agent=existing_config.testing_agent | (testing_agent or {}),
-            verbose=verbose if verbose is not None else existing_config.verbose,
+        cls.default_config = existing_config.merge(
+            ScenarioConfig(
+                testing_agent=testing_agent or {},
+                verbose=verbose,
+                cache_key=cache_key,
+            )
         )
+
+    def copy(self) -> "Scenario":
+        return Scenario(
+            description=self.description,
+            agent=self.agent,
+            success_criteria=self.success_criteria,
+            failure_criteria=self.failure_criteria,
+            testing_agent=self.testing_agent,
+            strategy=self.strategy,
+            max_turns=self.max_turns,
+            config=self.config,
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the scenario to a dictionary representation."""
+        return {
+            "description": self.description,
+            "success_criteria": self.success_criteria,
+            "failure_criteria": self.failure_criteria,
+            "strategy": self.strategy,
+            "max_turns": self.max_turns,
+            "config": self.config.model_dump(),
+        }
