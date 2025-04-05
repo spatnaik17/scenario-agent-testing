@@ -11,7 +11,6 @@ from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 import termcolor
 
-from scenario.config import ScenarioConfig
 from scenario.error_messages import message_return_error_message
 
 # Fix imports for local modules
@@ -30,155 +29,19 @@ class TestingAgent:
     The Testing Agent that interacts with the agent under test.
 
     This agent is responsible for:
-    1. Taking a scenario and running it against the agent under test
-    2. Generating messages to send to the agent based on the scenario
-    3. Evaluating the responses from the agent against the success/failure criteria
-    4. Determining when to end the test and return a result
+    1. Generating messages to send to the agent based on the scenario
+    2. Evaluating the responses from the agent against the success/failure criteria
+    3. Determining when to end the test and return a result
     """
 
     def __init__(self):
         """
         Initialize the testing agent.
         """
+        pass
 
-        # Initialize conversation history
-        self._conversation: List[Dict[str, str]] = []
-        self._artifacts: Dict[str, Any] = {}
-
-    def run_scenario(
-        self,
-        agent_fn: Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]],
-        scenario: "Scenario",
-        context: Optional[Dict[str, Any]] = None,
-    ) -> ScenarioResult:
-        """
-        Run a scenario against the agent under test.
-
-        Args:
-            agent_fn: Function that takes a message and returns agent response
-            scenario: The scenario to test
-            context: Optional initial context for the agent
-
-        Returns:
-            ScenarioResult containing the test outcome
-        """
-        # Reset state for this run
-        self._conversation = []
-        self._artifacts = {}
-
-        if scenario.config.verbose:
-            print("")  # new line
-
-        # Run the initial testing agent prompt to get started
-        start_time = time.time()
-        initial_message = self._generate_next_message(scenario)
-
-        if isinstance(initial_message, ScenarioResult):
-            raise Exception(
-                "Unexpectedly generated a ScenarioResult for the initial message"
-            )
-
-        # Execute the conversation
-        current_turn = 0
-        max_turns = scenario.max_turns
-        agent_time = 0
-
-        # Start the test with the initial message
-        while current_turn < max_turns:
-            # Record the testing agent's message
-            self._conversation.append({"role": "user", "content": initial_message})
-
-            # Get response from the agent under test
-            start_time = time.time()
-            try:
-                agent_response = agent_fn(initial_message, context)
-                if (
-                    "message" not in agent_response
-                    or type(agent_response["message"]) is not str
-                    or agent_response["message"] is None
-                ) and (
-                    "messages" not in agent_response
-                    or not isinstance(agent_response["messages"], list)
-                    or not all(
-                        "role" in msg or hasattr(msg, "role")
-                        for msg in agent_response["messages"]
-                    )
-                ):
-                    raise Exception(message_return_error_message)
-                if "messages" in agent_response and scenario.config.verbose:
-                    for msg in agent_response["messages"]:
-                        role = msg.get("role", getattr(msg, "role", None))
-                        content = msg.get("content", getattr(msg, "content", None))
-                        if role == "assistant":
-                            print(termcolor.colored("Agent:", "blue"), content)
-                        else:
-                            print(
-                                termcolor.colored(f"{role}:", "magenta"),
-                                msg.__repr__(),
-                            )
-
-                if (
-                    scenario.config.verbose
-                    and "extra" in agent_response
-                    and len(agent_response["extra"].keys()) > 0
-                ):
-                    print(
-                        termcolor.colored(
-                            "Extra:" + json.dumps(agent_response["extra"]), "magenta"
-                        )
-                    )
-                response_time = time.time() - start_time
-                agent_time += response_time
-            except Exception as e:
-                logger.error(f"Agent function raised an exception: {e}")
-                return ScenarioResult.failure_result(
-                    conversation=self._conversation,
-                    artifacts=self._artifacts,
-                    failure_reason=f"Agent function raised an exception: {str(e)}",
-                    total_time=time.time() - start_time,
-                    agent_time=agent_time,
-                )
-
-            if "messages" in agent_response:
-                self._conversation.extend(agent_response["messages"])
-            if "message" in agent_response:
-                self._conversation.append(
-                    {"role": "assistant", "content": agent_response["message"]}
-                )
-            if "extra" in agent_response:
-                self._conversation.append(
-                    {
-                        "role": "assistant",
-                        "content": json.dumps(agent_response["extra"]),
-                    }
-                )
-
-            # Generate the next message OR finish the test based on the agent's evaluation
-            result = self._generate_next_message(scenario)
-
-            # Check if the result is a ScenarioResult (indicating test completion)
-            if isinstance(result, ScenarioResult):
-                result.total_time = time.time() - start_time
-                result.agent_time = agent_time
-                return result
-
-            # Otherwise, it's the next message to send to the agent
-            initial_message = result
-
-            # Increment turn counter
-            current_turn += 1
-
-        # If we reached max turns without conclusion, fail the test
-        return ScenarioResult.failure_result(
-            conversation=self._conversation,
-            artifacts=self._artifacts,
-            failure_reason=f"Reached maximum turns ({max_turns}) without conclusion",
-            total_time=time.time() - start_time,
-            agent_time=agent_time,
-        )
-
-    def _generate_next_message(
-        self, scenario: "Scenario"
+    def generate_next_message(
+        self, conversation: List[Dict[str, Any]], scenario: "Scenario", first_message: bool = False
     ) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
@@ -193,47 +56,47 @@ class TestingAgent:
             {
                 "role": "system",
                 "content": f"""
+<role>
 You are pretending to be a user, you are testing an AI Agent based on a scenario.
+</role>
 
+<goal>
 Your goal is to interact with the Agent Under Test as if you were a human user to see if it can complete the scenario successfully.
+</goal>
 
-SCENARIO DESCRIPTION:
+<scenario>
 {scenario.description}
+</scenario>
 
-TESTING STRATEGY:
-{scenario.strategy or "Approach this naturally, as a human user would. Use context from the conversation."}
+<strategy>
+{scenario.strategy or "Approach this naturally, as a human user would, with very short inputs, few words, all lowercase, like when they google or talk to chatgpt."}
+</strategy>
 
-SUCCESS CRITERIA:
+<success_criteria>
 {json.dumps(scenario.success_criteria, indent=2)}
+</success_criteria>
 
-FAILURE CRITERIA:
+<failure_criteria>
 {json.dumps(scenario.failure_criteria, indent=2)}
+</failure_criteria>
 
-You have two responsibilities:
-1. Generate the next message to send to the Agent Under Test
-2. Evaluate the conversation to determine if success or failure criteria have been met
+<execution_flow>
+1. Generate the first message to start the scenario
+2. After the Agent Under Test responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until the test should end
+3. If the test should end, use the finish_test tool to determine if success or failure criteria have been met
+</execution_flow>
 
-After each response from the Agent Under Test, decide whether:
-- success: All success criteria have been met and the test is successful
-- failure: Any failure criteria have been triggered and the test has failed
-- continue: The test should continue with a new message
-
-Failure criteria should be evaluated first, and if any are triggered, the test should END IMMEDIATELY as a failure.
-Success criteria should be evaluated next, and if all are met, the test should END as a success.
-If neither has been met conclusively, the test should CONTINUE.
-
-You have access to a special tool: finish_test(verdict, reasoning)
-- Use this tool ONLY if you've determined the test should conclude (success or inconclusive)
-- If you use this tool, do NOT also return a next message
-- If the test should continue, do NOT use this tool and instead provide a next message
-
-For the verdict parameter, use one of: "success", "failure", "inconclusive"
+<rules>
+1. Test should end immediately if a failure criteria is triggered
+2. Test should continue until all success criteria have been met
+3. DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
+</rules>
 """,
             }
         ]
 
         # Add the conversation history
-        for msg in self._conversation:
+        for msg in conversation:
             if msg["role"] == "user":
                 messages.append({"role": "assistant", "content": msg["content"]})
             else:
@@ -295,7 +158,7 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                     messages=messages,
                     temperature=scenario.config.testing_agent.get("temperature"),
                     max_tokens=scenario.config.testing_agent.get("max_tokens"),
-                    tools=tools,
+                    tools=tools if not first_message else None,
                 ),
             )
 
@@ -321,14 +184,12 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                             # Return the appropriate ScenarioResult based on the verdict
                             if verdict == "success":
                                 return ScenarioResult.success_result(
-                                    conversation=self._conversation,
-                                    artifacts=self._artifacts,
+                                    conversation=conversation,
                                     met_criteria=met_criteria,
                                 )
                             elif verdict == "failure":
                                 return ScenarioResult.failure_result(
-                                    conversation=self._conversation,
-                                    artifacts=self._artifacts,
+                                    conversation=conversation,
                                     failure_reason=reasoning,
                                     met_criteria=met_criteria,
                                     unmet_criteria=unmet_criteria,
@@ -337,8 +198,7 @@ For the verdict parameter, use one of: "success", "failure", "inconclusive"
                             else:  # inconclusive
                                 return ScenarioResult(
                                     success=False,
-                                    conversation=self._conversation,
-                                    artifacts=self._artifacts,
+                                    conversation=conversation,
                                     met_criteria=met_criteria,
                                     unmet_criteria=unmet_criteria,
                                     triggered_failures=triggered_failures,

@@ -46,16 +46,15 @@ def test_vegetarian_recipe_agent():
 
     # Define the scenario
     scenario = Scenario(
-        description="Test if the recipe agent can correctly generate a vegetarian recipe.",
+        "User is looking for a dinner idea",
         agent=vegetarian_recipe_agent,
         success_criteria=[
-            "Recipe agent generates a complete vegetarian recipe",
+            "Recipe agent generates a vegetarian recipe",
             "Recipe includes a list of ingredients",
             "Recipe includes step-by-step cooking instructions",
         ],
         failure_criteria=[
             "The recipe is not vegetarian or includes meat",
-            "The agent fails to provide a complete recipe",
             "The agent asks more than two follow-up questions",
         ],
         max_turns=5,

@@ -11,3 +11,4 @@ repl.ipynb
 chainlit.md
 .env
 *.ignored.*
+*.egg-info

@@ -32,4 +32,3 @@ class ScenarioConfig:
         )
     )
     verbose: bool = True
-    timeout: int = 60

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import List, Dict, Any, Optional, Callable
 
 from scenario.config import ScenarioConfig, TestingAgentConfig
+from scenario.scenario_executor import ScenarioExecutor
 
 from .result import ScenarioResult
 from .testing_agent import DEFAULT_TESTING_AGENT, TestingAgent
@@ -76,16 +77,18 @@ class Scenario:
             ScenarioResult containing the test outcome
         """
         # Run the scenario using the testing agent
-        return self.testing_agent.run_scenario(self.agent, self, context)
+        return ScenarioExecutor(self).run(context)
 
     @classmethod
     def configure(
         cls,
         testing_agent: Optional[TestingAgentConfig] = None,
+        verbose: Optional[bool] = None,
     ) -> None:
         existing_config = getattr(cls, "default_config", ScenarioConfig())
 
         # Merge the default config with the new provided config
         cls.default_config = ScenarioConfig(
             testing_agent=existing_config.testing_agent | (testing_agent or {}),
+            verbose=verbose if verbose is not None else existing_config.verbose,
         )
