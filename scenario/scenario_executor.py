@@ -4,14 +4,13 @@ ScenarioExecutor module: holds the scenario execution logic and state, orchestra
 
 from contextvars import ContextVar
 import json
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional, Union
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional
 import time
-from copy import deepcopy
 import termcolor
 
 from scenario.config import get_cache
 from scenario.error_messages import message_return_error_message
-from scenario.utils import safe_attr_or_key, safe_list_at, scenario_cache, title_case
+from scenario.utils import print_openai_messages, safe_attr_or_key, safe_list_at
 from openai.types.chat import ChatCompletionMessageParam
 
 from .result import ScenarioResult
@@ -111,32 +110,7 @@ class ScenarioExecutor:
                 print(termcolor.colored("Agent:", "blue"), agent_response["message"])
 
             if messages and self.scenario.config.verbose:
-                for msg in messages:
-                    role = safe_attr_or_key(msg, "role")
-                    content = safe_attr_or_key(msg, "content")
-                    if role == "assistant":
-                        tool_calls = safe_attr_or_key(msg, "tool_calls")
-                        if not content and tool_calls:
-                            for tool_call in tool_calls:
-                                function = safe_attr_or_key(tool_call, "function")
-                                name = safe_attr_or_key(function, "name")
-                                args = safe_attr_or_key(function, "arguments")
-                                print(
-                                    termcolor.colored(f"ToolCall({name}):", "blue"),
-                                    args,
-                                )
-                        else:
-                            print(termcolor.colored("Agent:", "blue"), content)
-                    elif role == "tool":
-                        print(
-                            termcolor.colored(f"ToolResult:", "blue"),
-                            content or msg.__repr__(),
-                        )
-                    else:
-                        print(
-                            termcolor.colored(f"{title_case(role)}:", "magenta"),
-                            msg.__repr__(),
-                        )
+                print_openai_messages(messages)
 
             if (
                 self.scenario.config.verbose
@@ -168,7 +142,9 @@ class ScenarioExecutor:
 
             # Generate the next message OR finish the test based on the agent's evaluation
             result = self.testing_agent.generate_next_message(
-                self.scenario, self.conversation
+                self.scenario,
+                self.conversation,
+                last_message=current_turn == max_turns - 1,
             )
 
             # Check if the result is a ScenarioResult (indicating test completion)

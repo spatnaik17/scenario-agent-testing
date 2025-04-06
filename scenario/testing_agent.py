@@ -2,7 +2,6 @@
 TestingAgent module: defines the testing agent that interacts with the agent under test.
 """
 
-from copy import deepcopy
 import json
 import logging
 from typing import TYPE_CHECKING, Dict, List, Any, Union, cast
@@ -45,6 +44,7 @@ class TestingAgent:
         scenario: "Scenario",
         conversation: List[Dict[str, Any]],
         first_message: bool = False,
+        last_message: bool = False,
     ) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
@@ -61,6 +61,7 @@ class TestingAgent:
                 "content": f"""
 <role>
 You are pretending to be a user, you are testing an AI Agent (shown as the user role) based on a scenario.
+Approach this naturally, as a human user would, with very short inputs, few words, all lowercase, imperative, not periods, like when they google or talk to chatgpt.
 </role>
 
 <goal>
@@ -72,7 +73,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 </scenario>
 
 <strategy>
-{scenario.strategy or "Approach this naturally, as a human user would, with very short inputs, few words, all lowercase, like when they google or talk to chatgpt."}
+{scenario.strategy or "Start with a first message and guide the conversation to play out the scenario."}
 </strategy>
 
 <success_criteria>
@@ -100,6 +101,21 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
             {"role": "assistant", "content": "Hello, how can I help you today?"},
             *conversation,
         ]
+
+        if last_message:
+            messages.append(
+                {
+                    "role": "user",
+                    "content": """
+System:
+
+<finish_test>
+This is the last message, conversation has reached the maximum number of turns, give your final verdict,
+if you don't have enough information to make a verdict, say inconclusive with max turns reached.
+</finish_test>
+""",
+                }
+            )
 
         # User to assistant role reversal
         # LLM models are biased to always be the assistant not the user, so we need to do this reversal otherwise models like GPT 4.5 is
@@ -178,6 +194,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
                 temperature=scenario.config.testing_agent.get("temperature"),
                 max_tokens=scenario.config.testing_agent.get("max_tokens"),
                 tools=tools if not first_message else None,
+                tool_choice="required" if last_message else None,
             ),
         )
 
@@ -228,11 +245,11 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
                         logger.error("Failed to parse tool call arguments")
 
             # If no tool call or invalid tool call, use the message content as next message
-            # message_content = message.content
-            # if message_content is None:
-            #     raise Exception(f"No response from LLM: {response.__repr__()}")
+            message_content = message.content
+            if message_content is None:
+                raise Exception(f"No response from LLM: {response.__repr__()}")
 
-            return message.content or "?"
+            return message_content
         else:
             raise Exception(
                 f"Unexpected response format from LLM: {response.__repr__()}"

@@ -22,6 +22,7 @@ async def test_lovable_clone():
     scenario = Scenario(
         "user wants to create a new landing page for their dog walking startup",
         agent=lovable_agent,
+        strategy="send the first message to generate the landing page, then a single follow up request to extend it, then give your final verdict",
         success_criteria=[
             "agent reads the files before go and making changes",
             "agent modifies index.css file",
@@ -32,7 +33,11 @@ async def test_lovable_clone():
             "agent says it can't read the file",
             "agent produces incomplete code or is too lazy to finish",
         ],
+        max_turns=5,
     )
 
     result = await scenario.run()
+
+    print(f"\n-> Done, check the results at: {template_path}\n")
+
     assert result.success

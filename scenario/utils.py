@@ -6,6 +6,9 @@ import json
 
 from scenario.config import get_cache
 import wrapt
+import termcolor
+from textwrap import indent
+from openai.types.chat import ChatCompletionMessageParam
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
@@ -81,3 +84,46 @@ def safe_attr_or_key(obj, attr_or_key, default=None):
 
 def title_case(string):
     return " ".join(word.capitalize() for word in string.split("_"))
+
+
+def print_openai_messages(messages: list[ChatCompletionMessageParam]):
+    for msg in messages:
+        role = safe_attr_or_key(msg, "role")
+        content = safe_attr_or_key(msg, "content")
+        if role == "assistant":
+            tool_calls = safe_attr_or_key(msg, "tool_calls")
+            if content:
+                print(termcolor.colored("Agent:", "blue"), content)
+            if tool_calls:
+                for tool_call in tool_calls:
+                    function = safe_attr_or_key(tool_call, "function")
+                    name = safe_attr_or_key(function, "name")
+                    args = safe_attr_or_key(function, "arguments", "{}")
+                    args = _take_maybe_json_first_lines(args)
+                    print(
+                        termcolor.colored(f"ToolCall({name}):", "magenta"),
+                        f"\n\n{indent(args, ' ' * 4)}\n",
+                    )
+        elif role == "tool":
+            content = _take_maybe_json_first_lines(content or msg.__repr__())
+            print(
+                termcolor.colored(f"ToolResult:", "magenta"),
+                f"\n\n{indent(content, ' ' * 4)}\n",
+            )
+        else:
+            print(
+                termcolor.colored(f"{title_case(role)}:", "magenta"),
+                msg.__repr__(),
+            )
+
+
+def _take_maybe_json_first_lines(string, max_lines=5):
+    content = str(string)
+    try:
+        content = json.dumps(json.loads(content), indent=2)
+    except:
+        pass
+    content = content.split("\n")
+    if len(content) > max_lines:
+        content = content[:max_lines] + ["..."]
+    return "\n".join(content)
