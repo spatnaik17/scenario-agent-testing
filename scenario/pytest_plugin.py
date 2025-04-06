@@ -83,8 +83,7 @@ class ScenarioReporter:
                 f"\n{idx}. {scenario.description} - {colored(status, status_color, attrs=['bold'])}{time}"
             )
 
-            if not result.success:
-                print(colored(f"   Failure Reason: {result.failure_reason}", "red"))
+            print(colored(f"   Reasoning: {result.reasoning}", "green" if result.success else "red"))
 
             if hasattr(result, "met_criteria") and result.met_criteria:
                 criteria_count = len(result.met_criteria)

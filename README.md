@@ -1,151 +1,65 @@
+![scenario](./assets/scenario-wide.webp)
+
+<div align="center">
+<!-- Discord, PyPI, Docs, etc links -->
+</div>
+
 # Scenario: Use an Agent to test your Agent
 
-Scenario is a comprehensive library for testing conversational AI agents, designed to define natural language testing scenarios, interact with agents, and evaluate their performance.
+Scenario is a library for testing agents end-to-end as a human would. Instead of manually testing your agent on every change, have an automated testing agent cover every single scenario for you.
 
-## Features
+The testing agent will simulate your users as it follows the scenarios, and it will keep chatting and evaluating your agent until it reaches the desired goal or detects an unexpected behavior.
 
-- Define natural language testing scenarios with success and failure criteria
-- Automatic test execution using TestingAgent
-- Integrated with pytest for easy test creation and reporting
-- Support for custom validation functions
-- Early stopping when failure criteria are detected
-- Function calling for efficient test execution
-- Automatic test result reporting with detailed insights
+## Getting Started
 
-## Installation
-
-Using uv (recommended):
+Install pytest and scenario:
 
 ```bash
-uv pip install scenario
+pip install pytest scenario-testing
 ```
 
-Or with pip:
-
-```bash
-pip install scenario
-```
-
-## Quick Start
-
-```python
-from scenario import Scenario
-
-# Define an agent to test
-def weather_agent(message, context=None):
-    """A simple agent that responds to weather inquiries."""
-
-    return {
-        "message": "The weather is sunny and 75°F."
-    }
-
-# Create a test scenario
-scenario = Scenario(
-    description="Test if the agent can respond to weather inquiries",
-    agent=weather_agent,  # Pass the agent to test
-    success_criteria=[
-        "Agent provides temperature information",
-        "Agent responds with weather conditions"
-    ],
-    failure_criteria=[
-        "Agent fails to respond with any weather data",
-        "Agent provides incorrect or inconsistent information"
-    ],
-    strategy="Ask for the current weather"
-)
-
-# Run the test and get results
-result = scenario.run()
-print(f"Test success: {result.success}")
-print(f"Conversation: {result.conversation}")
-
-# For more complex validation, you can use a custom testing agent
-from scenario import config
-
-# Create a scenario with a custom testing agent
-complex_scenario = Scenario(
-    description="Test complex weather information with persistence",
-    agent=weather_agent,
-    testing_agent=config(model="gpt-4"),  # Use a more powerful model
-    success_criteria=[
-        "Agent remembers previous city when asked for forecast",
-        "Agent provides forecast for multiple days when requested"
-    ],
-    failure_criteria=[
-        "Agent forgets the city being discussed",
-        "Agent cannot provide multi-day forecast"
-    ],
-    strategy="First ask about weather in New York, then ask for the forecast without mentioning the city"
-)
-
-result = complex_scenario.run()
-```
-
-## Key Features
-
-### Early Stopping for Efficiency
-
-The TestingAgent actively evaluates agent responses against success and failure criteria during the conversation and can stop the test immediately when a conclusion is reached:
-
-- When any failure criteria are triggered, the test stops immediately, preventing unnecessary conversation turns.
-- When all success criteria are met, the test concludes as successful.
-- The result includes detailed information about which criteria were met or unmet.
-
-This is implemented using function calling within the LLM, where it can choose to continue the conversation or invoke a tool to finalize the test with a verdict.
-
-### Pytest Integration with Automatic Reporting
-
-Scenario provides seamless pytest integration with automatic reporting:
+Now create your first scenario:
 
 ```python
 import pytest
+
 from scenario import Scenario
 
+Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
+
+
 @pytest.mark.agent_test
-def test_weather_agent():
-    """Test if the weather agent provides accurate temperature information."""
+@pytest.mark.asyncio
+async def test_vegetarian_recipe_agent():
+    def vegetarian_recipe_agent(message, context):
+        # Call your agent here
+        response = "<Your agent's response>"
+
+        return {"message": response}
+
     scenario = Scenario(
-        description="Test weather information",
-        agent=weather_agent,
-        success_criteria=["Provides temperature"],
-        failure_criteria=["Gives incorrect weather data"]
+        "User is looking for a dinner idea",
+        agent=vegetarian_recipe_agent,
+        success_criteria=[
+            "Recipe agent generates a vegetarian recipe",
+            "Recipe includes step-by-step cooking instructions",
+        ],
+        failure_criteria=[
+            "The recipe includes meat",
+            "The agent asks more than two follow-up questions",
+        ],
     )
-    result = scenario.run()
+
+    result = await scenario.run()
+
     assert result.success
 ```
 
-When you run your tests with pytest, you'll automatically get a comprehensive report:
+Save it as `tests/test_vegetarian_recipe_agent.py` and run it with pytest:
 
+```bash
+pytest -s tests/test_vegetarian_recipe_agent.py
 ```
-=== Scenario Test Report ===
-Total Scenarios: 2
-Passed: 1
-Failed: 1
-Success Rate: 50.0%
-
-Detailed Results:
-1. Test weather information - PASSED
-   Met Criteria: 1/1
-
-2. Test complex weather interactions - FAILED
-   Failure Reason: Agent failed to remember the previously mentioned city
-   Met Criteria: 0/2
-   Triggered Failures: 1
-```
-
-No manual configuration is needed - just create your scenarios and run them with pytest!
-
-## Examples
-
-The library includes examples for testing various types of agents:
-
-- Travel booking agents
-- Website builder agents
-- Code assistant agents
-- Calculator agents (demonstrating early stopping)
-- Recipe agents
-
-Check the `examples/` directory for complete examples.
 
 ## License
 

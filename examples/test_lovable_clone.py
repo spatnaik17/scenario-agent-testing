@@ -9,15 +9,18 @@ Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_lovable_clone():
+    template_path = LovableAgent.clone_template()
+    print(f"\n-> Lovable clone template path: {template_path}\n")
+
     async def lovable_agent(message: str, context):
         lovable_agent = LovableAgent()
 
-        _, messages = await lovable_agent.process_user_message(message)
+        _, messages = await lovable_agent.process_user_message(message, template_path)
 
         return {"messages": messages}
 
     scenario = Scenario(
-        "user wants to create a new landing page for their startup",
+        "user wants to create a new landing page for their dog walking startup",
         agent=lovable_agent,
         success_criteria=[
             "agent reads the files before go and making changes",

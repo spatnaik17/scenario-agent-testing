@@ -107,6 +107,9 @@ class ScenarioExecutor:
                 if safe_attr_or_key(safe_list_at(messages, 0), "role") == "user":
                     messages = messages[1:]
 
+            if has_valid_message and self.scenario.config.verbose:
+                print(termcolor.colored("Agent:", "blue"), agent_response["message"])
+
             if messages and self.scenario.config.verbose:
                 for msg in messages:
                     role = safe_attr_or_key(msg, "role")
@@ -185,7 +188,7 @@ class ScenarioExecutor:
         # If we reached max turns without conclusion, fail the test
         return ScenarioResult.failure_result(
             conversation=self.conversation,
-            failure_reason=f"Reached maximum turns ({max_turns}) without conclusion",
+            reasoning=f"Reached maximum turns ({max_turns}) without conclusion",
             total_time=time.time() - start_time,
             agent_time=agent_time,
         )

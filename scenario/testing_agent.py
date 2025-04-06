@@ -2,6 +2,7 @@
 TestingAgent module: defines the testing agent that interacts with the agent under test.
 """
 
+from copy import deepcopy
 import json
 import logging
 from typing import TYPE_CHECKING, Dict, List, Any, Union, cast
@@ -9,7 +10,7 @@ from typing import TYPE_CHECKING, Dict, List, Any, Union, cast
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
-from scenario.utils import scenario_cache
+from scenario.utils import safe_attr_or_key, scenario_cache
 
 # Fix imports for local modules
 from .result import ScenarioResult
@@ -40,7 +41,10 @@ class TestingAgent:
 
     @scenario_cache(ignore=["scenario"])
     def generate_next_message(
-        self, scenario: "Scenario", conversation: List[Dict[str, Any]], first_message: bool = False
+        self,
+        scenario: "Scenario",
+        conversation: List[Dict[str, Any]],
+        first_message: bool = False,
     ) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
@@ -56,11 +60,11 @@ class TestingAgent:
                 "role": "system",
                 "content": f"""
 <role>
-You are pretending to be a user, you are testing an AI Agent based on a scenario.
+You are pretending to be a user, you are testing an AI Agent (shown as the user role) based on a scenario.
 </role>
 
 <goal>
-Your goal is to interact with the Agent Under Test as if you were a human user to see if it can complete the scenario successfully.
+Your goal (assistant) is to interact with the Agent Under Test (user) as if you were a human user to see if it can complete the scenario successfully.
 </goal>
 
 <scenario>
@@ -81,7 +85,7 @@ Your goal is to interact with the Agent Under Test as if you were a human user t
 
 <execution_flow>
 1. Generate the first message to start the scenario
-2. After the Agent Under Test responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until the test should end
+2. After the Agent Under Test (user) responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until the test should end
 3. If the test should end, use the finish_test tool to determine if success or failure criteria have been met
 </execution_flow>
 
@@ -89,11 +93,34 @@ Your goal is to interact with the Agent Under Test as if you were a human user t
 1. Test should end immediately if a failure criteria is triggered
 2. Test should continue until all success criteria have been met
 3. DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
+4. DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, wait for the user to do it
 </rules>
 """,
             },
-            *conversation
+            {"role": "assistant", "content": "Hello, how can I help you today?"},
+            *conversation,
         ]
+
+        # User to assistant role reversal
+        # LLM models are biased to always be the assistant not the user, so we need to do this reversal otherwise models like GPT 4.5 is
+        # super confused, and Claude 3.7 even starts throwing exceptions.
+        for message in messages:
+            # Can't reverse tool calls
+            if not safe_attr_or_key(message, "content") or safe_attr_or_key(
+                message, "tool_calls"
+            ):
+                continue
+
+            if type(message) == dict:
+                if message["role"] == "user":
+                    message["role"] = "assistant"
+                elif message["role"] == "assistant":
+                    message["role"] = "user"
+            else:
+                if getattr(message, "role", None) == "user":
+                    message.role = "assistant"
+                elif getattr(message, "role", None) == "assistant":
+                    message.role = "user"
 
         # Define the tool
         tools = [
@@ -143,76 +170,73 @@ Your goal is to interact with the Agent Under Test as if you were a human user t
             }
         ]
 
-        try:
-            response = cast(
-                ModelResponse,
-                completion(
-                    model=scenario.config.testing_agent.get("model", "invalid"),
-                    messages=messages,
-                    temperature=scenario.config.testing_agent.get("temperature"),
-                    max_tokens=scenario.config.testing_agent.get("max_tokens"),
-                    tools=tools if not first_message else None,
-                ),
+        response = cast(
+            ModelResponse,
+            completion(
+                model=scenario.config.testing_agent.get("model", "invalid"),
+                messages=messages,
+                temperature=scenario.config.testing_agent.get("temperature"),
+                max_tokens=scenario.config.testing_agent.get("max_tokens"),
+                tools=tools if not first_message else None,
+            ),
+        )
+
+        # Extract the content from the response
+        if hasattr(response, "choices") and len(response.choices) > 0:
+            message = cast(Choices, response.choices[0]).message
+
+            # Check if the LLM chose to use the tool
+            if message.tool_calls:
+                tool_call = message.tool_calls[0]
+                if tool_call.function.name == "finish_test":
+                    # Parse the tool call arguments
+                    try:
+                        args = json.loads(tool_call.function.arguments)
+                        verdict = args.get("verdict", "inconclusive")
+                        reasoning = args.get("reasoning", "No reasoning provided")
+                        details = args.get("details", {})
+
+                        met_criteria = details.get("met_criteria", [])
+                        unmet_criteria = details.get("unmet_criteria", [])
+                        triggered_failures = details.get("triggered_failures", [])
+
+                        # Return the appropriate ScenarioResult based on the verdict
+                        if verdict == "success":
+                            return ScenarioResult.success_result(
+                                conversation=conversation,
+                                reasoning=reasoning,
+                                met_criteria=met_criteria,
+                            )
+                        elif verdict == "failure":
+                            return ScenarioResult.failure_result(
+                                conversation=conversation,
+                                reasoning=reasoning,
+                                met_criteria=met_criteria,
+                                unmet_criteria=unmet_criteria,
+                                triggered_failures=triggered_failures,
+                            )
+                        else:  # inconclusive
+                            return ScenarioResult(
+                                success=False,
+                                conversation=conversation,
+                                reasoning=reasoning,
+                                met_criteria=met_criteria,
+                                unmet_criteria=unmet_criteria,
+                                triggered_failures=triggered_failures,
+                            )
+                    except json.JSONDecodeError:
+                        logger.error("Failed to parse tool call arguments")
+
+            # If no tool call or invalid tool call, use the message content as next message
+            # message_content = message.content
+            # if message_content is None:
+            #     raise Exception(f"No response from LLM: {response.__repr__()}")
+
+            return message.content or "?"
+        else:
+            raise Exception(
+                f"Unexpected response format from LLM: {response.__repr__()}"
             )
-
-            # Extract the content from the response
-            if hasattr(response, "choices") and len(response.choices) > 0:
-                message = cast(Choices, response.choices[0]).message
-
-                # Check if the LLM chose to use the tool
-                if message.tool_calls:
-                    tool_call = message.tool_calls[0]
-                    if tool_call.function.name == "finish_test":
-                        # Parse the tool call arguments
-                        try:
-                            args = json.loads(tool_call.function.arguments)
-                            verdict = args.get("verdict", "inconclusive")
-                            reasoning = args.get("reasoning", "No reasoning provided")
-                            details = args.get("details", {})
-
-                            met_criteria = details.get("met_criteria", [])
-                            unmet_criteria = details.get("unmet_criteria", [])
-                            triggered_failures = details.get("triggered_failures", [])
-
-                            # Return the appropriate ScenarioResult based on the verdict
-                            if verdict == "success":
-                                return ScenarioResult.success_result(
-                                    conversation=conversation,
-                                    met_criteria=met_criteria,
-                                )
-                            elif verdict == "failure":
-                                return ScenarioResult.failure_result(
-                                    conversation=conversation,
-                                    failure_reason=reasoning,
-                                    met_criteria=met_criteria,
-                                    unmet_criteria=unmet_criteria,
-                                    triggered_failures=triggered_failures,
-                                )
-                            else:  # inconclusive
-                                return ScenarioResult(
-                                    success=False,
-                                    conversation=conversation,
-                                    met_criteria=met_criteria,
-                                    unmet_criteria=unmet_criteria,
-                                    triggered_failures=triggered_failures,
-                                )
-                        except json.JSONDecodeError:
-                            logger.error("Failed to parse tool call arguments")
-
-                # If no tool call or invalid tool call, use the message content as next message
-                message_content = message.content
-                if message_content is None:
-                    raise Exception(f"No response from LLM: {response.__repr__()}")
-
-                return message_content
-            else:
-                raise Exception(
-                    f"Unexpected response format from LLM: {response.__repr__()}"
-                )
-        except Exception as e:
-            logger.error(f"Error generating next message: {e}")
-            # Continue the conversation if there's an error
-            return "Let's continue our conversation. Can you tell me more about that?"
 
 
 # Create a default testing agent instance to be used when none is provided
