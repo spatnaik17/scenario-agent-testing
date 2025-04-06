@@ -9,13 +9,11 @@ import pytest
 from dotenv import load_dotenv
 import litellm
 
-from scenario.utils import scenario_cache
-
 load_dotenv()
 
-from scenario import Scenario
+from scenario import Scenario, TestingAgent, scenario_cache
 
-Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
+Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), cache_key="42")
 
 
 @pytest.mark.agent_test

@@ -1,9 +1,9 @@
 import pytest
 
 from examples.lovable_clone.lovable_agent import LovableAgent
-from scenario import Scenario
+from scenario import Scenario, TestingAgent
 
-Scenario.configure(testing_agent={"model": "anthropic/claude-3-5-sonnet-latest"})
+Scenario.configure(testing_agent=TestingAgent(model="anthropic/claude-3-5-sonnet-latest"))
 
 
 @pytest.mark.agent_test

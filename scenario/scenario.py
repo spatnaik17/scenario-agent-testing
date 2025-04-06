@@ -2,15 +2,15 @@
 Scenario module: defines the core Scenario class for agent testing.
 """
 
-from dataclasses import dataclass
 from typing import Awaitable, List, Dict, Any, Optional, Callable, TypedDict, Union
 
-from scenario.config import ScenarioConfig, TestingAgentConfig
+from scenario.config import ScenarioConfig
 from scenario.scenario_executor import ScenarioExecutor
+from scenario.utils import SerializableAndPydanticEncoder, SerializableWithStringFallback
 
 from .result import ScenarioResult
-from .testing_agent import DEFAULT_TESTING_AGENT, TestingAgent
-from .error_messages import default_config_error_message
+from .testing_agent import TestingAgent
+
 from openai.types.chat import ChatCompletionMessageParam
 
 class AgentResult(TypedDict, total=False):
@@ -19,8 +19,7 @@ class AgentResult(TypedDict, total=False):
     extra: Dict[str, Any]
 
 
-@dataclass
-class Scenario:
+class Scenario(ScenarioConfig):
     """
     A scenario represents a specific testing case for an agent.
 
@@ -38,38 +37,31 @@ class Scenario:
         Callable[[str, Optional[Dict[str, Any]]], Awaitable[Dict[str, Any]]],
     ]
     success_criteria: List[str]
-    failure_criteria: List[str]
-    testing_agent: TestingAgent = DEFAULT_TESTING_AGENT
+    failure_criteria: List[str] = []
     strategy: Optional[str] = None
-    max_turns: int = 10
-    config: ScenarioConfig = None  # type: ignore
 
-    def __post_init__(self) -> None:
+    def __init__(self, description: str, **kwargs):
         """Validate scenario configuration after initialization."""
-        if not self.description:
+        if not description:
             raise ValueError("Scenario description cannot be empty")
+        kwargs["description"] = description
 
-        if not self.success_criteria:
+        if not kwargs.get("success_criteria"):
             raise ValueError("Scenario must have at least one success criterion")
 
-        if self.max_turns < 1:
+        if kwargs.get("max_turns", 0) < 1:
             raise ValueError("max_turns must be a positive integer")
 
-        if not self.failure_criteria:
-            self.failure_criteria = []
-
         # Ensure agent is callable
-        if not callable(self.agent):
+        if not callable(kwargs.get("agent")):
             raise ValueError("Agent must be a callable function")
 
-        if self.config is None:
-            if not hasattr(
-                Scenario, "default_config"
-            ) or not Scenario.default_config.testing_agent.get("model"):
-                raise Exception(default_config_error_message)
-            self.config = Scenario.default_config
-        else:
-            self.config = self.config.merge(Scenario.default_config)
+        default_config = getattr(Scenario, "default_config", None)
+        if default_config:
+            kwargs = {**default_config.model_dump(), **kwargs}
+
+        super().__init__(**kwargs)
+
 
     async def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
@@ -87,7 +79,8 @@ class Scenario:
     @classmethod
     def configure(
         cls,
-        testing_agent: Optional[TestingAgentConfig] = None,
+        testing_agent: Optional[TestingAgent] = None,
+        max_turns: Optional[int] = None,
         verbose: Optional[bool] = None,
         cache_key: Optional[str] = None,
     ) -> None:
@@ -95,31 +88,15 @@ class Scenario:
 
         cls.default_config = existing_config.merge(
             ScenarioConfig(
-                testing_agent=testing_agent or {},
+                testing_agent=testing_agent,
+                max_turns=max_turns,
                 verbose=verbose,
                 cache_key=cache_key,
             )
         )
 
-    def copy(self) -> "Scenario":
-        return Scenario(
-            description=self.description,
-            agent=self.agent,
-            success_criteria=self.success_criteria,
-            failure_criteria=self.failure_criteria,
-            testing_agent=self.testing_agent,
-            strategy=self.strategy,
-            max_turns=self.max_turns,
-            config=self.config,
-        )
+    def cache_dict(self) -> Dict[str, Any]:
+        """Convert the scenario to a dictionary representation to form the cache key."""
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert the scenario to a dictionary representation."""
-        return {
-            "description": self.description,
-            "success_criteria": self.success_criteria,
-            "failure_criteria": self.failure_criteria,
-            "strategy": self.strategy,
-            "max_turns": self.max_turns,
-            "config": self.config.model_dump(),
-        }
+        # Everything except the agent
+        return {**self.model_dump(), "agent": None}

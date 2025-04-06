@@ -7,8 +7,9 @@ from .result import ScenarioResult
 from .config import ScenarioConfig
 
 # Then import modules with dependencies
-from .testing_agent import TestingAgent, DEFAULT_TESTING_AGENT
+from .testing_agent import TestingAgent
 from .scenario import Scenario
+from .cache import scenario_cache
 
 # Import pytest plugin components
 from .pytest_plugin import pytest_configure, scenario_reporter
@@ -18,8 +19,8 @@ __all__ = [
     "TestingAgent",
     "ScenarioResult",
     "ScenarioConfig",
-    "DEFAULT_TESTING_AGENT",
     "pytest_configure",
-    "scenario_reporter"
+    "scenario_reporter",
+    "scenario_cache",
 ]
 __version__ = "0.1.0"

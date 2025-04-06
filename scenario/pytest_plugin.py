@@ -3,7 +3,7 @@ Pytest plugin for Scenario testing library.
 """
 
 import pytest
-from typing import Awaitable, Dict, List, Any, Optional, TypedDict
+from typing import TypedDict
 import functools
 from termcolor import colored
 

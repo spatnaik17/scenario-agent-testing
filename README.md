@@ -23,9 +23,9 @@ Now create your first scenario:
 ```python
 import pytest
 
-from scenario import Scenario
+from scenario import Scenario, TestingAgent
 
-Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
+Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 
 
 @pytest.mark.agent_test
@@ -61,7 +61,7 @@ Save it as `tests/test_vegetarian_recipe_agent.py` and run it with pytest:
 pytest -s tests/test_vegetarian_recipe_agent.py
 ```
 
-Once you connect a real agent to it, this is how it will look like:
+Once you connect a real agent on the callback, this is how it will look like:
 
 [![asciicast](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
 

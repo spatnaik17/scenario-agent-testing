@@ -2,32 +2,33 @@
 ScenarioExecutor module: holds the scenario execution logic and state, orchestrating the conversation between the testing agent and the agent under test.
 """
 
-from contextvars import ContextVar
 import json
 from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional
 import time
 import termcolor
 
-from scenario.config import get_cache
 from scenario.error_messages import message_return_error_message
 from scenario.utils import print_openai_messages, safe_attr_or_key, safe_list_at, show_spinner
 from openai.types.chat import ChatCompletionMessageParam
 
 from .result import ScenarioResult
+from .error_messages import default_config_error_message
+from .cache import context_scenario
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
 
-memory = get_cache()
-
-context_scenario = ContextVar("scenario")
 
 
 class ScenarioExecutor:
     def __init__(self, scenario: "Scenario"):
-        self.scenario = scenario.copy()
-        self.config = scenario.config
-        self.testing_agent = scenario.testing_agent
+        self.scenario = scenario.model_copy()
+
+        testing_agent = scenario.testing_agent
+        if not testing_agent or not testing_agent.model:
+            raise Exception(default_config_error_message)
+        self.testing_agent = testing_agent
+
         self.conversation: List[Dict[str, Any]] = []
 
     async def run(
@@ -44,13 +45,13 @@ class ScenarioExecutor:
             ScenarioResult containing the test outcome
         """
 
-        if self.config.verbose:
+        if self.scenario.verbose:
             print("")  # new line
 
         # Run the initial testing agent prompt to get started
         total_start_time = time.time()
         context_scenario.set(self.scenario)
-        with show_spinner(text="User:", color="green", enabled=self.scenario.config.verbose):
+        with show_spinner(text="User:", color="green", enabled=self.scenario.verbose):
             initial_message = self.testing_agent.generate_next_message(
                 self.scenario, self.conversation, first_message=True
             )
@@ -60,12 +61,12 @@ class ScenarioExecutor:
                 "Unexpectedly generated a ScenarioResult for the initial message",
                 initial_message.__repr__(),
             )
-        elif self.scenario.config.verbose:
+        elif self.scenario.verbose:
             print(termcolor.colored("User:", "green"), initial_message)
 
         # Execute the conversation
         current_turn = 0
-        max_turns = self.scenario.max_turns
+        max_turns = self.scenario.max_turns or 10
         agent_time = 0
 
         # Start the test with the initial message
@@ -77,7 +78,7 @@ class ScenarioExecutor:
             start_time = time.time()
 
             context_scenario.set(self.scenario)
-            with show_spinner(text="Agent:", color="blue", enabled=self.scenario.config.verbose):
+            with show_spinner(text="Agent:", color="blue", enabled=self.scenario.verbose):
                 agent_response = self.scenario.agent(initial_message, context)
                 if isinstance(agent_response, Awaitable):
                     agent_response = await agent_response
@@ -108,14 +109,14 @@ class ScenarioExecutor:
                 if safe_attr_or_key(safe_list_at(messages, 0), "role") == "user":
                     messages = messages[1:]
 
-            if has_valid_message and self.scenario.config.verbose:
+            if has_valid_message and self.scenario.verbose:
                 print(termcolor.colored("Agent:", "blue"), agent_response["message"])
 
-            if messages and self.scenario.config.verbose:
+            if messages and self.scenario.verbose:
                 print_openai_messages(messages)
 
             if (
-                self.scenario.config.verbose
+                self.scenario.verbose
                 and "extra" in agent_response
                 and len(agent_response["extra"].keys()) > 0
             ):
@@ -143,7 +144,7 @@ class ScenarioExecutor:
                 )
 
             # Generate the next message OR finish the test based on the agent's evaluation
-            with show_spinner(text="User:", color="green", enabled=self.scenario.config.verbose):
+            with show_spinner(text="User:", color="green", enabled=self.scenario.verbose):
                 result = self.testing_agent.generate_next_message(
                     self.scenario,
                     self.conversation,
@@ -155,7 +156,7 @@ class ScenarioExecutor:
                 result.total_time = time.time() - start_time
                 result.agent_time = agent_time
                 return result
-            elif self.scenario.config.verbose:
+            elif self.scenario.verbose:
                 print(termcolor.colored("User:", "green"), result)
 
             # Otherwise, it's the next message to send to the agent

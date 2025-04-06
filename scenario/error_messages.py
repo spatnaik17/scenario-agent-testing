@@ -5,10 +5,10 @@ default_config_error_message = f"""
 
  {termcolor.colored("->", "cyan")} Please set a default config with at least a testing_agent model for running your scenarios at the top of your test file, for example:
 
-    from scenario import Scenario
+    from scenario import Scenario, TestingAgent
 
-    Scenario.configure(testing_agent={{"model": "openai/gpt-4o-mini"}})
-    {termcolor.colored("^" * 65, "green")}
+    Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
+    {termcolor.colored("^" * 74, "green")}
 
     @pytest.mark.agent_test
     def test_vegetarian_recipe_agent():
@@ -22,14 +22,14 @@ default_config_error_message = f"""
 
  {termcolor.colored("->", "cyan")} Alternatively, you can set the config specifically for this scenario:
 
-    from scenario import Scenario, ScenarioConfig
+    from scenario import Scenario, TestingAgent
 
     @pytest.mark.agent_test
     def test_vegetarian_recipe_agent():
         scenario = Scenario(
             # ...
-            config=ScenarioConfig(testing_agent={{"model": "openai/gpt-4o-mini"}})
-            {termcolor.colored("^" * 68, "green")}
+            testing_agent=TestingAgent(model="openai/gpt-4o-mini")
+            {termcolor.colored("^" * 54, "green")}
         )
         result = scenario.run()
 

@@ -1,8 +1,8 @@
 import pytest
 
-from scenario import Scenario
+from scenario import Scenario, TestingAgent
 
-Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
+Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 
 
 @pytest.mark.agent_test

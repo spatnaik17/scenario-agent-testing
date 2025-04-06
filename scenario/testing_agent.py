@@ -4,25 +4,25 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 
 import json
 import logging
-from typing import TYPE_CHECKING, Dict, List, Any, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Any, Optional, Union, cast
+from pydantic import BaseModel
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
-from scenario.utils import safe_attr_or_key, scenario_cache
+from scenario.cache import scenario_cache
+from scenario.utils import safe_attr_or_key
 
-# Fix imports for local modules
 from .result import ScenarioResult
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
 
 
-# Set up logging
 logger = logging.getLogger("scenario")
 
 
-class TestingAgent:
+class TestingAgent(BaseModel):
     """
     The Testing Agent that interacts with the agent under test.
 
@@ -32,11 +32,10 @@ class TestingAgent:
     3. Determining when to end the test and return a result
     """
 
-    def __init__(self):
-        """
-        Initialize the testing agent.
-        """
-        pass
+    model: str
+    api_key: Optional[str] = None
+    temperature: float = 0.0
+    max_tokens: Optional[int] = None
 
     @scenario_cache(ignore=["scenario"])
     def generate_next_message(
@@ -192,10 +191,10 @@ if you don't have enough information to make a verdict, say inconclusive with ma
         response = cast(
             ModelResponse,
             completion(
-                model=scenario.config.testing_agent.get("model", "invalid"),
+                model=self.model,
                 messages=messages,
-                temperature=scenario.config.testing_agent.get("temperature"),
-                max_tokens=scenario.config.testing_agent.get("max_tokens"),
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
                 tools=tools if not first_message else None,
                 tool_choice="required" if last_message else None,
             ),
@@ -258,6 +257,3 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 f"Unexpected response format from LLM: {response.__repr__()}"
             )
 
-
-# Create a default testing agent instance to be used when none is provided
-DEFAULT_TESTING_AGENT = TestingAgent()
