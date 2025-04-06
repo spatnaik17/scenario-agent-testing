@@ -1,6 +1,6 @@
 from contextlib import contextmanager
 import sys
-from typing import Optional
+from typing import Optional, Union
 from pydantic import BaseModel
 
 import json
@@ -12,6 +12,7 @@ from rich.live import Live
 from rich.spinner import Spinner
 from rich.console import Console
 from rich.text import Text
+from rich.errors import LiveError
 
 
 
@@ -45,14 +46,14 @@ def title_case(string):
     return " ".join(word.capitalize() for word in string.split("_"))
 
 
-def print_openai_messages(messages: list[ChatCompletionMessageParam]):
+def print_openai_messages(scenario_name: str, messages: list[ChatCompletionMessageParam]):
     for msg in messages:
         role = safe_attr_or_key(msg, "role")
         content = safe_attr_or_key(msg, "content")
         if role == "assistant":
             tool_calls = safe_attr_or_key(msg, "tool_calls")
             if content:
-                print(termcolor.colored("Agent:", "blue"), content)
+                print(scenario_name + termcolor.colored("Agent:", "blue"), content)
             if tool_calls:
                 for tool_call in tool_calls:
                     function = safe_attr_or_key(tool_call, "function")
@@ -60,18 +61,18 @@ def print_openai_messages(messages: list[ChatCompletionMessageParam]):
                     args = safe_attr_or_key(function, "arguments", "{}")
                     args = _take_maybe_json_first_lines(args)
                     print(
-                        termcolor.colored(f"ToolCall({name}):", "magenta"),
+                        scenario_name + termcolor.colored(f"ToolCall({name}):", "magenta"),
                         f"\n\n{indent(args, ' ' * 4)}\n",
                     )
         elif role == "tool":
             content = _take_maybe_json_first_lines(content or msg.__repr__())
             print(
-                termcolor.colored(f"ToolResult:", "magenta"),
+                scenario_name + termcolor.colored(f"ToolResult:", "magenta"),
                 f"\n\n{indent(content, ' ' * 4)}\n",
             )
         else:
             print(
-                termcolor.colored(f"{title_case(role)}:", "magenta"),
+                scenario_name + termcolor.colored(f"{title_case(role)}:", "magenta"),
                 msg.__repr__(),
             )
 
@@ -104,12 +105,17 @@ class TextFirstSpinner(Spinner):
 
 
 @contextmanager
-def show_spinner(text: str, color: str = "white", enabled: Optional[bool] = None):
+def show_spinner(text: str, color: str = "white", enabled: Optional[Union[bool, int]] = None):
     if not enabled:
         yield
     else:
         spinner = TextFirstSpinner("dots", text, color=color)
-        with Live(spinner, console=console, refresh_per_second=20):
+        try:
+            with Live(spinner, console=console, refresh_per_second=20):
+                yield
+        # It happens when we are multi-threading, it's fine, just ignore it, you probably don't want multiple spinners at once anyway
+        except LiveError:
             yield
+
         # Cursor up one line
         sys.stdout.write("\033[F")

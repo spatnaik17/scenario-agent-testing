@@ -54,4 +54,5 @@ markers = [
 [dependency-groups]
 dev = [
     "pydantic-ai>=0.0.52",
+    "pytest-asyncio-concurrent>=0.4.1",
 ]

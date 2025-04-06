@@ -3,6 +3,9 @@ Scenario module: defines the core Scenario class for agent testing.
 """
 
 from typing import Awaitable, List, Dict, Any, Optional, Callable, TypedDict, Union
+import asyncio
+import concurrent.futures
+from functools import partial
 
 from scenario.config import ScenarioConfig
 from scenario.scenario_executor import ScenarioExecutor
@@ -72,15 +75,34 @@ class Scenario(ScenarioConfig):
         Returns:
             ScenarioResult containing the test outcome
         """
-        # Run the scenario using the testing agent
-        return await ScenarioExecutor(self).run(context)
+
+        # We'll use a thread pool to run the execution logic, we
+        # require a separate thread because even though asyncio is
+        # being used throughout, any user code on the callback can
+        # be blocking, preventing them from running scenarios in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            def run_in_thread():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                try:
+                    return loop.run_until_complete(ScenarioExecutor(self).run(context))
+                finally:
+                    loop.close()
+
+            # Run the function in the thread pool and await its result
+            # This converts the thread's execution into a Future that the current
+            # event loop can await without blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(executor, run_in_thread)
+            return result
 
     @classmethod
     def configure(
         cls,
         testing_agent: Optional[TestingAgent] = None,
         max_turns: Optional[int] = None,
-        verbose: Optional[bool] = None,
+        verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,
     ) -> None:
         existing_config = getattr(cls, "default_config", ScenarioConfig())

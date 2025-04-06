@@ -2,7 +2,7 @@
 Configuration module for Scenario.
 """
 
-from typing import Optional
+from typing import Optional, Union
 from pydantic import BaseModel
 
 from scenario.testing_agent import TestingAgent
@@ -17,7 +17,7 @@ class ScenarioConfig(BaseModel):
 
     testing_agent: Optional[TestingAgent] = None
     max_turns: Optional[int] = 10
-    verbose: Optional[bool] = True
+    verbose: Optional[Union[bool, int]] = True
     cache_key: Optional[str] = None
     debug: Optional[bool] = False
 

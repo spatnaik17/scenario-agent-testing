@@ -61,7 +61,7 @@ Save it as `tests/test_vegetarian_recipe_agent.py` and run it with pytest:
 pytest -s tests/test_vegetarian_recipe_agent.py
 ```
 
-Once you connect a real agent on the callback, this is how it will look like:
+Once you connect to callback to a real agent, this is how it will look like:
 
 [![asciicast](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
 
@@ -101,7 +101,7 @@ You can find a fully working Lovable Clone example in [examples/test_lovable_clo
 
 You can enable debug mode by setting the `debug` field to `True` in the `Scenario.configure` method or in the specific scenario you are running.
 
-Debug mode allow you to see the messages in slow motion step by step, and intervene with your own inputs to debug your agent from the middle of the conversation.
+Debug mode allows you to see the messages in slow motion step by step, and intervene with your own inputs to debug your agent from the middle of the conversation.
 
 ```python
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), debug=True)
@@ -109,7 +109,7 @@ Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), debug
 
 ## Cache
 
-Each time the scenario runs, the testing agent might chose a different input to start, this is good to make sure it covers the variance real users as well, however we understand the non-deterministic nature of it might make it less repeatable, costly and harder to debug. To solve for that, you can use the `cache_key` field in the `Scenario.configure` method or in the specific scenario you are running, this will make the testing agent give the same input for given the same scenario:
+Each time the scenario runs, the testing agent might chose a different input to start, this is good to make sure it covers the variance of real users as well, however we understand that the non-deterministic nature of it might make it less repeatable, costly and harder to debug. To solve for it, you can use the `cache_key` field in the `Scenario.configure` method or in the specific scenario you are running, this will make the testing agent give the same input for given the same scenario:
 
 ```python
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), cache_key="42")
@@ -117,7 +117,7 @@ Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), cache
 
 To bust the cache, you can simply pass a different `cache_key`, disable it, or delete the cache files located at `~/.scenario/cache`.
 
-To fully cache the test, however, you also need to wrap the LLM calls on your application side with the `@scenario_cache` decorator:
+To go a step further and fully cache the test end-to-end, you can also wrap the LLM calls or any other non-deterministic functions in your application side with the `@scenario_cache` decorator:
 
 ```python
 class MyAgent:
@@ -128,11 +128,31 @@ class MyAgent:
         )
 ```
 
-This will cache any function call you decorate when running the tests, hashed by the function arguments, the scenario being executed, and the `cache_key` you provided. You can exclude arguments that should not be hashed for the cache key by naming them in the `ignore` argument.
+This will cache any function call you decorate when running the tests and make them repeatable, hashed by the function arguments, the scenario being executed, and the `cache_key` you provided. You can exclude arguments that should not be hashed for the cache key by naming them in the `ignore` argument.
 
 ## Disable Output
 
-You can remove the `-s` flag from pytest to hide the output of the scenario testing, which will only show up if the test fails. Alternatively, you can set `verbose=False` in the `Scenario.configure` method or in the specific scenario you are running.
+You can remove the `-s` flag from pytest to hide the output during test, which will only show up if the test fails. Alternatively, you can set `verbose=False` in the `Scenario.configure` method or in the specific scenario you are running.
+
+## Running in parallel
+
+As the number of your scenarios grows, you might want to run them in parallel to speed up your whole test suite. We suggest you to use the [pytest-asyncio-concurrent](https://pypi.org/project/pytest-asyncio-concurrent/) plugin to do so.
+
+Simply install the plugin from the link above, then replace the `@pytest.mark.asyncio` annotation in the tests with `@pytest.mark.asyncio_concurrent`, adding a group name to it to mark the group of scenarions that should be run in parallel together, e.g.:
+
+```python
+@pytest.mark.agent_test
+@pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
+async def test_vegetarian_recipe_agent():
+    # ...
+
+@pytest.mark.agent_test
+@pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
+async def test_user_is_very_hungry():
+    # ...
+```
+
+Those two scenarios should now run in parallel.
 
 ## License
 

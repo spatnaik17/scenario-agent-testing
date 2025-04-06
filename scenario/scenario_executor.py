@@ -62,7 +62,7 @@ class ScenarioExecutor:
                 initial_message.__repr__(),
             )
         elif self.scenario.verbose:
-            print(termcolor.colored("User:", "green"), initial_message)
+            print(self._scenario_name() + termcolor.colored("User:", "green"), initial_message)
 
         # Execute the conversation
         current_turn = 0
@@ -110,10 +110,10 @@ class ScenarioExecutor:
                     messages = messages[1:]
 
             if has_valid_message and self.scenario.verbose:
-                print(termcolor.colored("Agent:", "blue"), agent_response["message"])
+                print(self._scenario_name(), termcolor.colored("Agent:", "blue"), agent_response["message"])
 
             if messages and self.scenario.verbose:
-                print_openai_messages(messages)
+                print_openai_messages(self._scenario_name(), messages)
 
             if (
                 self.scenario.verbose
@@ -156,7 +156,7 @@ class ScenarioExecutor:
                 result.agent_time = agent_time
                 return result
             elif self.scenario.verbose:
-                print(termcolor.colored("User:", "green"), result)
+                print(self._scenario_name() + termcolor.colored("User:", "green"), result)
 
             # Otherwise, it's the next message to send to the agent
             initial_message = result
@@ -180,8 +180,8 @@ class ScenarioExecutor:
         last_message: bool = False,
     ) -> Union[str, ScenarioResult]:
         if self.scenario.debug:
-            print(f"\n{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send")
-            input_message = input(termcolor.colored('User: ', 'green'))
+            print(f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send")
+            input_message = input(self._scenario_name() + termcolor.colored('User: ', 'green'))
 
             # Clear the input prompt lines completely
             for _ in range(3):
@@ -192,7 +192,13 @@ class ScenarioExecutor:
             if input_message:
                 return input_message
 
-        with show_spinner(text="User:", color="green", enabled=self.scenario.verbose):
+        with show_spinner(text=f"{self._scenario_name()}User:", color="green", enabled=self.scenario.verbose):
             return self.testing_agent.generate_next_message(
                 scenario, conversation, first_message, last_message
             )
+
+    def _scenario_name(self):
+        if self.scenario.verbose == 2:
+            return termcolor.colored(f"[Scenario: {self.scenario.description}] ", "yellow")
+        else:
+            return ""

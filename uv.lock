@@ -2270,6 +2270,18 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-asyncio-concurrent"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dd/26/cedff50a632e0347dbbab86c78688c1afb8f5eb4238fd527e66054acf1f8/pytest_asyncio_concurrent-0.4.1.tar.gz", hash = "sha256:8e359988f616dc9a545c4a16b30024defab2380af6074c857533371a8dfdf20b", size = 17104 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/f5/513b2ad3777d9661b9323caa460d8c9feef0986d914180ab1156d6fb19e1/pytest_asyncio_concurrent-0.4.1-py3-none-any.whl", hash = "sha256:eff5fe785319d34f53d25df21e44a31be451cb8590c20ffa81444dc1ef427a29", size = 13675 },
+]
+
+[[package]]
 name = "pytest-cov"
 version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -2780,6 +2792,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "pydantic-ai" },
+    { name = "pytest-asyncio-concurrent" },
 ]
 
 [package.metadata]
@@ -2800,7 +2813,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pydantic-ai", specifier = ">=0.0.52" }]
+dev = [
+    { name = "pydantic-ai", specifier = ">=0.0.52" },
+    { name = "pytest-asyncio-concurrent", specifier = ">=0.4.1" },
+]
 
 [[package]]
 name = "six"
