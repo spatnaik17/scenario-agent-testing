@@ -46,7 +46,7 @@ def scenario_cache(ignore=[]):
         cache_key = json.dumps(
             {
                 "cache_key": scenario.cache_key,
-                "scenario": scenario.cache_dict(),
+                "scenario": scenario.model_dump(exclude={"agent"}),
                 "all_args": all_args,
             },
             cls=SerializableWithStringFallback,

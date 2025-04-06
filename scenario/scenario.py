@@ -6,7 +6,6 @@ from typing import Awaitable, List, Dict, Any, Optional, Callable, TypedDict, Un
 
 from scenario.config import ScenarioConfig
 from scenario.scenario_executor import ScenarioExecutor
-from scenario.utils import SerializableAndPydanticEncoder, SerializableWithStringFallback
 
 from .result import ScenarioResult
 from .testing_agent import TestingAgent
@@ -94,9 +93,3 @@ class Scenario(ScenarioConfig):
                 cache_key=cache_key,
             )
         )
-
-    def cache_dict(self) -> Dict[str, Any]:
-        """Convert the scenario to a dictionary representation to form the cache key."""
-
-        # Everything except the agent
-        return {**self.model_dump(), "agent": None}

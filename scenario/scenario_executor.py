@@ -3,7 +3,8 @@ ScenarioExecutor module: holds the scenario execution logic and state, orchestra
 """
 
 import json
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional
+import sys
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional, Union
 import time
 import termcolor
 
@@ -51,10 +52,9 @@ class ScenarioExecutor:
         # Run the initial testing agent prompt to get started
         total_start_time = time.time()
         context_scenario.set(self.scenario)
-        with show_spinner(text="User:", color="green", enabled=self.scenario.verbose):
-            initial_message = self.testing_agent.generate_next_message(
-                self.scenario, self.conversation, first_message=True
-            )
+        initial_message = self._generate_next_message(
+            self.scenario, self.conversation, first_message=True
+        )
 
         if isinstance(initial_message, ScenarioResult):
             raise Exception(
@@ -144,12 +144,11 @@ class ScenarioExecutor:
                 )
 
             # Generate the next message OR finish the test based on the agent's evaluation
-            with show_spinner(text="User:", color="green", enabled=self.scenario.verbose):
-                result = self.testing_agent.generate_next_message(
-                    self.scenario,
-                    self.conversation,
-                    last_message=current_turn == max_turns - 1,
-                )
+            result = self._generate_next_message(
+                self.scenario,
+                self.conversation,
+                last_message=current_turn == max_turns - 1,
+            )
 
             # Check if the result is a ScenarioResult (indicating test completion)
             if isinstance(result, ScenarioResult):
@@ -172,3 +171,28 @@ class ScenarioExecutor:
             total_time=time.time() - total_start_time,
             agent_time=agent_time,
         )
+
+    def _generate_next_message(
+        self,
+        scenario: "Scenario",
+        conversation: List[Dict[str, Any]],
+        first_message: bool = False,
+        last_message: bool = False,
+    ) -> Union[str, ScenarioResult]:
+        if self.scenario.debug:
+            print(f"\n{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send")
+            input_message = input(termcolor.colored('User: ', 'green'))
+
+            # Clear the input prompt lines completely
+            for _ in range(3):
+                sys.stdout.write("\033[F")  # Move up to the input line
+                sys.stdout.write("\033[2K")  # Clear the entire input line
+            sys.stdout.flush()  # Make sure the clearing is visible
+
+            if input_message:
+                return input_message
+
+        with show_spinner(text="User:", color="green", enabled=self.scenario.verbose):
+            return self.testing_agent.generate_next_message(
+                scenario, conversation, first_message, last_message
+            )

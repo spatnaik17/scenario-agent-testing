@@ -13,7 +13,7 @@ load_dotenv()
 
 from scenario import Scenario, TestingAgent, scenario_cache
 
-Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), cache_key="42")
+Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 
 
 @pytest.mark.agent_test

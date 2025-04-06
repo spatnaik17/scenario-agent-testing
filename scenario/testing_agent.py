@@ -37,6 +37,9 @@ class TestingAgent(BaseModel):
     temperature: float = 0.0
     max_tokens: Optional[int] = None
 
+    # To prevent pytest from thinking this is actually a test class
+    __test__ = False
+
     @scenario_cache(ignore=["scenario"])
     def generate_next_message(
         self,
