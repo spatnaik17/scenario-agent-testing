@@ -61,6 +61,12 @@ Save it as `tests/test_vegetarian_recipe_agent.py` and run it with pytest:
 pytest -s tests/test_vegetarian_recipe_agent.py
 ```
 
+Once you connect a real agent to it, this is how it will look like:
+
+[![asciicast](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
+
+You can find a fully working example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
+
 ## License
 
 MIT License
