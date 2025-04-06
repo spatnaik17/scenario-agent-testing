@@ -13,7 +13,6 @@ from .testing_agent import DEFAULT_TESTING_AGENT, TestingAgent
 from .error_messages import default_config_error_message
 from openai.types.chat import ChatCompletionMessageParam
 
-
 class AgentResult(TypedDict, total=False):
     message: str
     messages: List[ChatCompletionMessageParam]

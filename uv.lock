@@ -2764,6 +2764,7 @@ dependencies = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "python-dotenv" },
+    { name = "rich" },
     { name = "termcolor" },
     { name = "wrapt" },
 ]
@@ -2793,6 +2794,7 @@ requires-dist = [
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "rich", specifier = ">=14.0.0" },
     { name = "termcolor", specifier = ">=2.4.0" },
     { name = "wrapt", specifier = ">=1.17.2" },
 ]

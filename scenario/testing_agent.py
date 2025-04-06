@@ -86,7 +86,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 
 <execution_flow>
 1. Generate the first message to start the scenario
-2. After the Agent Under Test (user) responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until the test should end
+2. After the Agent Under Test (user) responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until criterias match
 3. If the test should end, use the finish_test tool to determine if success or failure criteria have been met
 </execution_flow>
 
@@ -145,6 +145,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 "function": {
                     "name": "finish_test",
                     "description": "Complete the test with a final verdict",
+                    "strict": True,
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -176,11 +177,13 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                                         "description": "List of failure criteria that have been triggered",
                                     },
                                 },
-                                "required": ["met_criteria"],
+                                "required": ["met_criteria", "unmet_criteria", "triggered_failures"],
+                                "additionalProperties": False,
                                 "description": "Detailed information about criteria evaluation",
                             },
                         },
-                        "required": ["verdict", "reasoning"],
+                        "required": ["verdict", "reasoning", "details"],
+                        "additionalProperties": False,
                     },
                 },
             }

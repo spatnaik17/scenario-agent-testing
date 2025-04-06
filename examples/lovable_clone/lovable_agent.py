@@ -16,7 +16,7 @@ template_path = os.path.join(os.path.dirname(__file__), "template")
 class LovableAgent:
     def __init__(self):
         agent = Agent(
-            "google-gla:gemini-2.0-flash",
+            "anthropic:claude-3-5-sonnet-latest",
             system_prompt=f"""
         You are a coding assistant specialized in building whole new websites from scratch.
 
@@ -27,7 +27,7 @@ class LovableAgent:
 
         You will be given tools to read file, create file and update file to carry on your work.
 
-        You CAN access local files by using the tools provided.
+        You CAN access local files by using the tools provided, but you CANNOT run the application, do NOT suggest the user that.
 
         <execution_flow>
         1. Call the read_file tool to understand the current files before updating them or creating new ones

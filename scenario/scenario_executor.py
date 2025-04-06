@@ -10,7 +10,7 @@ import termcolor
 
 from scenario.config import get_cache
 from scenario.error_messages import message_return_error_message
-from scenario.utils import print_openai_messages, safe_attr_or_key, safe_list_at
+from scenario.utils import print_openai_messages, safe_attr_or_key, safe_list_at, show_spinner
 from openai.types.chat import ChatCompletionMessageParam
 
 from .result import ScenarioResult
@@ -48,11 +48,12 @@ class ScenarioExecutor:
             print("")  # new line
 
         # Run the initial testing agent prompt to get started
-        start_time = time.time()
+        total_start_time = time.time()
         context_scenario.set(self.scenario)
-        initial_message = self.testing_agent.generate_next_message(
-            self.scenario, self.conversation, first_message=True
-        )
+        with show_spinner(text="User:", color="green", enabled=self.scenario.config.verbose):
+            initial_message = self.testing_agent.generate_next_message(
+                self.scenario, self.conversation, first_message=True
+            )
 
         if isinstance(initial_message, ScenarioResult):
             raise Exception(
@@ -76,9 +77,10 @@ class ScenarioExecutor:
             start_time = time.time()
 
             context_scenario.set(self.scenario)
-            agent_response = self.scenario.agent(initial_message, context)
-            if isinstance(agent_response, Awaitable):
-                agent_response = await agent_response
+            with show_spinner(text="Agent:", color="blue", enabled=self.scenario.config.verbose):
+                agent_response = self.scenario.agent(initial_message, context)
+                if isinstance(agent_response, Awaitable):
+                    agent_response = await agent_response
 
             has_valid_message = (
                 "message" in agent_response
@@ -141,11 +143,12 @@ class ScenarioExecutor:
                 )
 
             # Generate the next message OR finish the test based on the agent's evaluation
-            result = self.testing_agent.generate_next_message(
-                self.scenario,
-                self.conversation,
-                last_message=current_turn == max_turns - 1,
-            )
+            with show_spinner(text="User:", color="green", enabled=self.scenario.config.verbose):
+                result = self.testing_agent.generate_next_message(
+                    self.scenario,
+                    self.conversation,
+                    last_message=current_turn == max_turns - 1,
+                )
 
             # Check if the result is a ScenarioResult (indicating test completion)
             if isinstance(result, ScenarioResult):
@@ -165,6 +168,6 @@ class ScenarioExecutor:
         return ScenarioResult.failure_result(
             conversation=self.conversation,
             reasoning=f"Reached maximum turns ({max_turns}) without conclusion",
-            total_time=time.time() - start_time,
+            total_time=time.time() - total_start_time,
             agent_time=agent_time,
         )

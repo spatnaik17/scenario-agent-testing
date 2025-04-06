@@ -3,7 +3,7 @@ import pytest
 from examples.lovable_clone.lovable_agent import LovableAgent
 from scenario import Scenario
 
-Scenario.configure(testing_agent={"model": "openai/gpt-4o-mini"})
+Scenario.configure(testing_agent={"model": "anthropic/claude-3-5-sonnet-latest"})
 
 
 @pytest.mark.agent_test
@@ -25,9 +25,10 @@ async def test_lovable_clone():
         strategy="send the first message to generate the landing page, then a single follow up request to extend it, then give your final verdict",
         success_criteria=[
             "agent reads the files before go and making changes",
-            "agent modifies index.css file",
-            "agent modifies App.tsx file",
-            "agent creates a comprehensive landing page",
+            "agent modified the index.css file",
+            "agent modified the Index.tsx file",
+            "agent created a comprehensive landing page",
+            "agent extended the landing page with a new section",
         ],
         failure_criteria=[
             "agent says it can't read the file",

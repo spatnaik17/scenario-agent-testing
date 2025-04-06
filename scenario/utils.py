@@ -1,5 +1,7 @@
+from contextlib import contextmanager
 import inspect
-from typing import Callable, TYPE_CHECKING
+import sys
+from typing import Callable, TYPE_CHECKING, Optional
 from pydantic import BaseModel
 
 import json
@@ -9,6 +11,11 @@ import wrapt
 import termcolor
 from textwrap import indent
 from openai.types.chat import ChatCompletionMessageParam
+from rich.live import Live
+from rich.spinner import Spinner
+from rich.console import Console
+from rich.layout import Layout
+from rich.text import Text
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
@@ -127,3 +134,30 @@ def _take_maybe_json_first_lines(string, max_lines=5):
     if len(content) > max_lines:
         content = content[:max_lines] + ["..."]
     return "\n".join(content)
+
+
+console = Console()
+
+class TextFirstSpinner(Spinner):
+    def __init__(self, name, text: str, color: str, **kwargs):
+        super().__init__(name, "", style="bold white", **kwargs)  # Initialize with empty text
+        self.text_before = text
+        self.color = color
+
+    def render(self, time):
+        # Get the original spinner frame
+        spinner_frame = super().render(time)
+        # Create a composite with text first, then spinner
+        return Text(f"{self.text_before} ", style=self.color) + spinner_frame
+
+
+@contextmanager
+def show_spinner(text: str, color: str = "white", enabled: Optional[bool] = None):
+    if not enabled:
+        yield
+    else:
+        spinner = TextFirstSpinner("dots", text, color=color)
+        with Live(spinner, console=console, refresh_per_second=20):
+            yield
+        # Cursor up one line
+        sys.stdout.write("\033[F")
