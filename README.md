@@ -15,7 +15,7 @@ You define the scenarios, and the testing agent will simulate your users as it f
 Install pytest and scenario:
 
 ```bash
-pip install pytest scenario-testing
+pip install pytest langwatch-scenario
 ```
 
 Now create your first scenario:
