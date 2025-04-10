@@ -1,4 +1,4 @@
-![scenario](./assets/scenario-wide.webp)
+![scenario](https://github.com/langwatch/scenario/raw/main/assets/scenario-wide.webp)
 
 <div align="center">
 <!-- Discord, PyPI, Docs, etc links -->
