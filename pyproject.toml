@@ -3,12 +3,12 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "scenario"
+name = "langwatch-scenario"
 version = "0.1.0"
-description = "A testing library for conversational agents"
+description = "The end-to-end agent testing library"
 readme = "README.md"
 authors = [
-    {name = "Scenario Team", email = "info@scenario.dev"}
+    {name = "LangWatch Team", email = "support@langwatch.ai"}
 ]
 license = {text = "MIT"}
 requires-python = ">=3.9"
@@ -23,11 +23,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "pytest>=8.3.5",
-    "litellm>=1.65.3",
+    "pytest>=8.1.1",
+    "litellm>=1.49.0",
     "python-dotenv>=1.0.1",
     "termcolor>=2.4.0",
-    "pydantic>=2.10.6",
+    "pydantic>=2.7.0",
     "joblib>=1.4.2",
     "wrapt>=1.17.2",
     "pytest-asyncio>=0.26.0",
@@ -43,8 +43,8 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/scenario-testing/scenario"
-"Bug Tracker" = "https://github.com/scenario-testing/scenario/issues"
+"Homepage" = "https://github.com/langwatch/scenario"
+"Bug Tracker" = "https://github.com/langwatch/scenario/issues"
 
 [tool.pytest.ini_options]
 markers = [
