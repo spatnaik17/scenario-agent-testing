@@ -44,6 +44,11 @@ class Scenario(ScenarioConfig):
 
     def __init__(self, description: str, **kwargs):
         """Validate scenario configuration after initialization."""
+
+        default_config = getattr(Scenario, "default_config", None)
+        if default_config:
+            kwargs = {**default_config.model_dump(), **kwargs}
+
         if not description:
             raise ValueError("Scenario description cannot be empty")
         kwargs["description"] = description
@@ -57,10 +62,6 @@ class Scenario(ScenarioConfig):
         # Ensure agent is callable
         if not callable(kwargs.get("agent")):
             raise ValueError("Agent must be a callable function")
-
-        default_config = getattr(Scenario, "default_config", None)
-        if default_config:
-            kwargs = {**default_config.model_dump(), **kwargs}
 
         super().__init__(**kwargs)
 
