@@ -18,12 +18,12 @@ Install pytest and scenario:
 pip install pytest langwatch-scenario
 ```
 
-Now create your first scenario:
+Now create your first scenario and save it as `tests/test_vegetarian_recipe_agent.py`:
 
 ```python
 import pytest
 
-from scenario import Scenario, TestingAgent
+from scenario import Scenario, TestingAgent, scenario_cache
 
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 
@@ -31,37 +31,78 @@ Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_vegetarian_recipe_agent():
+    agent = VegetarianRecipeAgent()
+
     def vegetarian_recipe_agent(message, context):
         # Call your agent here
-        response = "<Your agent's response>"
+        return agent.run(message)
 
-        return {"message": response}
-
+    # Define the scenario
     scenario = Scenario(
         "User is looking for a dinner idea",
         agent=vegetarian_recipe_agent,
         success_criteria=[
             "Recipe agent generates a vegetarian recipe",
+            "Recipe includes a list of ingredients",
             "Recipe includes step-by-step cooking instructions",
         ],
         failure_criteria=[
-            "The recipe includes meat",
+            "The recipe is not vegetarian or includes meat",
             "The agent asks more than two follow-up questions",
         ],
     )
 
+    # Run the scenario and get results
     result = await scenario.run()
 
+    # Assert for pytest to know whether the test passed
     assert result.success
+
+
+# Example agent implementation
+import litellm
+
+
+class VegetarianRecipeAgent:
+    def __init__(self):
+        self.history = []
+
+    @scenario_cache()
+    def run(self, message: str):
+        self.history.append({"role": "user", "content": message})
+
+        response = litellm.completion(
+            model="openai/gpt-4o-mini",
+            messages=[
+                {
+                    "role": "system",
+                    "content": """You are a vegetarian recipe agent.
+                    Given the user request, ask AT MOST ONE follow-up question,
+                    then provide a complete recipe. Keep your responses concise and focused.""",
+                },
+                *self.history,
+            ],
+        )
+        message = response.choices[0].message  # type: ignore
+        self.history.append(message)
+
+        return {"messages": [message]}
+
 ```
 
-Save it as `tests/test_vegetarian_recipe_agent.py` and run it with pytest:
+Create a `.env` file and put your OpenAI API key in it:
+
+```bash
+OPENAI_API_KEY=<your-api-key>
+```
+
+Now run it with pytest:
 
 ```bash
 pytest -s tests/test_vegetarian_recipe_agent.py
 ```
 
-Once you connect to callback to a real agent, this is how it will look like:
+This is how it will look like:
 
 [![asciicast](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
 
