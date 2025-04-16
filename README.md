@@ -10,7 +10,7 @@ Scenario is a library for testing agents end-to-end as a human would, but withou
 
 You define the scenarios, and the testing agent will simulate your users as it follows them, it will keep chatting and evaluating your agent until it reaches the desired goal or detects an unexpected behavior.
 
-[📺 Video](https://www.youtube.com/watch?v=f8NLpkY0Av4)
+[📺 Video Tutorial](https://www.youtube.com/watch?v=f8NLpkY0Av4)
 
 ## Getting Started
 
