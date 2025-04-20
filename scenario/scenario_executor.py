@@ -52,17 +52,17 @@ class ScenarioExecutor:
         # Run the initial testing agent prompt to get started
         total_start_time = time.time()
         context_scenario.set(self.scenario)
-        initial_message = self._generate_next_message(
+        next_message = self._generate_next_message(
             self.scenario, self.conversation, first_message=True
         )
 
-        if isinstance(initial_message, ScenarioResult):
+        if isinstance(next_message, ScenarioResult):
             raise Exception(
                 "Unexpectedly generated a ScenarioResult for the initial message",
-                initial_message.__repr__(),
+                next_message.__repr__(),
             )
         elif self.scenario.verbose:
-            print(self._scenario_name() + termcolor.colored("User:", "green"), initial_message)
+            print(self._scenario_name() + termcolor.colored("User:", "green"), next_message)
 
         # Execute the conversation
         current_turn = 0
@@ -72,14 +72,14 @@ class ScenarioExecutor:
         # Start the test with the initial message
         while current_turn < max_turns:
             # Record the testing agent's message
-            self.conversation.append({"role": "user", "content": initial_message})
+            self.conversation.append({"role": "user", "content": next_message})
 
             # Get response from the agent under test
             start_time = time.time()
 
             context_scenario.set(self.scenario)
             with show_spinner(text="Agent:", color="blue", enabled=self.scenario.verbose):
-                agent_response = self.scenario.agent(initial_message, context)
+                agent_response = self.scenario.agent(next_message, context)
                 if isinstance(agent_response, Awaitable):
                     agent_response = await agent_response
 
@@ -97,10 +97,10 @@ class ScenarioExecutor:
                 )
             )
             if not has_valid_message and not has_valid_messages:
-                raise Exception(message_return_error_message)
+                raise Exception(message_return_error_message(agent_response))
 
             messages: list[ChatCompletionMessageParam] = []
-            if has_valid_messages:
+            if has_valid_messages and len(agent_response["messages"]) > 0:
                 messages = agent_response["messages"]
 
                 # Drop the first messages both if they are system or user messages
@@ -110,7 +110,7 @@ class ScenarioExecutor:
                     messages = messages[1:]
 
             if has_valid_message and self.scenario.verbose:
-                print(self._scenario_name(), termcolor.colored("Agent:", "blue"), agent_response["message"])
+                print(self._scenario_name() + termcolor.colored("Agent:", "blue"), agent_response["message"])
 
             if messages and self.scenario.verbose:
                 print_openai_messages(self._scenario_name(), messages)
@@ -159,7 +159,7 @@ class ScenarioExecutor:
                 print(self._scenario_name() + termcolor.colored("User:", "green"), result)
 
             # Otherwise, it's the next message to send to the agent
-            initial_message = result
+            next_message = result
 
             # Increment turn counter
             current_turn += 1

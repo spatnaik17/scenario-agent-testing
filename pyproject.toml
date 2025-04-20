@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "langwatch-scenario"
-version = "0.1.1"
+version = "0.1.2"
 description = "The end-to-end agent testing library"
 readme = "README.md"
 authors = [
@@ -31,7 +31,7 @@ dependencies = [
     "joblib>=1.4.2",
     "wrapt>=1.17.2",
     "pytest-asyncio>=0.26.0",
-    "rich>=14.0.0",
+    "rich>=13.3.3,<15.0.0",
 ]
 
 [project.optional-dependencies]

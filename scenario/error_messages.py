@@ -1,3 +1,5 @@
+from textwrap import indent
+from typing import Any
 import termcolor
 
 
@@ -37,9 +39,17 @@ default_config_error_message = f"""
                           """
 
 
-message_return_error_message = f"""
+def message_return_error_message(got: Any):
+    got_ = got.__repr__()
+    if len(got_) > 100:
+        got_ = got_[:100] + "..."
 
- {termcolor.colored("->", "cyan")} Your agent should return a dict with either a "message" string key or a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
+    return f"""
+ {termcolor.colored("->", "cyan")} Your agent returned:
+
+{indent(got_, ' ' * 4)}
+
+ {termcolor.colored("->", "cyan")} But your agent should return a dict with either a "message" string key or a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
 
     def my_agent_under_test(message, context):
         response = call_my_agent(message)

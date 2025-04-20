@@ -249,9 +249,12 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                     except json.JSONDecodeError:
                         logger.error("Failed to parse tool call arguments")
 
-            # If no tool call or invalid tool call, use the message content as next message
+            # If no tool call use the message content as next message
             message_content = message.content
             if message_content is None:
+                # If invalid tool call, raise an error
+                if message.tool_calls:
+                    raise Exception(f"Invalid tool call from testing agent: {message.tool_calls.__repr__()}")
                 raise Exception(f"No response from LLM: {response.__repr__()}")
 
             return message_content
