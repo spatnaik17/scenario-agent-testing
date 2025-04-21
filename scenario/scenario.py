@@ -105,6 +105,7 @@ class Scenario(ScenarioConfig):
         max_turns: Optional[int] = None,
         verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
     ) -> None:
         existing_config = getattr(cls, "default_config", ScenarioConfig())
 
@@ -114,5 +115,6 @@ class Scenario(ScenarioConfig):
                 max_turns=max_turns,
                 verbose=verbose,
                 cache_key=cache_key,
+                debug=debug,
             )
         )

@@ -142,12 +142,18 @@ You can find a fully working Lovable Clone example in [examples/test_lovable_clo
 
 ## Debug mode
 
-You can enable debug mode by setting the `debug` field to `True` in the `Scenario.configure` method or in the specific scenario you are running.
+You can enable debug mode by setting the `debug` field to `True` in the `Scenario.configure` method or in the specific scenario you are running, or by passing the `--debug` flag to pytest.
 
 Debug mode allows you to see the messages in slow motion step by step, and intervene with your own inputs to debug your agent from the middle of the conversation.
 
 ```python
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), debug=True)
+```
+
+or
+
+```bash
+pytest -s tests/test_vegetarian_recipe_agent.py --debug
 ```
 
 ## Cache

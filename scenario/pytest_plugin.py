@@ -11,14 +11,16 @@ from scenario.result import ScenarioResult
 
 from .scenario import Scenario
 
+
 class ScenarioReporterResults(TypedDict):
     scenario: Scenario
     result: ScenarioResult
 
+
 # ScenarioReporter class definition moved outside the fixture for global use
 class ScenarioReporter:
     def __init__(self):
-        self.results : list[ScenarioReporterResults] = []
+        self.results: list[ScenarioReporterResults] = []
 
     def add_result(self, scenario, result):
         """Add a test result to the reporter."""
@@ -83,7 +85,12 @@ class ScenarioReporter:
                 f"\n{idx}. {scenario.description} - {colored(status, status_color, attrs=['bold'])}{time}"
             )
 
-            print(colored(f"   Reasoning: {result.reasoning}", "green" if result.success else "red"))
+            print(
+                colored(
+                    f"   Reasoning: {result.reasoning}",
+                    "green" if result.success else "red",
+                )
+            )
 
             if hasattr(result, "met_criteria") and result.met_criteria:
                 criteria_count = len(result.met_criteria)
@@ -119,6 +126,10 @@ def pytest_configure(config):
         "markers", "agent_test: mark test as an agent scenario test"
     )
 
+    if config.getoption("--debug"):
+        print(colored("\nScenario debug mode enabled (--debug).", "yellow"))
+        Scenario.configure(verbose=True, debug=True)
+
     # Create a global reporter instance
     config._scenario_reporter = ScenarioReporter()
 
@@ -128,7 +139,12 @@ def pytest_configure(config):
         result = await original_run(self, *args, **kwargs)
 
         # Always report to the global reporter
-        config._scenario_reporter.add_result(self, result)
+        # Ensure the reporter exists before adding result
+        if hasattr(config, "_scenario_reporter"):
+            config._scenario_reporter.add_result(self, result)
+        else:
+            # Handle case where reporter might not be initialized (should not happen with current setup)
+            print(colored("Warning: Scenario reporter not found during run.", "yellow"))
 
         return result
 
