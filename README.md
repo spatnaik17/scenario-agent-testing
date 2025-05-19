@@ -12,6 +12,11 @@ You define the scenarios, and the testing agent will simulate your users as it f
 
 [📺 Video Tutorial](https://www.youtube.com/watch?v=f8NLpkY0Av4)
 
+### See also
+
+- [Scenario TypeScript](https://github.com/langwatch/scenario-ts/)
+- [Scenario Go](https://github.com/langwatch/scenario-go/)
+
 ## Getting Started
 
 Install pytest and scenario:
