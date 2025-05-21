@@ -150,9 +150,8 @@ class LovableAgent:
     ) -> list[ChatCompletionMessageParam]:
         openai_model = OpenAIModel("any")
         new_messages_openai_format: list[ChatCompletionMessageParam] = []
-        for message in messages:
-            async for openai_message in openai_model._map_message(message):
-                new_messages_openai_format.append(openai_message)
+        for openai_message in await openai_model._map_messages(messages):
+            new_messages_openai_format.append(openai_message)
 
         return new_messages_openai_format
 
