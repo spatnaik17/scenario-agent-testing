@@ -82,7 +82,7 @@ class ScenarioReporter:
                 time = f" in {result.total_time:.2f}s (agent: {result.agent_time:.2f}s)"
 
             print(
-                f"\n{idx}. {scenario.description} - {colored(status, status_color, attrs=['bold'])}{time}"
+                f"\n{idx}. {scenario.name} - {colored(status, status_color, attrs=['bold'])}{time}"
             )
 
             print(
@@ -92,23 +92,23 @@ class ScenarioReporter:
                 )
             )
 
-            if hasattr(result, "met_criteria") and result.met_criteria:
-                criteria_count = len(result.met_criteria)
-                total_criteria = len(scenario.success_criteria)
+            if hasattr(result, "passed_criteria") and result.passed_criteria:
+                criteria_count = len(result.passed_criteria)
+                total_criteria = len(scenario.criteria)
                 criteria_color = (
                     "green" if criteria_count == total_criteria else "yellow"
                 )
                 print(
                     colored(
-                        f"   Success Criteria: {criteria_count}/{total_criteria}",
+                        f"   Passed Criteria: {criteria_count}/{total_criteria}",
                         criteria_color,
                     )
                 )
 
-            if hasattr(result, "triggered_failures") and result.triggered_failures:
+            if hasattr(result, "failed_criteria") and result.failed_criteria:
                 print(
                     colored(
-                        f"   Failures Criteria: {len(result.triggered_failures)}",
+                        f"   Failed Criteria: {len(result.failed_criteria)}",
                         "red",
                     )
                 )

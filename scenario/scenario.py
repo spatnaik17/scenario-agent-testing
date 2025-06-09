@@ -15,6 +15,7 @@ from .testing_agent import TestingAgent
 
 from openai.types.chat import ChatCompletionMessageParam
 
+
 class AgentResult(TypedDict, total=False):
     message: str
     messages: List[ChatCompletionMessageParam]
@@ -27,34 +28,36 @@ class Scenario(ScenarioConfig):
 
     It includes:
     - A description of the scenario
-    - Success criteria to determine if the agent behaved correctly
-    - Failure criteria to determine if the agent failed
-    - An optional strategy that guides the testing agent
+    - Criteria to determine if the agent behaved correctly
     - Optional additional parameters
     """
 
+    name: str
     description: str
     agent: Union[
         Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]],
         Callable[[str, Optional[Dict[str, Any]]], Awaitable[Dict[str, Any]]],
     ]
-    success_criteria: List[str]
-    failure_criteria: List[str] = []
-    strategy: Optional[str] = None
+    criteria: List[str]
 
-    def __init__(self, description: str, **kwargs):
+    def __init__(self, name: str, description: str, **kwargs):
         """Validate scenario configuration after initialization."""
 
         default_config = getattr(Scenario, "default_config", None)
         if default_config:
             kwargs = {**default_config.model_dump(), **kwargs}
 
+        if not name:
+            raise ValueError("Scenario name cannot be empty")
+        kwargs["name"] = name
+
         if not description:
             raise ValueError("Scenario description cannot be empty")
         kwargs["description"] = description
 
-        if not kwargs.get("success_criteria"):
-            raise ValueError("Scenario must have at least one success criterion")
+        # TODO: allow not having any criteria, for scripted scenarios
+        if not kwargs.get("criteria"):
+            raise ValueError("Scenario must have at least one criteria")
 
         if kwargs.get("max_turns", 0) < 1:
             raise ValueError("max_turns must be a positive integer")
@@ -64,7 +67,6 @@ class Scenario(ScenarioConfig):
             raise ValueError("Agent must be a callable function")
 
         super().__init__(**kwargs)
-
 
     async def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
@@ -82,6 +84,7 @@ class Scenario(ScenarioConfig):
         # being used throughout, any user code on the callback can
         # be blocking, preventing them from running scenarios in parallel
         with concurrent.futures.ThreadPoolExecutor() as executor:
+
             def run_in_thread():
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)

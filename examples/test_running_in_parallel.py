@@ -15,6 +15,7 @@ from scenario import Scenario, TestingAgent, scenario_cache
 
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), verbose=2)
 
+
 def create_vegetarian_recipe_agent():
     history = []
 
@@ -44,6 +45,7 @@ def create_vegetarian_recipe_agent():
 
     return vegetarian_recipe_agent
 
+
 @pytest.mark.agent_test
 @pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
 async def test_vegetarian_recipe_agent():
@@ -52,16 +54,15 @@ async def test_vegetarian_recipe_agent():
 
     # Define the scenario
     scenario = Scenario(
-        "User is looking for a dinner idea",
+        name="dinner idea",
+        description="User is looking for a dinner idea",
         agent=vegetarian_recipe_agent,
-        success_criteria=[
+        criteria=[
             "Recipe agent generates a vegetarian recipe",
             "Recipe includes a list of ingredients",
             "Recipe includes step-by-step cooking instructions",
-        ],
-        failure_criteria=[
-            "The recipe is not vegetarian or includes meat",
-            "The agent asks more than two follow-up questions",
+            "The recipe is vegetarian and does not include meat",
+            "The should NOT ask more than two follow-up questions",
         ],
         max_turns=5,
     )
@@ -72,6 +73,7 @@ async def test_vegetarian_recipe_agent():
     # Assert for pytest to know whether the test passed
     assert result.success
 
+
 @pytest.mark.agent_test
 @pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
 async def test_user_is_hungry():
@@ -80,16 +82,15 @@ async def test_user_is_hungry():
 
     # Define the scenario
     scenario = Scenario(
-        "User is very very hungry, they say they could eat a cow",
+        name="hungry user",
+        description="User is very very hungry, they say they could eat a cow",
         agent=vegetarian_recipe_agent,
-        success_criteria=[
+        criteria=[
             "Recipe agent generates a vegetarian recipe",
             "Recipe includes a list of ingredients",
             "Recipe includes step-by-step cooking instructions",
-        ],
-        failure_criteria=[
-            "The recipe is not vegetarian or includes meat",
-            "The agent asks more than two follow-up questions",
+            "The recipe is vegetarian and does not include meat",
+            "The agent should NOT ask more than two follow-up questions",
         ],
         max_turns=5,
     )

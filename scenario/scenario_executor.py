@@ -199,6 +199,6 @@ class ScenarioExecutor:
 
     def _scenario_name(self):
         if self.scenario.verbose == 2:
-            return termcolor.colored(f"[Scenario: {self.scenario.description}] ", "yellow")
+            return termcolor.colored(f"[Scenario: {self.scenario.name}] ", "yellow")
         else:
             return ""

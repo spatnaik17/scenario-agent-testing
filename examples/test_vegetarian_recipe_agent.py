@@ -22,17 +22,20 @@ async def test_vegetarian_recipe_agent():
 
     # Define the scenario
     scenario = Scenario(
-        "User is looking for a dinner idea",
+        name="dinner idea",
+        description="""
+            It's saturday evening, the user is very hungry and tired,
+            but have no money to order out, so they are looking for a recipe.
+
+            The user never mentions they want a vegetarian recipe.
+        """,
         agent=vegetarian_recipe_agent,
-        strategy="never mention you want vegetarian food",
-        success_criteria=[
-            "Recipe agent generates a vegetarian recipe",
-            "Recipe includes a list of ingredients",
-            "Recipe includes step-by-step cooking instructions",
-        ],
-        failure_criteria=[
-            "The recipe is not vegetarian or includes meat",
-            "The agent asks more than two follow-up questions",
+        criteria=[
+            "Agent should not ask more than two follow-up questions",
+            "Agent should generate a recipe",
+            "Recipe should include a list of ingredients",
+            "Recipe should include step-by-step cooking instructions",
+            "Recipe should be vegetarian and not include any sort of meat",
         ],
     )
 
@@ -60,9 +63,11 @@ class VegetarianRecipeAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a vegetarian recipe agent.
-                    Given the user request, ask AT MOST ONE follow-up question,
-                    then provide a complete recipe. Keep your responses concise and focused.""",
+                    "content": """
+                        You are a vegetarian recipe agent.
+                        Given the user request, ask AT MOST ONE follow-up question,
+                        then provide a complete recipe. Keep your responses concise and focused.
+                    """,
                 },
                 *self.history,
             ],

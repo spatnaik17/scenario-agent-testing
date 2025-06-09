@@ -44,18 +44,23 @@ async def test_vegetarian_recipe_agent():
         # Call your agent here
         return agent.run(message)
 
-    # Define the scenario
+    # Define the simulated scenario
     scenario = Scenario(
-        "User is looking for a dinner idea",
+        name="dinner idea",
+        description="""
+            It's saturday evening, the user is very hungry and tired,
+            but have no money to order out, so they are looking for a recipe.
+
+            The user never mentions they want a vegetarian recipe.
+        """,
         agent=vegetarian_recipe_agent,
-        success_criteria=[
-            "Recipe agent generates a vegetarian recipe",
-            "Recipe includes a list of ingredients",
-            "Recipe includes step-by-step cooking instructions",
-        ],
-        failure_criteria=[
-            "The recipe is not vegetarian or includes meat",
-            "The agent asks more than two follow-up questions",
+        # List the evaluation criteria for the scenario to be considered successful
+        criteria=[
+            "Agent should not ask more than two follow-up questions",
+            "Agent should generate a recipe",
+            "Recipe should include a list of ingredients",
+            "Recipe should include step-by-step cooking instructions",
+            "Recipe should be vegetarian and not include any sort of meat",
         ],
     )
 
@@ -83,9 +88,11 @@ class VegetarianRecipeAgent:
             messages=[
                 {
                     "role": "system",
-                    "content": """You are a vegetarian recipe agent.
-                    Given the user request, ask AT MOST ONE follow-up question,
-                    then provide a complete recipe. Keep your responses concise and focused.""",
+                    "content": """
+                        You are a vegetarian recipe agent.
+                        Given the user request, ask AT MOST ONE follow-up question,
+                        then provide a complete recipe. Keep your responses concise and focused.
+                    """,
                 },
                 *self.history,
             ],
@@ -123,19 +130,20 @@ For example, in this Lovable Clone scenario test:
 
 ```python
 scenario = Scenario(
-    "user wants to create a new landing page for their dog walking startup",
+    name="dog walking startup landing page",
+    description="""
+        the user wants to create a new landing page for their dog walking startup
+
+        send the first message to generate the landing page, then a single follow up request to extend it, then give your final verdict
+    """,
     agent=lovable_agent,
-    strategy="send the first message to generate the landing page, then a single follow up request to extend it, then give your final verdict",
-    success_criteria=[
+    criteria=[
         "agent reads the files before go and making changes",
-        "agent modified the index.css file",
-        "agent modified the Index.tsx file",
+        "agent modified the index.css file, not only the Index.tsx file",
         "agent created a comprehensive landing page",
         "agent extended the landing page with a new section",
-    ],
-    failure_criteria=[
-        "agent says it can't read the file",
-        "agent produces incomplete code or is too lazy to finish",
+        "agent should NOT say it can't read the file",
+        "agent should NOT produce incomplete code or be too lazy to finish",
     ],
     max_turns=5,
 )

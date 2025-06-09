@@ -15,17 +15,15 @@ class ScenarioResult:
         success: Whether the scenario passed
         conversation: The conversation history
         reasoning: Reasoning for the result
-        met_criteria: List of success criteria that were met
-        unmet_criteria: List of success criteria that were not met
-        triggered_failures: List of failure criteria that were triggered
+        passed_criteria: List of criteria that were met
+        failed_criteria: List of criteria that were not met
     """
 
     success: bool
     conversation: List[Dict[str, str]]
     reasoning: Optional[str] = None
-    met_criteria: List[str] = field(default_factory=list)
-    unmet_criteria: List[str] = field(default_factory=list)
-    triggered_failures: List[str] = field(default_factory=list)
+    passed_criteria: List[str] = field(default_factory=list)
+    failed_criteria: List[str] = field(default_factory=list)
     total_time: Optional[float] = None
     agent_time: Optional[float] = None
 
@@ -39,7 +37,7 @@ class ScenarioResult:
         cls,
         conversation: List[Dict[str, str]],
         reasoning: Optional[str],
-        met_criteria: List[str],
+        passed_criteria: List[str],
         total_time: Optional[float] = None,
         agent_time: Optional[float] = None,
     ) -> "ScenarioResult":
@@ -48,9 +46,8 @@ class ScenarioResult:
             success=True,
             conversation=conversation,
             reasoning=reasoning,
-            met_criteria=met_criteria,
-            unmet_criteria=[],
-            triggered_failures=[],
+            passed_criteria=passed_criteria,
+            failed_criteria=[],
             total_time=total_time,
             agent_time=agent_time,
         )
@@ -60,9 +57,8 @@ class ScenarioResult:
         cls,
         conversation: List[Dict[str, str]],
         reasoning: str,
-        met_criteria: Optional[List[str]] = None,
-        unmet_criteria: Optional[List[str]] = None,
-        triggered_failures: Optional[List[str]] = None,
+        passed_criteria: Optional[List[str]] = None,
+        failed_criteria: Optional[List[str]] = None,
         total_time: Optional[float] = None,
         agent_time: Optional[float] = None,
     ) -> "ScenarioResult":
@@ -71,11 +67,8 @@ class ScenarioResult:
             success=False,
             conversation=conversation,
             reasoning=reasoning,
-            met_criteria=met_criteria if met_criteria is not None else [],
-            unmet_criteria=unmet_criteria if unmet_criteria is not None else [],
-            triggered_failures=(
-                triggered_failures if triggered_failures is not None else []
-            ),
+            passed_criteria=passed_criteria if passed_criteria is not None else [],
+            failed_criteria=failed_criteria if failed_criteria is not None else [],
             total_time=total_time,
             agent_time=agent_time,
         )

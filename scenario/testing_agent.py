@@ -4,6 +4,7 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Dict, List, Any, Optional, Union, cast
 from pydantic import BaseModel
 
@@ -74,27 +75,19 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 {scenario.description}
 </scenario>
 
-<strategy>
-{scenario.strategy or "Start with a first message and guide the conversation to play out the scenario."}
-</strategy>
-
-<success_criteria>
-{json.dumps(scenario.success_criteria, indent=2)}
-</success_criteria>
-
-<failure_criteria>
-{json.dumps(scenario.failure_criteria, indent=2)}
-</failure_criteria>
+<criteria>
+{"\n".join([f"{idx + 1}. {criterion}" for idx, criterion in enumerate(scenario.criteria)])}
+</criteria>
 
 <execution_flow>
 1. Generate the first message to start the scenario
 2. After the Agent Under Test (user) responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until criterias match
-3. If the test should end, use the finish_test tool to determine if success or failure criteria have been met
+3. If the test should end, use the finish_test tool to determine if all the criteria have been met
 </execution_flow>
 
 <rules>
-1. Test should end immediately if a failure criteria is triggered
-2. Test should continue until all success criteria have been met
+1. Test should end immediately if a criteria mentioning something the agent should NOT do is met
+2. Test should continue until all scenario goals have been met to try going through all the criteria
 3. DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
 4. DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, wait for the user to do it
 </rules>
@@ -141,6 +134,14 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                     message.role = "user"
 
         # Define the tool
+        criteria_names = [
+            re.sub(
+                r"[^a-zA-Z0-9]",
+                "_",
+                criterion.replace(" ", "_").replace("'", "").lower(),
+            )[:70]
+            for criterion in scenario.criteria
+        ]
         tools = [
             {
                 "type": "function",
@@ -151,40 +152,30 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                     "parameters": {
                         "type": "object",
                         "properties": {
+                            "criteria": {
+                                "type": "object",
+                                "properties": {
+                                    criteria_names[idx]: {
+                                        "enum": [True, False, "inconclusive"],
+                                        "description": criterion,
+                                    }
+                                    for idx, criterion in enumerate(scenario.criteria)
+                                },
+                                "required": criteria_names,
+                                "additionalProperties": False,
+                                "description": "Strict verdict for each criterion",
+                            },
+                            "reasoning": {
+                                "type": "string",
+                                "description": "Explanation of what the final verdict should be",
+                            },
                             "verdict": {
                                 "type": "string",
                                 "enum": ["success", "failure", "inconclusive"],
                                 "description": "The final verdict of the test",
                             },
-                            "reasoning": {
-                                "type": "string",
-                                "description": "Explanation of why this verdict was reached",
-                            },
-                            "details": {
-                                "type": "object",
-                                "properties": {
-                                    "met_criteria": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                        "description": "List of success criteria that have been met",
-                                    },
-                                    "unmet_criteria": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                        "description": "List of success criteria that have not been met",
-                                    },
-                                    "triggered_failures": {
-                                        "type": "array",
-                                        "items": {"type": "string"},
-                                        "description": "List of failure criteria that have been triggered",
-                                    },
-                                },
-                                "required": ["met_criteria", "unmet_criteria", "triggered_failures"],
-                                "additionalProperties": False,
-                                "description": "Detailed information about criteria evaluation",
-                            },
                         },
-                        "required": ["verdict", "reasoning", "details"],
+                        "required": ["criteria", "reasoning", "verdict"],
                         "additionalProperties": False,
                     },
                 },
@@ -216,35 +207,40 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         args = json.loads(tool_call.function.arguments)
                         verdict = args.get("verdict", "inconclusive")
                         reasoning = args.get("reasoning", "No reasoning provided")
-                        details = args.get("details", {})
+                        criteria = args.get("criteria", {})
 
-                        met_criteria = details.get("met_criteria", [])
-                        unmet_criteria = details.get("unmet_criteria", [])
-                        triggered_failures = details.get("triggered_failures", [])
+                        passed_criteria = [
+                            scenario.criteria[idx]
+                            for idx, criterion in enumerate(criteria.values())
+                            if criterion == True
+                        ]
+                        failed_criteria = [
+                            scenario.criteria[idx]
+                            for idx, criterion in enumerate(criteria.values())
+                            if criterion == False
+                        ]
 
                         # Return the appropriate ScenarioResult based on the verdict
                         if verdict == "success":
                             return ScenarioResult.success_result(
                                 conversation=conversation,
                                 reasoning=reasoning,
-                                met_criteria=met_criteria,
+                                passed_criteria=passed_criteria,
                             )
                         elif verdict == "failure":
                             return ScenarioResult.failure_result(
                                 conversation=conversation,
                                 reasoning=reasoning,
-                                met_criteria=met_criteria,
-                                unmet_criteria=unmet_criteria,
-                                triggered_failures=triggered_failures,
+                                passed_criteria=passed_criteria,
+                                failed_criteria=failed_criteria,
                             )
                         else:  # inconclusive
                             return ScenarioResult(
                                 success=False,
                                 conversation=conversation,
                                 reasoning=reasoning,
-                                met_criteria=met_criteria,
-                                unmet_criteria=unmet_criteria,
-                                triggered_failures=triggered_failures,
+                                passed_criteria=passed_criteria,
+                                failed_criteria=failed_criteria,
                             )
                     except json.JSONDecodeError:
                         logger.error("Failed to parse tool call arguments")
@@ -254,7 +250,9 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             if message_content is None:
                 # If invalid tool call, raise an error
                 if message.tool_calls:
-                    raise Exception(f"Invalid tool call from testing agent: {message.tool_calls.__repr__()}")
+                    raise Exception(
+                        f"Invalid tool call from testing agent: {message.tool_calls.__repr__()}"
+                    )
                 raise Exception(f"No response from LLM: {response.__repr__()}")
 
             return message_content
@@ -262,4 +260,3 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             raise Exception(
                 f"Unexpected response format from LLM: {response.__repr__()}"
             )
-
