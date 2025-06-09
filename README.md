@@ -6,9 +6,9 @@
 
 # Scenario: Use an Agent to test your Agent
 
-Scenario is a library for testing agents end-to-end as a human would, but without having to manually do it. The automated testing agent covers every single scenario for you.
+Scenario is an Agent Testing Framework for testing AI agents through Simulation Testing.
 
-You define the scenarios, and the testing agent will simulate your users as it follows them, it will keep chatting and evaluating your agent until it reaches the desired goal or detects an unexpected behavior.
+You define the scenarios, and the testing agent will simulate a real user as it follows them, it will keep chatting back and forth with _your_ agent to play out the simulation, until it reaches the desired goal or detects an unexpected behavior based on the criteria you defined.
 
 [📺 Video Tutorial](https://www.youtube.com/watch?v=f8NLpkY0Av4)
 
