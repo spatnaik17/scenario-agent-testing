@@ -229,27 +229,6 @@ This will:
 make test
 ```
 
-### Alternative Manual Setup
-
-If you prefer manual setup or don't have `make` available:
-
-1. **Set up a virtual environment**:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-2. **Install dependencies**:
-```bash
-pip install -e ".[dev]"
-```
-
-3. **Set up git hooks** (important for commit message enforcement):
-```bash
-pre-commit install --hook-type commit-msg
-pre-commit install
-```
-
 ### Running Examples
 
 The project includes a Makefile with commands to simplify running examples and tests:
@@ -267,12 +246,6 @@ make test
 
 # Run a specific test
 make test tests/test_scenario.py
-```
-
-3. **Installing dependencies with uv**:
-```bash
-# Install all dependencies
-make install
 ```
 
 The examples will produce a colorized report showing test results, success criteria met, and any failures.
