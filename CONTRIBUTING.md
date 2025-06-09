@@ -214,20 +214,40 @@ git clone https://github.com/yourusername/scenario.git
 cd scenario
 ```
 
-2. **Set up a virtual environment**:
+2. **Install dependencies and set up git hooks**:
+```bash
+make install
+```
+
+This will:
+- Install all dependencies using `uv`
+- Set up pre-commit hooks for code quality
+- **Install conventional commit enforcement** - commits must follow the format: `feat:`, `fix:`, `chore:`, etc.
+
+3. **Run tests**:
+```bash
+make test
+```
+
+### Alternative Manual Setup
+
+If you prefer manual setup or don't have `make` available:
+
+1. **Set up a virtual environment**:
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
-3. **Install dependencies**:
+2. **Install dependencies**:
 ```bash
 pip install -e ".[dev]"
 ```
 
-4. **Run tests**:
+3. **Set up git hooks** (important for commit message enforcement):
 ```bash
-pytest
+pre-commit install --hook-type commit-msg
+pre-commit install
 ```
 
 ### Running Examples

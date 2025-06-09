@@ -8,7 +8,9 @@ example:
 	PYTHONPATH=$$PYTHONPATH:. uv run pytest -s -vv $$args
 
 install: ensure-uv
-	uv sync --all-extras
+	uv sync --all-groups --all-extras
+	uv run pre-commit install --hook-type commit-msg
+	uv run pre-commit install
 
 ensure-uv:
 	@if ! command -v uv &> /dev/null; then \
