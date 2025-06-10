@@ -7,7 +7,7 @@ from typing import TypedDict
 import functools
 from termcolor import colored
 
-from scenario.result import ScenarioResult
+from scenario.types import ScenarioResult
 
 from .scenario import Scenario
 

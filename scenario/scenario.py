@@ -9,7 +9,7 @@ import concurrent.futures
 from scenario.config import ScenarioConfig
 from scenario.scenario_executor import ScenarioExecutor
 
-from .result import ScenarioResult
+from .types import ScenarioResult
 from .testing_agent import TestingAgent
 
 from openai.types.chat import ChatCompletionMessageParam
@@ -39,7 +39,6 @@ class Scenario(ScenarioConfig):
         Callable[[str, Optional[Dict[str, Any]]], Awaitable[Dict[str, Any]]],
     ]
     criteria: List[str]
-    _state: ScenarioExecutor
 
     def __init__(self, name: str, description: str, **kwargs):
         """Validate scenario configuration after initialization."""
@@ -60,7 +59,7 @@ class Scenario(ScenarioConfig):
         if not kwargs.get("criteria"):
             raise ValueError("Scenario must have at least one criteria")
 
-        if kwargs.get("max_turns", 0) < 1:
+        if kwargs.get("max_turns", 10) < 1:
             raise ValueError("max_turns must be a positive integer")
 
         # Ensure agent is callable
@@ -68,8 +67,6 @@ class Scenario(ScenarioConfig):
             raise ValueError("Agent must be a callable function")
 
         super().__init__(**kwargs)
-
-        self._state = ScenarioExecutor(self)
 
     async def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
@@ -82,8 +79,6 @@ class Scenario(ScenarioConfig):
             ScenarioResult containing the test outcome
         """
 
-        self._state = ScenarioExecutor(self)
-
         # We'll use a thread pool to run the execution logic, we
         # require a separate thread because even though asyncio is
         # being used throughout, any user code on the callback can
@@ -95,7 +90,7 @@ class Scenario(ScenarioConfig):
                 asyncio.set_event_loop(loop)
 
                 try:
-                    return loop.run_until_complete(self._state.run(context))
+                    return loop.run_until_complete(ScenarioExecutor(self, context).run())
                 finally:
                     loop.close()
 

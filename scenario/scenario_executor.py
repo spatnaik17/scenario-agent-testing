@@ -17,32 +17,48 @@ from scenario.utils import (
 )
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
-from .result import ScenarioResult
+from .types import ScenarioResult
 from .error_messages import default_config_error_message
 from .cache import context_scenario
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
+    from scenario.testing_agent import TestingAgent
 
 
 class ScenarioExecutor:
-    def __init__(self, scenario: "Scenario"):
-        self.scenario = scenario.model_copy()
+    scenario: "Scenario"
+    messages: List[ChatCompletionMessageParam]
+    current_turn: int
 
+    _context: Optional[Dict[str, Any]]
+    _testing_agent: "TestingAgent"
+    _total_start_time: float
+
+    def __init__(self, scenario: "Scenario", context: Optional[Dict[str, Any]] = None):
+        super().__init__()
+
+        self.scenario = scenario.model_copy()
+        self._context = context
         testing_agent = scenario.testing_agent
         if not testing_agent or not testing_agent.model:
             raise Exception(default_config_error_message)
-        self.testing_agent = testing_agent
+        self._testing_agent = testing_agent
+        self.reset()
 
-        self.messages: List[ChatCompletionMessageParam] = []
+    def reset(self):
+        self.messages = []
+        self._total_start_time = time.time()
+        self.current_turn = 0
+        context_scenario.set(self.scenario)
 
     def add_message(self, message: ChatCompletionMessageParam):
         self.messages.append(message)
 
-    async def run(
-        self,
-        context: Optional[Dict[str, Any]] = None,
-    ) -> ScenarioResult:
+    async def step(self):
+        pass
+
+    async def run(self) -> ScenarioResult:
         """
         Run a scenario against the agent under test.
 
@@ -56,9 +72,9 @@ class ScenarioExecutor:
         if self.scenario.verbose:
             print("")  # new line
 
+        self.reset()
+
         # Run the initial testing agent prompt to get started
-        total_start_time = time.time()
-        context_scenario.set(self.scenario)
         next_message = self._generate_user_message(
             self.scenario, self.messages, first_message=True
         )
@@ -75,12 +91,11 @@ class ScenarioExecutor:
             )
 
         # Execute the conversation
-        current_turn = 0
         max_turns = self.scenario.max_turns or 10
         agent_time = 0
 
         # Start the test with the initial message
-        while current_turn < max_turns:
+        while self.current_turn < max_turns:
             # Record the testing agent's message
             self.messages.append(
                 ChatCompletionUserMessageParam(role="user", content=next_message)
@@ -93,7 +108,7 @@ class ScenarioExecutor:
             with show_spinner(
                 text="Agent:", color="blue", enabled=self.scenario.verbose
             ):
-                agent_response = self.scenario.agent(next_message, context)
+                agent_response = self.scenario.agent(next_message, self._context)
                 if isinstance(agent_response, Awaitable):
                     agent_response = await agent_response
 
@@ -164,7 +179,7 @@ class ScenarioExecutor:
             result = self._generate_user_message(
                 self.scenario,
                 self.messages,
-                last_message=current_turn == max_turns - 1,
+                last_message=self.current_turn == max_turns - 1,
             )
 
             # Check if the result is a ScenarioResult (indicating test completion)
@@ -181,13 +196,14 @@ class ScenarioExecutor:
             next_message = result
 
             # Increment turn counter
-            current_turn += 1
+            self.current_turn += 1
 
         # If we reached max turns without conclusion, fail the test
-        return ScenarioResult.failure_result(
+        return ScenarioResult(
+            success=False,
             messages=self.messages,
             reasoning=f"Reached maximum turns ({max_turns}) without conclusion",
-            total_time=time.time() - total_start_time,
+            total_time=time.time() - self._total_start_time,
             agent_time=agent_time,
         )
 
@@ -220,7 +236,7 @@ class ScenarioExecutor:
             color="green",
             enabled=self.scenario.verbose,
         ):
-            return self.testing_agent.generate_next_message(
+            return self._testing_agent.generate_next_message(
                 scenario, messages, first_message, last_message
             )
 

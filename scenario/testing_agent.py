@@ -16,7 +16,7 @@ from litellm.files.main import ModelResponse
 from scenario.cache import scenario_cache
 from scenario.utils import safe_attr_or_key
 
-from .result import ScenarioResult
+from .types import ScenarioResult
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
@@ -223,27 +223,13 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         ]
 
                         # Return the appropriate ScenarioResult based on the verdict
-                        if verdict == "success":
-                            return ScenarioResult.success_result(
-                                messages=messages,
-                                reasoning=reasoning,
-                                passed_criteria=passed_criteria,
-                            )
-                        elif verdict == "failure":
-                            return ScenarioResult.failure_result(
-                                messages=messages,
-                                reasoning=reasoning,
-                                passed_criteria=passed_criteria,
-                                failed_criteria=failed_criteria,
-                            )
-                        else:  # inconclusive
-                            return ScenarioResult(
-                                success=False,
-                                messages=messages,
-                                reasoning=reasoning,
-                                passed_criteria=passed_criteria,
-                                failed_criteria=failed_criteria,
-                            )
+                        return ScenarioResult(
+                            success=verdict == "success",
+                            messages=messages,
+                            reasoning=reasoning,
+                            passed_criteria=passed_criteria,
+                            failed_criteria=failed_criteria,
+                        )
                     except json.JSONDecodeError:
                         logger.error("Failed to parse tool call arguments")
 

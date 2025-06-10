@@ -3,7 +3,9 @@ from typing import List, Union
 import pytest
 from scenario import Scenario, TestingAgent
 from scenario.types import ScenarioResult
-from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
+
+from scenario.scenario_executor import ScenarioExecutor
 
 
 class MockTestingAgent(TestingAgent):
@@ -24,18 +26,22 @@ class MockTestingAgent(TestingAgent):
             passed_criteria=["test criteria"],
         )
 
-
 @pytest.mark.asyncio
-async def test_scenario_high_level_api():
-    Scenario.configure(testing_agent=MockTestingAgent(model="none"))
-
+async def test_advance_a_step():
     scenario = Scenario(
         name="test name",
         description="test description",
         agent=lambda _, __: {"message": "Hey, how can I help you?"},
+        testing_agent=MockTestingAgent(model="none"),
         criteria=["test criteria"],
     )
 
-    result = await scenario.run()
+    executor = ScenarioExecutor(scenario)
 
-    assert result.success
+    assert executor.messages == [], "starts with no messages"
+
+    await executor.step()
+
+    assert executor.messages == [
+        ChatCompletionUserMessageParam(role="user", content="Hi, I'm a user")
+    ], "starts with the user message"
