@@ -10,7 +10,7 @@ from scenario.scenario_executor import ScenarioExecutor
 
 
 class MockTestingAgent(TestingAgent):
-    def call(
+    async def call(
         self,
         input: AgentInput,
     ) -> Union[str, ScenarioResult]:

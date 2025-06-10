@@ -59,6 +59,8 @@ class Scenario(ScenarioConfig):
     ):
         """Validate scenario configuration after initialization."""
 
+        kwargs: Dict[str, Any] = {}
+
         default_config = getattr(Scenario, "default_config", None)
         if default_config:
             kwargs = default_config.merge(

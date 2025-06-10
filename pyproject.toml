@@ -34,7 +34,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["black", "isort", "mypy", "pytest-cov", "pre-commit", "commitizen"]
+dev = [
+    "black",
+    "isort",
+    "pytest-cov",
+    "pre-commit",
+    "commitizen",
+]
 
 [project.urls]
 "Homepage" = "https://github.com/langwatch/scenario"
@@ -48,6 +54,7 @@ dev = [
     "commitizen>=4.8.3",
     "pre-commit>=4.2.0",
     "pydantic-ai>=0.0.52",
+    "pyright>=1.1.401",
     "pytest-asyncio-concurrent>=0.4.1",
 ]
 
