@@ -7,7 +7,7 @@ from .types import ScenarioResult, AgentInput, MessageTriggers
 from .config import ScenarioConfig
 
 # Then import modules with dependencies
-from .scenario_agent import ScenarioAgent
+from .scenario_agent import ScenarioAgentAdapter
 from .testing_agent import TestingAgent
 from .scenario import Scenario
 from .cache import scenario_cache
@@ -24,7 +24,7 @@ __all__ = [
 
     # Classes
     "Scenario",
-    "ScenarioAgent",
+    "ScenarioAgentAdapter",
     "TestingAgent",
 
     # Plugins

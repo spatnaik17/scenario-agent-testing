@@ -11,17 +11,17 @@ from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
-from scenario.scenario_agent import ScenarioAgent
-from scenario.utils import safe_attr_or_key
+from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.utils import reverse_roles
 
 from .error_messages import default_config_error_message
-from .types import AgentInput, MessageTriggers, ScenarioResult
+from .types import AgentInput, AgentReturnTypes, MessageTriggers, ScenarioResult
 
 
 logger = logging.getLogger("scenario")
 
 
-class TestingAgent(ScenarioAgent):
+class TestingAgent(ScenarioAgentAdapter):
     """
     The Testing Agent that interacts with the agent under test.
 
@@ -67,10 +67,10 @@ class TestingAgent(ScenarioAgent):
         return TestingAgentWithConfig
 
     @scenario_cache(ignore=["scenario"])
-    def call(
+    async def call(
         self,
         input: AgentInput,
-    ) -> Union[str, ScenarioResult]:
+    ) -> AgentReturnTypes:
         """
         Generate the next message in the conversation based on history OR
         return a ScenarioResult if the test should conclude.
@@ -144,23 +144,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
         # User to assistant role reversal
         # LLM models are biased to always be the assistant not the user, so we need to do this reversal otherwise models like GPT 4.5 is
         # super confused, and Claude 3.7 even starts throwing exceptions.
-        for message in messages:
-            # Can't reverse tool calls
-            if not safe_attr_or_key(message, "content") or safe_attr_or_key(
-                message, "tool_calls"
-            ):
-                continue
-
-            if type(message) == dict:
-                if message["role"] == "user":
-                    message["role"] = "assistant"
-                elif message["role"] == "assistant":
-                    message["role"] = "user"
-            else:
-                if getattr(message, "role", None) == "user":
-                    message.role = "assistant"  # type: ignore
-                elif getattr(message, "role", None) == "assistant":
-                    message.role = "user"  # type: ignore
+        messages = reverse_roles(messages)
 
         # Define the tool
         criteria_names = [
@@ -270,7 +254,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                     )
                 raise Exception(f"No response from LLM: {response.__repr__()}")
 
-            return message_content
+            return {"role": "user", "content": message_content}
         else:
             raise Exception(
                 f"Unexpected response format from LLM: {response.__repr__()}"

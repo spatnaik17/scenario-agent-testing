@@ -2,23 +2,29 @@ import pytest
 
 from examples.lovable_clone.lovable_agent import LovableAgent
 from scenario import Scenario, TestingAgent
+from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.types import AgentInput, AgentReturnTypes
 
-Scenario.configure(testing_agent=TestingAgent(model="anthropic/claude-3-5-sonnet-latest"))
+Scenario.configure(
+    testing_agent=TestingAgent.with_config(model="anthropic/claude-3-5-sonnet-latest"),
+)
+
+
+class LovableAgentAdapter(ScenarioAgentAdapter):
+    def __init__(self, input: AgentInput):
+        self.lovable_agent = LovableAgent()
+
+    async def call(self, input: AgentInput) -> AgentReturnTypes:
+        _, messages = await self.lovable_agent.process_user_message(
+            input.last_user_message_str(), input.context["template_path"]
+        )
+
+        return messages
 
 
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_lovable_clone():
-    template_path = LovableAgent.clone_template()
-    print(f"\n-> Lovable clone template path: {template_path}\n")
-
-    async def lovable_agent(message: str, context):
-        lovable_agent = LovableAgent()
-
-        _, messages = await lovable_agent.process_user_message(message, template_path)
-
-        return {"messages": messages}
-
     scenario = Scenario(
         name="dog walking startup landing page",
         description="""
@@ -26,7 +32,7 @@ async def test_lovable_clone():
 
             send the first message to generate the landing page, then a single follow up request to extend it, then give your final verdict
         """,
-        agent=lovable_agent,
+        agent=LovableAgentAdapter,
         criteria=[
             "agent reads the files before go and making changes",
             "agent modified the index.css file, not only the Index.tsx file",
@@ -38,7 +44,10 @@ async def test_lovable_clone():
         max_turns=5,
     )
 
-    result = await scenario.run()
+    template_path = LovableAgent.clone_template()
+    print(f"\n-> Lovable clone template path: {template_path}\n")
+
+    result = await scenario.run(context={"template_path": template_path})
 
     print(f"\n-> Done, check the results at: {template_path}\n")
 

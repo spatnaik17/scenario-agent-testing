@@ -2,29 +2,28 @@
 ScenarioExecutor module: holds the scenario execution logic and state, orchestrating the conversation between the testing agent and the agent under test.
 """
 
-import json
 import sys
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional, Union
 import time
 import termcolor
 
-from scenario.error_messages import message_return_error_message
+import scenario.utils
 from scenario.utils import (
+    check_valid_return_type,
+    convert_agent_return_types_to_openai_messages,
     print_openai_messages,
-    safe_attr_or_key,
-    safe_list_at,
     show_spinner,
 )
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
-from .types import AgentInput, AgentReturnTypes, ScenarioResult
-from .error_messages import default_config_error_message
+from .types import AgentInput, ScenarioResult
+from .error_messages import agent_response_not_awaitable, default_config_error_message
 from .cache import context_scenario
 from pksuid import PKSUID
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
-    from scenario.scenario_agent import ScenarioAgent
+    from scenario.scenario_agent import ScenarioAgentAdapter
 
 
 class ScenarioExecutor:
@@ -34,7 +33,8 @@ class ScenarioExecutor:
     current_turn: int
 
     _context: Optional[Dict[str, Any]]
-    _testing_agent: "ScenarioAgent"
+    _agent: "ScenarioAgentAdapter"
+    _testing_agent: "ScenarioAgentAdapter"
     _total_start_time: float
 
     def __init__(self, scenario: "Scenario", context: Optional[Dict[str, Any]] = None):
@@ -50,6 +50,7 @@ class ScenarioExecutor:
         self._total_start_time = time.time()
         self.current_turn = 0
 
+        # TODO: array of agents instead
         TestingAgentClass = self.scenario.testing_agent
         if not TestingAgentClass:
             raise Exception(default_config_error_message)
@@ -58,10 +59,21 @@ class ScenarioExecutor:
             input=AgentInput(
                 thread_id=self.thread_id,
                 messages=[],
-                context={},
+                context=self._context or {},
                 scenario_state=self,
             )
         )
+
+        AgentClass = self.scenario.agent
+        self._agent = AgentClass(
+            input=AgentInput(
+                thread_id=self.thread_id,
+                messages=[],
+                context=self._context or {},
+                scenario_state=self,
+            )
+        )
+
         context_scenario.set(self.scenario)
 
     def add_message(self, message: ChatCompletionMessageParam):
@@ -87,7 +99,7 @@ class ScenarioExecutor:
         self.reset()
 
         # Run the initial testing agent prompt to get started
-        next_message = await self._generate_user_message(self.messages)
+        next_message = await self._generate_user_message()
 
         if isinstance(next_message, ScenarioResult):
             raise Exception(
@@ -101,96 +113,17 @@ class ScenarioExecutor:
 
         # Start the test with the initial message
         while self.current_turn < max_turns:
-            # TODO: temporary until main agent is converted to ScenarioAgent
-            next_message_str = (
-                str(self.last_user_message()["content"])
-                if "content" in next_message
-                else str(next_message)
-            )
-
             # Get response from the agent under test
             start_time = time.time()
 
             context_scenario.set(self.scenario)
-            with show_spinner(
-                text="Agent:", color="blue", enabled=self.scenario.verbose
-            ):
-                agent_response = self.scenario.agent(next_message_str, self._context)
-                if isinstance(agent_response, Awaitable):
-                    agent_response = await agent_response
+            await self._generate_agent_response()
 
-            has_valid_message = (
-                "message" in agent_response
-                and type(agent_response["message"]) is str
-                and agent_response["message"] is not None
-            )
-            has_valid_messages = (
-                "messages" in agent_response
-                and isinstance(agent_response["messages"], list)
-                and all(
-                    "role" in msg or hasattr(msg, "role")
-                    for msg in agent_response["messages"]
-                )
-            )
-            if not has_valid_message and not has_valid_messages:
-                raise Exception(
-                    message_return_error_message(
-                        got=agent_response,
-                        class_name=self.scenario.agent.__class__.__name__,
-                    )
-                )
-
-            messages: list[ChatCompletionMessageParam] = []
-            if has_valid_messages and len(agent_response["messages"]) > 0:
-                messages = agent_response["messages"]
-
-                # Drop the first messages both if they are system or user messages
-                if safe_attr_or_key(safe_list_at(messages, 0), "role") == "system":
-                    messages = messages[1:]
-                if safe_attr_or_key(safe_list_at(messages, 0), "role") == "user":
-                    messages = messages[1:]
-
-            if has_valid_message and self.scenario.verbose:
-                print(
-                    self._scenario_name() + termcolor.colored("Agent:", "blue"),
-                    agent_response["message"],
-                )
-
-            if messages and self.scenario.verbose:
-                print_openai_messages(self._scenario_name(), messages)
-
-            if (
-                self.scenario.verbose
-                and "extra" in agent_response
-                and len(agent_response["extra"].keys()) > 0
-            ):
-                print(
-                    termcolor.colored(
-                        "Extra:" + json.dumps(agent_response["extra"]),
-                        "magenta",
-                    )
-                )
             response_time = time.time() - start_time
             agent_time += response_time
 
-            if messages:
-                self.messages.extend(agent_response["messages"])
-            if "message" in agent_response:
-                self.messages.append(
-                    {"role": "assistant", "content": agent_response["message"]}
-                )
-            if "extra" in agent_response:
-                self.messages.append(
-                    {
-                        "role": "assistant",
-                        "content": json.dumps(agent_response["extra"]),
-                    }
-                )
-
             # Generate the next message OR finish the test based on the agent's evaluation
-            result = await self._generate_user_message(
-                self.messages,
-            )
+            result = await self._generate_user_message()
 
             # Check if the result is a ScenarioResult (indicating test completion)
             if isinstance(result, ScenarioResult):
@@ -215,7 +148,6 @@ class ScenarioExecutor:
 
     async def _generate_user_message(
         self,
-        messages: List[ChatCompletionMessageParam],
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
         if self.scenario.debug:
             print(
@@ -241,36 +173,77 @@ class ScenarioExecutor:
             color="green",
             enabled=self.scenario.verbose,
         ):
-            return_value = await self._testing_agent._call_wrapped(
-                AgentInput(
-                    thread_id=self.thread_id,
-                    messages=messages,
-                    context={},
-                    scenario_state=self,
-                ),
+            return await self._call_agent(self._testing_agent, reverse_roles=True)
+
+    async def _generate_agent_response(
+        self,
+    ) -> List[ChatCompletionMessageParam]:
+        with show_spinner(text="Agent:", color="blue", enabled=self.scenario.verbose):
+            agent_response = await self._call_agent(self._agent)
+
+        if isinstance(agent_response, ScenarioResult):
+            raise Exception(
+                "Unexpectedly generated a ScenarioResult for the agent response",
+                agent_response.__repr__(),
             )
 
-            messages = []
-            if isinstance(return_value, list):
-                messages.extend(return_value)
-            elif isinstance(return_value, str):
-                messages.append(
-                    ChatCompletionUserMessageParam(role="user", content=return_value)
-                )
-            elif isinstance(return_value, dict):
-                messages.append(return_value)
-            elif isinstance(return_value, ScenarioResult):
-                return return_value
+        return agent_response
 
-            self.messages.extend(messages)
+    async def _call_agent(
+        self, agent: "ScenarioAgentAdapter", reverse_roles: bool = False
+    ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
+        agent_response = agent.call(
+            AgentInput(
+                # TODO: test thread_id
+                thread_id=self.thread_id,
+                messages=self.messages,
+                # TODO: test context
+                context=self._context or {},
+                scenario_state=self,
+            )
+        )
+        if not isinstance(agent_response, Awaitable):
+            raise Exception(
+                agent_response_not_awaitable(agent.__class__.__name__),
+            )
 
-            if self.scenario.verbose:
-                print(
-                    self._scenario_name() + termcolor.colored("User:", "green"),
-                    self.last_user_message()["content"],
-                )
+        agent_response = await agent_response
+        check_valid_return_type(agent_response, agent.__class__.__name__)
 
-            return messages
+        messages = []
+        if isinstance(agent_response, list):
+            messages.extend(agent_response)
+        elif isinstance(agent_response, str):
+            messages.append(
+                {
+                    "role": "user" if reverse_roles else "assistant",
+                    "content": agent_response,
+                }
+            )
+        elif isinstance(agent_response, dict):
+            messages.append(agent_response)
+
+        if isinstance(agent_response, ScenarioResult):
+            # TODO: should be an event
+            return agent_response
+        else:
+            messages = convert_agent_return_types_to_openai_messages(
+                agent_response, role="user" if reverse_roles else "assistant"
+            )
+
+        self.messages.extend(messages)
+
+        if messages and self.scenario.verbose:
+            print_openai_messages(
+                self._scenario_name(), [m for m in messages if m["role"] != "system"]
+            )
+
+        return messages
+
+    def last_message(self) -> ChatCompletionMessageParam:
+        if len(self.messages) == 0:
+            raise ValueError("No messages found")
+        return self.messages[-1]
 
     def last_user_message(self) -> ChatCompletionUserMessageParam:
         user_messages = [m for m in self.messages if m["role"] == "user"]

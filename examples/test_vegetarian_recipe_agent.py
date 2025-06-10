@@ -6,9 +6,10 @@ This example demonstrates testing an AI agent that generates vegetarian recipes.
 
 import pytest
 
-from scenario import Scenario, TestingAgent, scenario_cache
+from scenario import Scenario, TestingAgent, scenario_cache, ScenarioAgentAdapter
+from scenario.types import AgentInput, AgentReturnTypes
 
-Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
+Scenario.configure(testing_agent=TestingAgent.with_config(model="openai/gpt-4o-mini"))
 
 
 @pytest.mark.agent_test
@@ -16,9 +17,9 @@ Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 async def test_vegetarian_recipe_agent():
     agent = VegetarianRecipeAgent()
 
-    def vegetarian_recipe_agent(message, context):
-        # Call your agent here
-        return agent.run(message)
+    class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            return agent.run(input.last_user_message_str())
 
     # Define the scenario
     scenario = Scenario(
@@ -29,7 +30,7 @@ async def test_vegetarian_recipe_agent():
 
             The user never mentions they want a vegetarian recipe.
         """,
-        agent=vegetarian_recipe_agent,
+        agent=VegetarianRecipeAgentAdapter,
         criteria=[
             "Agent should not ask more than two follow-up questions",
             "Agent should generate a recipe",
@@ -75,4 +76,4 @@ class VegetarianRecipeAgent:
         message = response.choices[0].message  # type: ignore
         self.history.append(message)
 
-        return {"messages": [message]}
+        return message

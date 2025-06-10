@@ -4,28 +4,27 @@ Example test for a vegetarian recipe agent.
 This example demonstrates testing an AI agent that generates vegetarian recipes.
 """
 
-from typing import Dict, Any, Optional
+from typing import cast
 import pytest
 from dotenv import load_dotenv
 import litellm
+
+from openai.types.chat import ChatCompletionMessageParam
+from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.types import AgentInput, AgentReturnTypes
 
 load_dotenv()
 
 from scenario import Scenario, TestingAgent, scenario_cache
 
-Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), verbose=2)
+Scenario.configure(
+    testing_agent=TestingAgent.with_config(model="openai/gpt-4o-mini"), verbose=2
+)
 
 
-def create_vegetarian_recipe_agent():
-    history = []
-
+class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
     @scenario_cache()
-    def vegetarian_recipe_agent(
-        message: str, context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        nonlocal history
-
-        history.append({"role": "user", "content": message})
+    async def call(self, input: AgentInput) -> AgentReturnTypes:
         response = litellm.completion(
             model="openai/gpt-4o-mini",
             messages=[
@@ -35,28 +34,22 @@ def create_vegetarian_recipe_agent():
                     Given the user request, ask AT MOST ONE follow-up question,
                     then provide a complete recipe. Keep your responses concise and focused.""",
                 },
-                *history,
+                *input.messages,
             ],
         )
         message = response.choices[0].message  # type: ignore
-        history.append(message)
 
-        return {"messages": [message]}
-
-    return vegetarian_recipe_agent
+        return [cast(ChatCompletionMessageParam, message)]
 
 
 @pytest.mark.agent_test
 @pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
 async def test_vegetarian_recipe_agent():
-    # Define the agent under test
-    vegetarian_recipe_agent = create_vegetarian_recipe_agent()
-
     # Define the scenario
     scenario = Scenario(
         name="dinner idea",
         description="User is looking for a dinner idea",
-        agent=vegetarian_recipe_agent,
+        agent=VegetarianRecipeAgentAdapter,
         criteria=[
             "Recipe agent generates a vegetarian recipe",
             "Recipe includes a list of ingredients",
@@ -77,14 +70,11 @@ async def test_vegetarian_recipe_agent():
 @pytest.mark.agent_test
 @pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
 async def test_user_is_hungry():
-    # Define the agent under test
-    vegetarian_recipe_agent = create_vegetarian_recipe_agent()
-
     # Define the scenario
     scenario = Scenario(
         name="hungry user",
         description="User is very very hungry, they say they could eat a cow",
-        agent=vegetarian_recipe_agent,
+        agent=VegetarianRecipeAgentAdapter,
         criteria=[
             "Recipe agent generates a vegetarian recipe",
             "Recipe includes a list of ingredients",

@@ -2,7 +2,7 @@ from enum import Enum
 from pydantic import BaseModel, Field
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
-from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
 # Prevent circular imports + Pydantic breaking
 if TYPE_CHECKING:
@@ -25,11 +25,19 @@ class AgentInput(BaseModel):
     context: Dict[str, Any]
     scenario_state: ScenarioExecutorType = Field(exclude=True)
 
-    def last_user_message(self) -> ChatCompletionMessageParam:
+    def last_user_message(self) -> ChatCompletionUserMessageParam:
         user_messages = [m for m in self.messages if m["role"] == "user"]
         if not user_messages:
             raise ValueError("No user messages found")
         return user_messages[-1]
+
+    def last_user_message_str(self) -> str:
+        content = self.last_user_message()["content"]
+        if type(content) != str:
+            raise ValueError(
+                f"Last user message is not a string: {content.__repr__()}. Please use the full message object instead."
+            )
+        return content
 
 
 class ScenarioResult(BaseModel):

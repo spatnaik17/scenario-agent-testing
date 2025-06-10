@@ -3,12 +3,10 @@ Scenario module: defines the core Scenario class for agent testing.
 """
 
 from typing import (
-    Awaitable,
     List,
     Dict,
     Any,
     Optional,
-    Callable,
     Type,
     TypedDict,
     Union,
@@ -17,7 +15,8 @@ import asyncio
 import concurrent.futures
 
 from scenario.config import ScenarioConfig
-from scenario.scenario_agent import ScenarioAgent
+from scenario.error_messages import message_invalid_agent_type
+from scenario.scenario_agent import ScenarioAgentAdapter
 from scenario.scenario_executor import ScenarioExecutor
 
 from .types import ScenarioResult
@@ -43,18 +42,34 @@ class Scenario(ScenarioConfig):
 
     name: str
     description: str
-    agent: Union[
-        Callable[[str, Optional[Dict[str, Any]]], Dict[str, Any]],
-        Callable[[str, Optional[Dict[str, Any]]], Awaitable[Dict[str, Any]]],
-    ]
+    agent: Type[ScenarioAgentAdapter]
     criteria: List[str]
 
-    def __init__(self, name: str, description: str, **kwargs):
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        agent: Type[ScenarioAgentAdapter],
+        criteria: List[str],
+        testing_agent: Optional[Type[ScenarioAgentAdapter]] = None,
+        max_turns: Optional[int] = None,
+        verbose: Optional[Union[bool, int]] = None,
+        cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
+    ):
         """Validate scenario configuration after initialization."""
 
         default_config = getattr(Scenario, "default_config", None)
         if default_config:
-            kwargs = {**default_config.items(), **kwargs}
+            kwargs = default_config.merge(
+                ScenarioConfig(
+                    testing_agent=testing_agent,
+                    max_turns=max_turns,
+                    verbose=verbose,
+                    cache_key=cache_key,
+                    debug=debug,
+                )
+            ).items()
 
         if not name:
             raise ValueError("Scenario name cannot be empty")
@@ -65,15 +80,21 @@ class Scenario(ScenarioConfig):
         kwargs["description"] = description
 
         # TODO: allow not having any criteria, for scripted scenarios
-        if not kwargs.get("criteria"):
+        if not criteria:
             raise ValueError("Scenario must have at least one criteria")
+        kwargs["criteria"] = criteria
 
         if kwargs.get("max_turns", 10) < 1:
             raise ValueError("max_turns must be a positive integer")
 
-        # Ensure agent is callable
-        if not callable(kwargs.get("agent")):
-            raise ValueError("Agent must be a callable function")
+        # Ensure agent is a ScenarioAgentAdapter
+        if (
+            not agent
+            or not isinstance(agent, type)
+            or not issubclass(agent, ScenarioAgentAdapter)
+        ):
+            raise ValueError(message_invalid_agent_type(agent))
+        kwargs["agent"] = agent
 
         super().__init__(**kwargs)
 
@@ -115,7 +136,7 @@ class Scenario(ScenarioConfig):
     @classmethod
     def configure(
         cls,
-        testing_agent: Optional[Type[ScenarioAgent]] = None,
+        testing_agent: Optional[Type[ScenarioAgentAdapter]] = None,
         max_turns: Optional[int] = None,
         verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,
