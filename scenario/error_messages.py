@@ -39,38 +39,33 @@ default_config_error_message = f"""
                           """
 
 
-def message_return_error_message(got: Any):
+def message_return_error_message(got: Any, class_name: str):
     got_ = got.__repr__()
     if len(got_) > 100:
         got_ = got_[:100] + "..."
 
     return f"""
- {termcolor.colored("->", "cyan")} Your agent returned:
+ {termcolor.colored("->", "cyan")} On the {termcolor.colored("call", "green")} method of the {class_name} agent adapter, you returned:
 
 {indent(got_, ' ' * 4)}
 
- {termcolor.colored("->", "cyan")} But your agent should return a dict with either a "message" string key or a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
+ {termcolor.colored("->", "cyan")} But the adapter should return either a string, a dict on the OpenAI messages format, or a list of messages in the OpenAI messages format so the testing agent can understand what happened. For example:
 
-    def my_agent_under_test(message, context):
-        response = call_my_agent(message)
+    class MyAgentAdapter(OpenAIMessagesAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            response = call_my_agent(message)
 
-        return {{
-            "message": response.output_text
-            {termcolor.colored("^" * 31, "green")}
-        }}
+            return response.output_text
+            {termcolor.colored("^" * 27, "green")}
 
- {termcolor.colored("->", "cyan")} Alternatively, you can return a list of messages in OpenAI messages format, you can also optionally provide extra artifacts:
+ {termcolor.colored("->", "cyan")} Alternatively, you can return a list of messages in OpenAI messages format, this is useful for capturing tool calls and other before the final response:
 
-    def my_agent_under_test(message, context):
-        response = call_my_agent(message)
+    class MyAgentAdapter(OpenAIMessagesAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            response = call_my_agent(message)
 
-        return {{
-            "messages": [
-                {{"role": "assistant", "content": response}}
-                {termcolor.colored("^" * 42, "green")}
-            ],
-            "extra": {{
-                # ... optional extra artifacts
-            }}
-        }}
-                          """
+            return [
+                {{"role": "assistant", "content": response.output_text}},
+                {termcolor.colored("^" * 55, "green")}
+            ]
+"""

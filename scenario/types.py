@@ -1,7 +1,6 @@
-from dataclasses import dataclass
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -33,8 +32,7 @@ class AgentInput(BaseModel):
         return user_messages[-1]
 
 
-@dataclass
-class ScenarioResult:
+class ScenarioResult(BaseModel):
     """
     Represents the results of a scenario test run.
 
@@ -49,7 +47,12 @@ class ScenarioResult:
     success: bool
     messages: List[ChatCompletionMessageParam]
     reasoning: Optional[str] = None
-    passed_criteria: List[str] = Field(default_factory=list)
-    failed_criteria: List[str] = Field(default_factory=list)
+    passed_criteria: List[str] = []
+    failed_criteria: List[str] = []
     total_time: Optional[float] = None
     agent_time: Optional[float] = None
+
+
+AgentReturnTypes = Union[
+    str, ChatCompletionMessageParam, List[ChatCompletionMessageParam], ScenarioResult
+]

@@ -2,18 +2,27 @@
 Scenario module: defines the core Scenario class for agent testing.
 """
 
-from typing import Awaitable, List, Dict, Any, Optional, Callable, TypedDict, Union
+from typing import (
+    Awaitable,
+    List,
+    Dict,
+    Any,
+    Optional,
+    Callable,
+    Type,
+    TypedDict,
+    Union,
+)
 import asyncio
 import concurrent.futures
 
 from scenario.config import ScenarioConfig
+from scenario.scenario_agent import ScenarioAgent
 from scenario.scenario_executor import ScenarioExecutor
 
 from .types import ScenarioResult
-from .testing_agent import TestingAgent
 
 from openai.types.chat import ChatCompletionMessageParam
-
 
 
 class AgentResult(TypedDict, total=False):
@@ -90,7 +99,9 @@ class Scenario(ScenarioConfig):
                 asyncio.set_event_loop(loop)
 
                 try:
-                    return loop.run_until_complete(ScenarioExecutor(self, context).run())
+                    return loop.run_until_complete(
+                        ScenarioExecutor(self, context).run()
+                    )
                 finally:
                     loop.close()
 
@@ -104,7 +115,7 @@ class Scenario(ScenarioConfig):
     @classmethod
     def configure(
         cls,
-        testing_agent: Optional[TestingAgent] = None,
+        testing_agent: Optional[Type[ScenarioAgent]] = None,
         max_turns: Optional[int] = None,
         verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,

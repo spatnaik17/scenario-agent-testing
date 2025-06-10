@@ -2,10 +2,15 @@
 Configuration module for Scenario.
 """
 
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Type, Union
 from pydantic import BaseModel
 
-from scenario.testing_agent import TestingAgent
+if TYPE_CHECKING:
+    from scenario.scenario_agent import ScenarioAgent
+
+    ScenarioAgentType = ScenarioAgent
+else:
+    ScenarioAgentType = Any
 
 
 class ScenarioConfig(BaseModel):
@@ -16,7 +21,7 @@ class ScenarioConfig(BaseModel):
     such as the LLM provider and model to use for the testing agent.
     """
 
-    testing_agent: Optional[TestingAgent] = None
+    testing_agent: Optional[Type[ScenarioAgentType]] = None
     max_turns: Optional[int] = 10
     verbose: Optional[Union[bool, int]] = True
     cache_key: Optional[str] = None

@@ -5,27 +5,23 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, List, Optional, Union, cast
-from pydantic import BaseModel
-
-from openai.types.chat import ChatCompletionMessageParam
+from typing import Optional, Type, Union, cast
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
+from scenario.scenario_agent import ScenarioAgent
 from scenario.utils import safe_attr_or_key
 
-from .types import ScenarioResult
-
-if TYPE_CHECKING:
-    from scenario.scenario import Scenario
+from .error_messages import default_config_error_message
+from .types import AgentInput, MessageTriggers, ScenarioResult
 
 
 logger = logging.getLogger("scenario")
 
 
-class TestingAgent(BaseModel):
+class TestingAgent(ScenarioAgent):
     """
     The Testing Agent that interacts with the agent under test.
 
@@ -35,7 +31,9 @@ class TestingAgent(BaseModel):
     3. Determining when to end the test and return a result
     """
 
-    model: str
+    triggers = {MessageTriggers.ASSISTANT}
+
+    model: str = ""
     api_key: Optional[str] = None
     temperature: float = 0.0
     max_tokens: Optional[int] = None
@@ -43,13 +41,35 @@ class TestingAgent(BaseModel):
     # To prevent pytest from thinking this is actually a test class
     __test__ = False
 
+    def __init__(self, input: AgentInput):
+        super().__init__(input)
+
+        if not self.model:
+            raise Exception(default_config_error_message)
+
+    @classmethod
+    def with_config(
+        cls,
+        model: str,
+        api_key: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = None,
+    ) -> Type["TestingAgent"]:
+        class TestingAgentWithConfig(cls):
+            def __init__(self, input: AgentInput):
+                self.model = model
+                self.api_key = api_key
+                self.temperature = temperature
+                self.max_tokens = max_tokens
+
+                super().__init__(input)
+
+        return TestingAgentWithConfig
+
     @scenario_cache(ignore=["scenario"])
-    def generate_next_message(
+    def call(
         self,
-        scenario: "Scenario",
-        messages: List[ChatCompletionMessageParam],
-        first_message: bool = False,
-        last_message: bool = False,
+        input: AgentInput,
     ) -> Union[str, ScenarioResult]:
         """
         Generate the next message in the conversation based on history OR
@@ -59,6 +79,8 @@ class TestingAgent(BaseModel):
           - A string message to send to the agent (if conversation should continue)
           - A ScenarioResult (if the test should conclude)
         """
+
+        scenario = input.scenario_state.scenario
 
         messages = [
             {
@@ -96,10 +118,15 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 """,
             },
             {"role": "assistant", "content": "Hello, how can I help you today?"},
-            *messages,
+            *input.messages,
         ]
 
-        if last_message:
+        is_first_message = len(input.messages) == 0
+        is_last_message = (
+            input.scenario_state.current_turn == input.scenario_state.scenario.max_turns
+        )
+
+        if is_last_message:
             messages.append(
                 {
                     "role": "user",
@@ -191,8 +218,8 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                tools=tools if not first_message else None,
-                tool_choice="required" if last_message else None,
+                tools=tools if not is_first_message else None,
+                tool_choice="required" if is_last_message else None,
             ),
         )
 

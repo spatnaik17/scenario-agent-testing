@@ -7,6 +7,7 @@ from .types import ScenarioResult, AgentInput, MessageTriggers
 from .config import ScenarioConfig
 
 # Then import modules with dependencies
+from .scenario_agent import ScenarioAgent
 from .testing_agent import TestingAgent
 from .scenario import Scenario
 from .cache import scenario_cache
@@ -15,12 +16,18 @@ from .cache import scenario_cache
 from .pytest_plugin import pytest_configure, scenario_reporter
 
 __all__ = [
-    "Scenario",
-    "TestingAgent",
+    # Types
     "ScenarioResult",
     "AgentInput",
     "MessageTriggers",
     "ScenarioConfig",
+
+    # Classes
+    "Scenario",
+    "ScenarioAgent",
+    "TestingAgent",
+
+    # Plugins
     "pytest_configure",
     "scenario_reporter",
     "scenario_cache",

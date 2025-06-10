@@ -1,21 +1,15 @@
-from typing import List, Union
-
 import pytest
 from scenario import Scenario, TestingAgent
-from scenario.types import ScenarioResult
-from openai.types.chat import ChatCompletionMessageParam
+from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
 
 
 class MockTestingAgent(TestingAgent):
-    def generate_next_message(
+    async def call(
         self,
-        scenario: Scenario,
-        messages: List[ChatCompletionMessageParam],
-        first_message: bool = False,
-        last_message: bool = False,
-    ) -> Union[str, ScenarioResult]:
-        if first_message:
-            return "Hi, I'm a user"
+        input: AgentInput,
+    ) -> AgentReturnTypes:
+        if len(input.messages) == 0:
+            return {"role": "user", "content": "Hi, I'm a user"}
 
         return ScenarioResult(
             success=True,
@@ -27,7 +21,7 @@ class MockTestingAgent(TestingAgent):
 
 @pytest.mark.asyncio
 async def test_scenario_high_level_api():
-    Scenario.configure(testing_agent=MockTestingAgent(model="none"))
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
 
     scenario = Scenario(
         name="test name",
