@@ -9,8 +9,13 @@ import time
 import termcolor
 
 from scenario.error_messages import message_return_error_message
-from scenario.utils import print_openai_messages, safe_attr_or_key, safe_list_at, show_spinner
-from openai.types.chat import ChatCompletionMessageParam
+from scenario.utils import (
+    print_openai_messages,
+    safe_attr_or_key,
+    safe_list_at,
+    show_spinner,
+)
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
 from .result import ScenarioResult
 from .error_messages import default_config_error_message
@@ -18,7 +23,6 @@ from .cache import context_scenario
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
-
 
 
 class ScenarioExecutor:
@@ -30,7 +34,7 @@ class ScenarioExecutor:
             raise Exception(default_config_error_message)
         self.testing_agent = testing_agent
 
-        self.conversation: List[Dict[str, Any]] = []
+        self.messages: List[ChatCompletionMessageParam] = []
 
     async def run(
         self,
@@ -52,8 +56,8 @@ class ScenarioExecutor:
         # Run the initial testing agent prompt to get started
         total_start_time = time.time()
         context_scenario.set(self.scenario)
-        next_message = self._generate_next_message(
-            self.scenario, self.conversation, first_message=True
+        next_message = self._generate_user_message(
+            self.scenario, self.messages, first_message=True
         )
 
         if isinstance(next_message, ScenarioResult):
@@ -62,7 +66,10 @@ class ScenarioExecutor:
                 next_message.__repr__(),
             )
         elif self.scenario.verbose:
-            print(self._scenario_name() + termcolor.colored("User:", "green"), next_message)
+            print(
+                self._scenario_name() + termcolor.colored("User:", "green"),
+                next_message,
+            )
 
         # Execute the conversation
         current_turn = 0
@@ -72,13 +79,17 @@ class ScenarioExecutor:
         # Start the test with the initial message
         while current_turn < max_turns:
             # Record the testing agent's message
-            self.conversation.append({"role": "user", "content": next_message})
+            self.messages.append(
+                ChatCompletionUserMessageParam(role="user", content=next_message)
+            )
 
             # Get response from the agent under test
             start_time = time.time()
 
             context_scenario.set(self.scenario)
-            with show_spinner(text="Agent:", color="blue", enabled=self.scenario.verbose):
+            with show_spinner(
+                text="Agent:", color="blue", enabled=self.scenario.verbose
+            ):
                 agent_response = self.scenario.agent(next_message, context)
                 if isinstance(agent_response, Awaitable):
                     agent_response = await agent_response
@@ -110,7 +121,10 @@ class ScenarioExecutor:
                     messages = messages[1:]
 
             if has_valid_message and self.scenario.verbose:
-                print(self._scenario_name() + termcolor.colored("Agent:", "blue"), agent_response["message"])
+                print(
+                    self._scenario_name() + termcolor.colored("Agent:", "blue"),
+                    agent_response["message"],
+                )
 
             if messages and self.scenario.verbose:
                 print_openai_messages(self._scenario_name(), messages)
@@ -130,13 +144,13 @@ class ScenarioExecutor:
             agent_time += response_time
 
             if messages:
-                self.conversation.extend(agent_response["messages"])
+                self.messages.extend(agent_response["messages"])
             if "message" in agent_response:
-                self.conversation.append(
+                self.messages.append(
                     {"role": "assistant", "content": agent_response["message"]}
                 )
             if "extra" in agent_response:
-                self.conversation.append(
+                self.messages.append(
                     {
                         "role": "assistant",
                         "content": json.dumps(agent_response["extra"]),
@@ -144,9 +158,9 @@ class ScenarioExecutor:
                 )
 
             # Generate the next message OR finish the test based on the agent's evaluation
-            result = self._generate_next_message(
+            result = self._generate_user_message(
                 self.scenario,
-                self.conversation,
+                self.messages,
                 last_message=current_turn == max_turns - 1,
             )
 
@@ -156,7 +170,9 @@ class ScenarioExecutor:
                 result.agent_time = agent_time
                 return result
             elif self.scenario.verbose:
-                print(self._scenario_name() + termcolor.colored("User:", "green"), result)
+                print(
+                    self._scenario_name() + termcolor.colored("User:", "green"), result
+                )
 
             # Otherwise, it's the next message to send to the agent
             next_message = result
@@ -166,22 +182,26 @@ class ScenarioExecutor:
 
         # If we reached max turns without conclusion, fail the test
         return ScenarioResult.failure_result(
-            conversation=self.conversation,
+            messages=self.messages,
             reasoning=f"Reached maximum turns ({max_turns}) without conclusion",
             total_time=time.time() - total_start_time,
             agent_time=agent_time,
         )
 
-    def _generate_next_message(
+    def _generate_user_message(
         self,
         scenario: "Scenario",
-        conversation: List[Dict[str, Any]],
+        messages: List[ChatCompletionMessageParam],
         first_message: bool = False,
         last_message: bool = False,
     ) -> Union[str, ScenarioResult]:
         if self.scenario.debug:
-            print(f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send")
-            input_message = input(self._scenario_name() + termcolor.colored('User: ', 'green'))
+            print(
+                f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send"
+            )
+            input_message = input(
+                self._scenario_name() + termcolor.colored("User: ", "green")
+            )
 
             # Clear the input prompt lines completely
             for _ in range(3):
@@ -192,9 +212,13 @@ class ScenarioExecutor:
             if input_message:
                 return input_message
 
-        with show_spinner(text=f"{self._scenario_name()}User:", color="green", enabled=self.scenario.verbose):
+        with show_spinner(
+            text=f"{self._scenario_name()}User:",
+            color="green",
+            enabled=self.scenario.verbose,
+        ):
             return self.testing_agent.generate_next_message(
-                scenario, conversation, first_message, last_message
+                scenario, messages, first_message, last_message
             )
 
     def _scenario_name(self):

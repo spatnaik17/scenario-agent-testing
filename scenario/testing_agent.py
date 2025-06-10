@@ -5,8 +5,10 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Dict, List, Any, Optional, Union, cast
+from typing import TYPE_CHECKING, List, Optional, Union, cast
 from pydantic import BaseModel
+
+from openai.types.chat import ChatCompletionMessageParam
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
@@ -45,7 +47,7 @@ class TestingAgent(BaseModel):
     def generate_next_message(
         self,
         scenario: "Scenario",
-        conversation: List[Dict[str, Any]],
+        messages: List[ChatCompletionMessageParam],
         first_message: bool = False,
         last_message: bool = False,
     ) -> Union[str, ScenarioResult]:
@@ -94,7 +96,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 """,
             },
             {"role": "assistant", "content": "Hello, how can I help you today?"},
-            *conversation,
+            *messages,
         ]
 
         if last_message:
@@ -129,9 +131,9 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                     message["role"] = "user"
             else:
                 if getattr(message, "role", None) == "user":
-                    message.role = "assistant"
+                    message.role = "assistant"  # type: ignore
                 elif getattr(message, "role", None) == "assistant":
-                    message.role = "user"
+                    message.role = "user"  # type: ignore
 
         # Define the tool
         criteria_names = [
@@ -223,13 +225,13 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         # Return the appropriate ScenarioResult based on the verdict
                         if verdict == "success":
                             return ScenarioResult.success_result(
-                                conversation=conversation,
+                                messages=messages,
                                 reasoning=reasoning,
                                 passed_criteria=passed_criteria,
                             )
                         elif verdict == "failure":
                             return ScenarioResult.failure_result(
-                                conversation=conversation,
+                                messages=messages,
                                 reasoning=reasoning,
                                 passed_criteria=passed_criteria,
                                 failed_criteria=failed_criteria,
@@ -237,7 +239,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         else:  # inconclusive
                             return ScenarioResult(
                                 success=False,
-                                conversation=conversation,
+                                messages=messages,
                                 reasoning=reasoning,
                                 passed_criteria=passed_criteria,
                                 failed_criteria=failed_criteria,

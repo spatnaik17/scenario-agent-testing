@@ -5,6 +5,8 @@ Result module: defines the class for scenario test results.
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
+from openai.types.chat import ChatCompletionMessageParam
+
 
 @dataclass
 class ScenarioResult:
@@ -20,7 +22,7 @@ class ScenarioResult:
     """
 
     success: bool
-    conversation: List[Dict[str, str]]
+    messages: List[ChatCompletionMessageParam]
     reasoning: Optional[str] = None
     passed_criteria: List[str] = field(default_factory=list)
     failed_criteria: List[str] = field(default_factory=list)
@@ -35,7 +37,7 @@ class ScenarioResult:
     @classmethod
     def success_result(
         cls,
-        conversation: List[Dict[str, str]],
+        messages: List[ChatCompletionMessageParam],
         reasoning: Optional[str],
         passed_criteria: List[str],
         total_time: Optional[float] = None,
@@ -44,7 +46,7 @@ class ScenarioResult:
         """Create a successful result."""
         return cls(
             success=True,
-            conversation=conversation,
+            messages=messages,
             reasoning=reasoning,
             passed_criteria=passed_criteria,
             failed_criteria=[],
@@ -55,7 +57,7 @@ class ScenarioResult:
     @classmethod
     def failure_result(
         cls,
-        conversation: List[Dict[str, str]],
+        messages: List[ChatCompletionMessageParam],
         reasoning: str,
         passed_criteria: Optional[List[str]] = None,
         failed_criteria: Optional[List[str]] = None,
@@ -65,7 +67,7 @@ class ScenarioResult:
         """Create a failed result."""
         return cls(
             success=False,
-            conversation=conversation,
+            messages=messages,
             reasoning=reasoning,
             passed_criteria=passed_criteria if passed_criteria is not None else [],
             failed_criteria=failed_criteria if failed_criteria is not None else [],

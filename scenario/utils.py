@@ -15,7 +15,6 @@ from rich.text import Text
 from rich.errors import LiveError
 
 
-
 class SerializableAndPydanticEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, BaseModel):
@@ -46,7 +45,9 @@ def title_case(string):
     return " ".join(word.capitalize() for word in string.split("_"))
 
 
-def print_openai_messages(scenario_name: str, messages: list[ChatCompletionMessageParam]):
+def print_openai_messages(
+    scenario_name: str, messages: list[ChatCompletionMessageParam]
+):
     for msg in messages:
         role = safe_attr_or_key(msg, "role")
         content = safe_attr_or_key(msg, "content")
@@ -61,7 +62,8 @@ def print_openai_messages(scenario_name: str, messages: list[ChatCompletionMessa
                     args = safe_attr_or_key(function, "arguments", "{}")
                     args = _take_maybe_json_first_lines(args)
                     print(
-                        scenario_name + termcolor.colored(f"ToolCall({name}):", "magenta"),
+                        scenario_name
+                        + termcolor.colored(f"ToolCall({name}):", "magenta"),
                         f"\n\n{indent(args, ' ' * 4)}\n",
                     )
         elif role == "tool":
@@ -91,9 +93,12 @@ def _take_maybe_json_first_lines(string, max_lines=5):
 
 console = Console()
 
+
 class TextFirstSpinner(Spinner):
     def __init__(self, name, text: str, color: str, **kwargs):
-        super().__init__(name, "", style="bold white", **kwargs)  # Initialize with empty text
+        super().__init__(
+            name, "", style="bold white", **kwargs
+        )  # Initialize with empty text
         self.text_before = text
         self.color = color
 
@@ -105,7 +110,9 @@ class TextFirstSpinner(Spinner):
 
 
 @contextmanager
-def show_spinner(text: str, color: str = "white", enabled: Optional[Union[bool, int]] = None):
+def show_spinner(
+    text: str, color: str = "white", enabled: Optional[Union[bool, int]] = None
+):
     if not enabled:
         yield
     else:
