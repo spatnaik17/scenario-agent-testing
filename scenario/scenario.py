@@ -5,7 +5,6 @@ Scenario module: defines the core Scenario class for agent testing.
 from typing import Awaitable, List, Dict, Any, Optional, Callable, TypedDict, Union
 import asyncio
 import concurrent.futures
-from functools import partial
 
 from scenario.config import ScenarioConfig
 from scenario.scenario_executor import ScenarioExecutor
@@ -14,6 +13,7 @@ from .result import ScenarioResult
 from .testing_agent import TestingAgent
 
 from openai.types.chat import ChatCompletionMessageParam
+
 
 
 class AgentResult(TypedDict, total=False):
@@ -39,13 +39,14 @@ class Scenario(ScenarioConfig):
         Callable[[str, Optional[Dict[str, Any]]], Awaitable[Dict[str, Any]]],
     ]
     criteria: List[str]
+    _state: ScenarioExecutor
 
     def __init__(self, name: str, description: str, **kwargs):
         """Validate scenario configuration after initialization."""
 
         default_config = getattr(Scenario, "default_config", None)
         if default_config:
-            kwargs = {**default_config.model_dump(), **kwargs}
+            kwargs = {**default_config.items(), **kwargs}
 
         if not name:
             raise ValueError("Scenario name cannot be empty")
@@ -68,6 +69,8 @@ class Scenario(ScenarioConfig):
 
         super().__init__(**kwargs)
 
+        self._state = ScenarioExecutor(self)
+
     async def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
         Run the scenario against the agent under test.
@@ -78,6 +81,8 @@ class Scenario(ScenarioConfig):
         Returns:
             ScenarioResult containing the test outcome
         """
+
+        self._state = ScenarioExecutor(self)
 
         # We'll use a thread pool to run the execution logic, we
         # require a separate thread because even though asyncio is
@@ -90,7 +95,7 @@ class Scenario(ScenarioConfig):
                 asyncio.set_event_loop(loop)
 
                 try:
-                    return loop.run_until_complete(ScenarioExecutor(self).run(context))
+                    return loop.run_until_complete(self._state.run(context))
                 finally:
                     loop.close()
 

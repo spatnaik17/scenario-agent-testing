@@ -36,6 +36,9 @@ class ScenarioExecutor:
 
         self.messages: List[ChatCompletionMessageParam] = []
 
+    def add_message(self, message: ChatCompletionMessageParam):
+        self.messages.append(message)
+
     async def run(
         self,
         context: Optional[Dict[str, Any]] = None,

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from scenario.testing_agent import TestingAgent
 
+
 class ScenarioConfig(BaseModel):
     """
     Configuration class for the Scenario library.
@@ -22,7 +23,12 @@ class ScenarioConfig(BaseModel):
     debug: Optional[bool] = False
 
     def merge(self, other: "ScenarioConfig") -> "ScenarioConfig":
-        return ScenarioConfig(**{
-            **self.model_dump(),
-            **other.model_dump(exclude_none=True),
-        })
+        return ScenarioConfig(
+            **{
+                **self.items(),
+                **other.items(),
+            }
+        )
+
+    def items(self):
+        return {k: getattr(self, k) for k in self.model_dump(exclude_none=True).keys()}
