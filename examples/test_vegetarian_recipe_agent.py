@@ -19,7 +19,7 @@ async def test_vegetarian_recipe_agent():
 
     class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
         async def call(self, input: AgentInput) -> AgentReturnTypes:
-            return agent.run(input.last_user_message_str())
+            return agent.run(input.last_new_user_message_str())
 
     # Define the scenario
     scenario = Scenario(

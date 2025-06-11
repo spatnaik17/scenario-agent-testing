@@ -59,19 +59,21 @@ class Scenario(ScenarioConfig):
     ):
         """Validate scenario configuration after initialization."""
 
-        kwargs: Dict[str, Any] = {}
+        config = ScenarioConfig(
+            testing_agent=testing_agent,
+            max_turns=max_turns,
+            verbose=verbose,
+            cache_key=cache_key,
+            debug=debug,
+        )
 
-        default_config = getattr(Scenario, "default_config", None)
+
+        kwargs = config.items()
+        default_config: Optional[ScenarioConfig] = getattr(
+            Scenario, "default_config", None
+        )
         if default_config:
-            kwargs = default_config.merge(
-                ScenarioConfig(
-                    testing_agent=testing_agent,
-                    max_turns=max_turns,
-                    verbose=verbose,
-                    cache_key=cache_key,
-                    debug=debug,
-                )
-            ).items()
+            kwargs = default_config.merge(config).items()
 
         if not name:
             raise ValueError("Scenario name cannot be empty")

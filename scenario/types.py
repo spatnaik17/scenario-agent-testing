@@ -22,20 +22,21 @@ class MessageTriggers(Enum):
 class AgentInput(BaseModel):
     thread_id: str
     messages: List[ChatCompletionMessageParam]
+    new_messages: List[ChatCompletionMessageParam]
     context: Dict[str, Any]
     scenario_state: ScenarioExecutorType = Field(exclude=True)
 
-    def last_user_message(self) -> ChatCompletionUserMessageParam:
-        user_messages = [m for m in self.messages if m["role"] == "user"]
+    def last_new_user_message(self) -> ChatCompletionUserMessageParam:
+        user_messages = [m for m in self.new_messages if m["role"] == "user"]
         if not user_messages:
-            raise ValueError("No user messages found")
+            raise ValueError("No new user messages found, did you mean to call the assistant twice? Perhaps change your adapter to use the full messages list instead.")
         return user_messages[-1]
 
-    def last_user_message_str(self) -> str:
-        content = self.last_user_message()["content"]
+    def last_new_user_message_str(self) -> str:
+        content = self.last_new_user_message()["content"]
         if type(content) != str:
             raise ValueError(
-                f"Last user message is not a string: {content.__repr__()}. Please use the full message object instead."
+                f"Last user message is not a string: {content.__repr__()}. Please use the full messages list instead."
             )
         return content
 

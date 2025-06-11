@@ -27,7 +27,11 @@ async def test_should_be_able_to_override_scenario_agent():
             )
 
     input = AgentInput(
-        thread_id="1", messages=[], context={}, scenario_state=cast(Any, None)
+        thread_id="1",
+        messages=[],
+        new_messages=[],
+        context={},
+        scenario_state=cast(Any, None),
     )
 
     agent = MyCustomTestingAgent(input)

@@ -16,7 +16,7 @@ class LovableAgentAdapter(ScenarioAgentAdapter):
 
     async def call(self, input: AgentInput) -> AgentReturnTypes:
         _, messages = await self.lovable_agent.process_user_message(
-            input.last_user_message_str(), input.context["template_path"]
+            input.last_new_user_message_str(), input.context["template_path"]
         )
 
         return messages
