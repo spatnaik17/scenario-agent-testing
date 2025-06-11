@@ -3,11 +3,20 @@ ScenarioExecutor module: holds the scenario execution logic and state, orchestra
 """
 
 import sys
-from typing import TYPE_CHECKING, Awaitable, Dict, List, Any, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Awaitable,
+    Dict,
+    List,
+    Any,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 import time
 import termcolor
 
-import scenario.utils
 from scenario.utils import (
     check_valid_return_type,
     convert_agent_return_types_to_openai_messages,
@@ -16,14 +25,14 @@ from scenario.utils import (
 )
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
-from .types import AgentInput, ScenarioResult
-from .error_messages import agent_response_not_awaitable, default_config_error_message
+from .types import AgentInput, ScenarioAgentRole, ScenarioResult
+from .error_messages import agent_response_not_awaitable
 from .cache import context_scenario
+from .scenario_agent_adapter import ScenarioAgentAdapter
 from pksuid import PKSUID
 
 if TYPE_CHECKING:
     from scenario.scenario import Scenario
-    from scenario.scenario_agent import ScenarioAgentAdapter
 
 
 class ScenarioExecutor:
@@ -33,15 +42,20 @@ class ScenarioExecutor:
     current_turn: int
 
     _context: Optional[Dict[str, Any]]
-    _agents: List["ScenarioAgentAdapter"]
+    _agents: List[ScenarioAgentAdapter]
     _total_start_time: float
     _pending_messages: Dict[int, List[ChatCompletionMessageParam]]
+
+    _pending_roles_on_turn: List[ScenarioAgentRole] = []
+    _pending_agents_on_turn: Set[ScenarioAgentAdapter] = set()
+    _agent_times: Dict[int, float] = {}
 
     def __init__(self, scenario: "Scenario", context: Optional[Dict[str, Any]] = None):
         super().__init__()
 
         self.scenario = scenario.model_copy()
         self._context = context
+        self.current_turn = 0
         self.reset()
 
     def reset(self):
@@ -50,38 +64,23 @@ class ScenarioExecutor:
         self._pending_messages = {}
         self.thread_id = str(PKSUID("thread"))
         self._total_start_time = time.time()
-        self._agent_time = 0
+        self._agent_times = {}
+
+        for AgentClass in self.scenario.agents:
+            self._agents.append(
+                AgentClass(
+                    input=AgentInput(
+                        thread_id=self.thread_id,
+                        messages=[],
+                        new_messages=[],
+                        context=self._context or {},
+                        scenario_state=self,
+                    )
+                )
+            )
+
+        self._new_turn()
         self.current_turn = 0
-
-        # TODO: array of agents instead
-        TestingAgentClass = self.scenario.testing_agent
-        if not TestingAgentClass:
-            raise Exception(default_config_error_message)
-
-        self._agents.append(
-            TestingAgentClass(
-                input=AgentInput(
-                    thread_id=self.thread_id,
-                    messages=[],
-                    new_messages=[],
-                    context=self._context or {},
-                    scenario_state=self,
-                )
-            )
-        )
-
-        AgentClass = self.scenario.agent
-        self._agents.append(
-            AgentClass(
-                input=AgentInput(
-                    thread_id=self.thread_id,
-                    messages=[],
-                    new_messages=[],
-                    context=self._context or {},
-                    scenario_state=self,
-                )
-            )
-        )
 
         context_scenario.set(self.scenario)
 
@@ -106,35 +105,58 @@ class ScenarioExecutor:
         for message in messages:
             self.add_message(message, from_agent_idx)
 
-    async def _turn(self):
-        # Generate the next message OR finish the test based on the agent's evaluation
-        user_message = await self._generate_user_message()
-
-        # Check if the result is a ScenarioResult (indicating test completion)
-        if isinstance(user_message, ScenarioResult):
-            if self.current_turn == 0:
-                raise Exception(
-                    "Unexpectedly generated a ScenarioResult for the initial message",
-                    user_message.__repr__(),
-                )
-            else:
-                user_message.total_time = time.time() - self._total_start_time
-                user_message.agent_time = self._agent_time
-                return user_message
-
-        # Get response from the agent under test
-        start_time = time.time()
-
-        context_scenario.set(self.scenario)
-        agent_response = await self._generate_agent_response()
-
-        response_time = time.time() - start_time
-        self._agent_time += response_time
-
-        # Increment turn counter
+    def _new_turn(self):
+        self._pending_agents_on_turn = set(self._agents)
+        self._pending_roles_on_turn = [
+            ScenarioAgentRole.USER,
+            ScenarioAgentRole.AGENT,
+            ScenarioAgentRole.JUDGE,
+        ]
         self.current_turn += 1
 
-        return agent_response
+    async def step(self) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
+        if len(self._pending_roles_on_turn) == 0:
+            self._new_turn()
+            if self.current_turn >= (self.scenario.max_turns or 10):
+                return self._reached_max_turns()
+
+        current_role = self._pending_roles_on_turn[0]
+        idx, next_agent = self._next_agent_for_role(current_role)
+        if not next_agent:
+            self._pending_roles_on_turn.pop(0)
+            return await self.step()
+
+        self._pending_agents_on_turn.remove(next_agent)
+        if current_role == ScenarioAgentRole.USER:
+            return await self._call_agent(idx, reverse_roles=True)
+        else:
+            return await self._call_agent(idx)
+
+    def _next_agent_for_role(
+        self, role: ScenarioAgentRole
+    ) -> Tuple[int, Optional[ScenarioAgentAdapter]]:
+        for idx, agent in enumerate(self._agents):
+            if role in agent.roles and agent in self._pending_agents_on_turn:
+                return idx, agent
+        return -1, None
+
+    def _reached_max_turns(self) -> ScenarioResult:
+        # If we reached max turns without conclusion, fail the test
+        agent_roles_agents_idx = [
+            idx
+            for idx, agent in enumerate(self._agents)
+            if ScenarioAgentRole.AGENT in agent.roles
+        ]
+        agent_times = [self._agent_times[idx] for idx in agent_roles_agents_idx]
+        agent_time = sum(agent_times)
+
+        return ScenarioResult(
+            success=False,
+            messages=self.messages,
+            reasoning=f"Reached maximum turns ({self.scenario.max_turns or 10}) without conclusion",
+            total_time=time.time() - self._total_start_time,
+            agent_time=agent_time,
+        )
 
     async def run(self) -> ScenarioResult:
         """
@@ -152,28 +174,20 @@ class ScenarioExecutor:
 
         self.reset()
 
-        # Execute the conversation
-        max_turns = self.scenario.max_turns or 10
+        while True:
+            next_message = await self.step()
 
-        # Start the test with the initial message
-        while self.current_turn < max_turns:
-            next_message = await self._turn()
             if isinstance(next_message, ScenarioResult):
                 return next_message
 
-        # If we reached max turns without conclusion, fail the test
-        return ScenarioResult(
-            success=False,
-            messages=self.messages,
-            reasoning=f"Reached maximum turns ({max_turns}) without conclusion",
-            total_time=time.time() - self._total_start_time,
-            agent_time=self._agent_time,
-        )
-
-    async def _generate_user_message(
-        self,
+    async def _call_agent(
+        self, idx: int, reverse_roles: bool = False
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
-        if self.scenario.debug:
+        agent = self._agents[idx]
+
+        first_role = next(iter(agent.roles), "Unknown")
+
+        if first_role == ScenarioAgentRole.USER and self.scenario.debug:
             print(
                 f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send"
             )
@@ -193,79 +207,59 @@ class ScenarioExecutor:
                 ]
 
         with show_spinner(
-            text=f"{self._scenario_name()}User:",
-            color="green",
+            text=f"{first_role.value if isinstance(first_role, ScenarioAgentRole) else first_role}:",
+            color=(
+                "blue"
+                if first_role == ScenarioAgentRole.AGENT
+                else "green" if first_role == ScenarioAgentRole.USER else "yellow"
+            ),
             enabled=self.scenario.verbose,
         ):
-            return await self._call_agent(0, reverse_roles=True)
+            start_time = time.time()
 
-    async def _generate_agent_response(
-        self,
-    ) -> List[ChatCompletionMessageParam]:
-        with show_spinner(text="Agent:", color="blue", enabled=self.scenario.verbose):
-            agent_response = await self._call_agent(1)
-
-        if isinstance(agent_response, ScenarioResult):
-            raise Exception(
-                "Unexpectedly generated a ScenarioResult for the agent response",
-                agent_response.__repr__(),
+            agent_response = agent.call(
+                AgentInput(
+                    # TODO: test thread_id
+                    thread_id=self.thread_id,
+                    messages=self.messages,
+                    new_messages=self._pending_messages.get(idx, []),
+                    # TODO: test context
+                    context=self._context or {},
+                    scenario_state=self,
+                )
             )
+            if not isinstance(agent_response, Awaitable):
+                raise Exception(
+                    agent_response_not_awaitable(agent.__class__.__name__),
+                )
 
-        return agent_response
+            agent_response = await agent_response
 
-    async def _call_agent(
-        self, idx: int, reverse_roles: bool = False
-    ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
-        agent = self._agents[idx]
-        agent_response = agent.call(
-            AgentInput(
-                # TODO: test thread_id
-                thread_id=self.thread_id,
-                messages=self.messages,
-                new_messages=self._pending_messages.get(idx, []),
-                # TODO: test context
-                context=self._context or {},
-                scenario_state=self,
-            )
-        )
-        if not isinstance(agent_response, Awaitable):
-            raise Exception(
-                agent_response_not_awaitable(agent.__class__.__name__),
-            )
+            if idx not in self._agent_times:
+                self._agent_times[idx] = 0
+            self._agent_times[idx] += time.time() - start_time
 
-        agent_response = await agent_response
-        self._pending_messages[idx] = []
-        check_valid_return_type(agent_response, agent.__class__.__name__)
+            self._pending_messages[idx] = []
+            check_valid_return_type(agent_response, agent.__class__.__name__)
 
-        messages = []
-        if isinstance(agent_response, list):
-            messages.extend(agent_response)
-        elif isinstance(agent_response, str):
-            messages.append(
-                {
-                    "role": "user" if reverse_roles else "assistant",
-                    "content": agent_response,
-                }
-            )
-        elif isinstance(agent_response, dict):
-            messages.append(agent_response)
+            messages = []
+            if isinstance(agent_response, ScenarioResult):
+                # TODO: should be an event
+                return agent_response
+            else:
+                messages = convert_agent_return_types_to_openai_messages(
+                    agent_response, role="user" if reverse_roles else "assistant"
+                )
 
-        if isinstance(agent_response, ScenarioResult):
-            # TODO: should be an event
-            return agent_response
-        else:
-            messages = convert_agent_return_types_to_openai_messages(
-                agent_response, role="user" if reverse_roles else "assistant"
-            )
+            self.add_messages(messages, from_agent_idx=idx)
 
-        self.add_messages(messages, from_agent_idx=idx)
+            if messages and self.scenario.verbose:
+                print_openai_messages(
+                    self._scenario_name(),
+                    [m for m in messages if m["role"] != "system"],
+                )
 
-        if messages and self.scenario.verbose:
-            print_openai_messages(
-                self._scenario_name(), [m for m in messages if m["role"] != "system"]
-            )
-
-        return messages
+            return messages
 
     def last_message(self) -> ChatCompletionMessageParam:
         if len(self.messages) == 0:

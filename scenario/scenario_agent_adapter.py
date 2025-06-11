@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
 from typing import ClassVar, Set
 
-from .types import AgentInput, AgentReturnTypes, MessageTriggers
+from .types import AgentInput, AgentReturnTypes, ScenarioAgentRole
 
 
 class ScenarioAgentAdapter(ABC):
-    triggers: ClassVar[Set[MessageTriggers]] = {MessageTriggers.USER}
+    roles: ClassVar[Set[ScenarioAgentRole]] = {ScenarioAgentRole.AGENT}
 
     def __init__(self, input: AgentInput):
         super().__init__()

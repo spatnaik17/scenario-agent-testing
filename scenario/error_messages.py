@@ -36,7 +36,16 @@ default_config_error_message = f"""
         result = scenario.run()
 
         assert result.success
-                          """
+"""
+
+
+testing_agent_not_configured_error_message = f"""
+
+ {termcolor.colored("->", "cyan")} Testing agent was initialized without a model, please set the model when defining the testing agent, for example:
+
+    TestingAgent.with_config(model="openai/gpt-4.1-mini")
+    {termcolor.colored("^" * 53, "green")}
+"""
 
 
 def message_return_error_message(got: Any, class_name: str):

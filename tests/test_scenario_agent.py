@@ -5,14 +5,14 @@ from scenario import Scenario, TestingAgent
 from scenario.types import ScenarioResult
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
-from scenario.scenario_agent import ScenarioAgentAdapter
-from scenario.types import AgentInput, MessageTriggers
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+from scenario.types import AgentInput, ScenarioAgentRole
 
 
 @pytest.mark.asyncio
 async def test_should_be_able_to_override_scenario_agent():
     class MyCustomTestingAgent(ScenarioAgentAdapter):
-        triggers = {MessageTriggers.ASSISTANT}
+        triggers = {ScenarioAgentRole.AGENT}
 
         async def call(self, input: AgentInput):
             return ScenarioResult(
@@ -35,5 +35,5 @@ async def test_should_be_able_to_override_scenario_agent():
     )
 
     agent = MyCustomTestingAgent(input)
-    assert agent.triggers == {MessageTriggers.ASSISTANT}
+    assert agent.triggers == {ScenarioAgentRole.AGENT}
     assert (await agent.call(input)).success

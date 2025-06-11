@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any, Optional, Type, Union
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from scenario.scenario_agent import ScenarioAgentAdapter
+    from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 
     ScenarioAgentType = ScenarioAgentAdapter
 else:

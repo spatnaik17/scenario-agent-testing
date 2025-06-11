@@ -2,7 +2,7 @@ import pytest
 
 from examples.lovable_clone.lovable_agent import LovableAgent
 from scenario import Scenario, TestingAgent
-from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes
 
 Scenario.configure(

@@ -15,8 +15,11 @@ import asyncio
 import concurrent.futures
 
 from scenario.config import ScenarioConfig
-from scenario.error_messages import message_invalid_agent_type
-from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.error_messages import (
+    default_config_error_message,
+    message_invalid_agent_type,
+)
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.scenario_executor import ScenarioExecutor
 
 from .types import ScenarioResult
@@ -42,16 +45,17 @@ class Scenario(ScenarioConfig):
 
     name: str
     description: str
-    agent: Type[ScenarioAgentAdapter]
+    agents: List[Type[ScenarioAgentAdapter]]
     criteria: List[str]
 
     def __init__(
         self,
         name: str,
         description: str,
-        agent: Type[ScenarioAgentAdapter],
         criteria: List[str],
+        agent: Optional[Type[ScenarioAgentAdapter]] = None,
         testing_agent: Optional[Type[ScenarioAgentAdapter]] = None,
+        agents: List[Type[ScenarioAgentAdapter]] = [],
         max_turns: Optional[int] = None,
         verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,
@@ -66,7 +70,6 @@ class Scenario(ScenarioConfig):
             cache_key=cache_key,
             debug=debug,
         )
-
 
         kwargs = config.items()
         default_config: Optional[ScenarioConfig] = getattr(
@@ -91,14 +94,29 @@ class Scenario(ScenarioConfig):
         if kwargs.get("max_turns", 10) < 1:
             raise ValueError("max_turns must be a positive integer")
 
-        # Ensure agent is a ScenarioAgentAdapter
-        if (
-            not agent
-            or not isinstance(agent, type)
-            or not issubclass(agent, ScenarioAgentAdapter)
-        ):
-            raise ValueError(message_invalid_agent_type(agent))
-        kwargs["agent"] = agent
+        if not agents and not agent:
+            raise ValueError(
+                "Missing required argument `agent`. Either `agent` or `agents` argument must be provided for the Scenario"
+            )
+
+        if not agents and not kwargs.get("testing_agent"):
+            raise Exception(default_config_error_message)
+
+
+        agents = agents or [
+            kwargs.get("testing_agent"),
+            agent, # type: ignore
+        ]
+
+        # Ensure each agent is a ScenarioAgentAdapter
+        for agent in agents:
+            if (
+                not agent
+                or not isinstance(agent, type)
+                or not issubclass(agent, ScenarioAgentAdapter)
+            ):
+                raise ValueError(message_invalid_agent_type(agent))
+        kwargs["agents"] = agents
 
         super().__init__(**kwargs)
 

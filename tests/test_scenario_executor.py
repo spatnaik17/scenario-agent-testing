@@ -2,7 +2,7 @@ from typing import Union
 
 import pytest
 from scenario import Scenario, TestingAgent
-from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
 
 from scenario.scenario_executor import ScenarioExecutor
@@ -41,13 +41,26 @@ async def test_advance_a_step():
 
     assert executor.messages == [], "starts with no messages"
 
-    # TODO: make it work
-    await executor._turn()
+    await executor.step()
+
+    assert executor.messages == [
+        {"role": "user", "content": "Hi, I'm a user"},
+    ], "starts with the user message"
+
+    assert executor.current_turn == 0, "stays at turn 0 until agent replied"
+
+    await executor.step()
 
     assert executor.messages == [
         {"role": "user", "content": "Hi, I'm a user"},
         {"role": "assistant", "content": "Hey, how can I help you?"},
     ], "starts with the user message"
+
+    assert executor.current_turn == 0, "stays at turn 0 until next step"
+
+    await executor.step()
+
+    assert executor.current_turn == 1, "increments turn"
 
 
 @pytest.mark.asyncio
@@ -106,7 +119,12 @@ async def test_sends_the_right_new_messages():
 
     executor = ScenarioExecutor(scenario)
 
-    await executor._turn()
+    # Run first turn
+    await executor.step()
+    await executor.step()
+
+    assert executor.current_turn == 0
 
     # Run a second turn to trigger the new_messages assertion
-    await executor._turn()
+    await executor.step()
+    await executor.step()

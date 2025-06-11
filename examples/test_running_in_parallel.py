@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 import litellm
 
 from openai.types.chat import ChatCompletionMessageParam
-from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes
 
 load_dotenv()

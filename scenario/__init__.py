@@ -3,11 +3,11 @@ Scenario: A testing library for conversational agents.
 """
 
 # First import non-dependent modules
-from .types import ScenarioResult, AgentInput, MessageTriggers
+from .types import ScenarioResult, AgentInput, ScenarioAgentRole
 from .config import ScenarioConfig
 
 # Then import modules with dependencies
-from .scenario_agent import ScenarioAgentAdapter
+from .scenario_agent_adapter import ScenarioAgentAdapter
 from .testing_agent import TestingAgent
 from .scenario import Scenario
 from .cache import scenario_cache
@@ -19,7 +19,7 @@ __all__ = [
     # Types
     "ScenarioResult",
     "AgentInput",
-    "MessageTriggers",
+    "ScenarioAgentRole",
     "ScenarioConfig",
 
     # Classes

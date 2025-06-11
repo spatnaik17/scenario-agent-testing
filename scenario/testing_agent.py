@@ -5,17 +5,17 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 import json
 import logging
 import re
-from typing import Optional, Type, Union, cast
+from typing import Optional, Type, cast
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
-from scenario.scenario_agent import ScenarioAgentAdapter
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.utils import reverse_roles
 
-from .error_messages import default_config_error_message
-from .types import AgentInput, AgentReturnTypes, MessageTriggers, ScenarioResult
+from .error_messages import testing_agent_not_configured_error_message
+from .types import AgentInput, AgentReturnTypes, ScenarioAgentRole, ScenarioResult
 
 
 logger = logging.getLogger("scenario")
@@ -31,7 +31,7 @@ class TestingAgent(ScenarioAgentAdapter):
     3. Determining when to end the test and return a result
     """
 
-    triggers = {MessageTriggers.ASSISTANT}
+    roles = {ScenarioAgentRole.USER, ScenarioAgentRole.JUDGE}
 
     model: str = ""
     api_key: Optional[str] = None
@@ -45,7 +45,7 @@ class TestingAgent(ScenarioAgentAdapter):
         super().__init__(input)
 
         if not self.model:
-            raise Exception(default_config_error_message)
+            raise Exception(testing_agent_not_configured_error_message)
 
     @classmethod
     def with_config(
