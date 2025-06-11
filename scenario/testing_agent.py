@@ -202,8 +202,8 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                tools=tools if not is_first_message else None,
-                tool_choice="required" if is_last_message else None,
+                tools=tools if not is_first_message and len(scenario.criteria) > 0 else None,
+                tool_choice="required" if is_last_message and len(scenario.criteria) > 0 else None,
             ),
         )
 

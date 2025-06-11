@@ -207,7 +207,7 @@ class ScenarioExecutor:
                 ]
 
         with show_spinner(
-            text=f"{first_role.value if isinstance(first_role, ScenarioAgentRole) else first_role}:",
+            text="Judging..." if first_role == ScenarioAgentRole.JUDGE else f"{first_role.value if isinstance(first_role, ScenarioAgentRole) else first_role}:",
             color=(
                 "blue"
                 if first_role == ScenarioAgentRole.AGENT

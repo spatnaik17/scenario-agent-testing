@@ -1,6 +1,5 @@
 import pytest
 from scenario import Scenario, TestingAgent
-from scenario.config import ScenarioConfig
 from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
 
@@ -68,7 +67,30 @@ async def test_scenario_high_level_api_allow_to_skip_testing_agent_if_given_agen
         name="test name",
         description="test description",
         agents=[MockAgent],
-        criteria=["test criteria"],
+        max_turns=2,
+    )
+
+    result = await scenario.run()
+
+    assert not result.success
+    assert result.reasoning and "Reached maximum turns" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_scenario_high_level_api_allow_to_skip_criteria():
+    class MockTestingAgent(TestingAgent):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> AgentReturnTypes:
+            return {"role": "user", "content": "Hi, I'm a user"}
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
         max_turns=2,
     )
 

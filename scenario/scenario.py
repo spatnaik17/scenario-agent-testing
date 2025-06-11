@@ -52,7 +52,7 @@ class Scenario(ScenarioConfig):
         self,
         name: str,
         description: str,
-        criteria: List[str],
+        criteria: List[str] = [],
         agent: Optional[Type[ScenarioAgentAdapter]] = None,
         testing_agent: Optional[Type[ScenarioAgentAdapter]] = None,
         agents: List[Type[ScenarioAgentAdapter]] = [],
@@ -86,9 +86,6 @@ class Scenario(ScenarioConfig):
             raise ValueError("Scenario description cannot be empty")
         kwargs["description"] = description
 
-        # TODO: allow not having any criteria, for scripted scenarios
-        if not criteria:
-            raise ValueError("Scenario must have at least one criteria")
         kwargs["criteria"] = criteria
 
         if kwargs.get("max_turns", 10) < 1:
