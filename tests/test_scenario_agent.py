@@ -1,9 +1,8 @@
-from typing import Any, List, Union, cast
+from typing import Any, cast
 
 import pytest
-from scenario import Scenario, TestingAgent
 from scenario.types import ScenarioResult
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
+from openai.types.chat import ChatCompletionUserMessageParam
 
 from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.types import AgentInput, ScenarioAgentRole

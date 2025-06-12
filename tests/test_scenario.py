@@ -177,7 +177,9 @@ async def test_scenario_allow_scripted_scenario_with_lower_level_openai_messages
 
     result = await scenario.script(
         [
-            scenario.message({"role": "user", "content": "Hi, I'm a hardcoded user message"}),
+            scenario.message(
+                {"role": "user", "content": "Hi, I'm a hardcoded user message"}
+            ),
             scenario.proceed(),
         ]
     ).run()
@@ -295,3 +297,63 @@ async def test_scenario_scripted_force_judgment():
 
     assert result.success
     assert result.reasoning and "judgement enforced" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_scenario_proceeds_the_amount_of_turns_specified():
+    class MockTestingAgent(TestingAgent):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> AgentReturnTypes:
+            return {"role": "user", "content": "Hi, I'm a user"}
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.agent(),
+            scenario.proceed(turns=2),
+            scenario.succeed(),
+        ]
+    ).run()
+
+    assert result.success
+    assert len(result.messages) == 6
+
+@pytest.mark.asyncio
+async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_halfway_through_a_turn():
+    class MockTestingAgent(TestingAgent):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> AgentReturnTypes:
+            return {"role": "user", "content": "Hi, I'm a user"}
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.proceed(turns=2),
+            scenario.succeed(),
+        ]
+    ).run()
+
+    assert result.success
+    assert len(result.messages) == 4

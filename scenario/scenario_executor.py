@@ -126,7 +126,18 @@ class ScenarioExecutor:
         self.current_turn += 1
 
     async def step(self) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
+        result = await self._step()
+        if result is None:
+            raise ValueError("No result from step")
+        return result
+
+    async def _step(
+        self, go_to_next_turn=True
+    ) -> Union[List[ChatCompletionMessageParam], ScenarioResult, None]:
         if len(self._pending_roles_on_turn) == 0:
+            if not go_to_next_turn:
+                return None
+
             self._new_turn()
             if self.current_turn >= (self.scenario.max_turns or 10):
                 return self._reached_max_turns()
@@ -135,7 +146,7 @@ class ScenarioExecutor:
         idx, next_agent = self._next_agent_for_role(current_role)
         if not next_agent:
             self._pending_roles_on_turn.pop(0)
-            return await self.step()
+            return await self._step(go_to_next_turn=go_to_next_turn)
 
         self._pending_agents_on_turn.remove(next_agent)
         return await self._call_agent(idx, role=current_role)
@@ -336,20 +347,30 @@ class ScenarioExecutor:
         return await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
 
     # TODO: on_turn and on_step callbacks
-    # TODO: turns actually is steps right now
     async def proceed(self, turns: Optional[int] = None) -> Optional[ScenarioResult]:
-        for _ in range(turns or sys.maxsize):
-            next_message = await self.step()
+        initial_turn: Optional[int] = None
+        while True:
+            next_message = await self._step(
+                go_to_next_turn=(
+                    turns is None
+                    or initial_turn is None
+                    or (self.current_turn + 1 < initial_turn + turns)
+                )
+            )
+
+            if initial_turn is None:
+                initial_turn = self.current_turn
 
             if isinstance(next_message, ScenarioResult):
                 return next_message
 
-        return None
+            if next_message is None:
+                break
 
     async def succeed(self) -> ScenarioResult:
         return ScenarioResult(
             success=True,
-            messages=[],
+            messages=self.messages,
             reasoning="Scenario marked as successful with scenario.succeed()",
             passed_criteria=self.scenario.criteria,
         )
@@ -357,7 +378,7 @@ class ScenarioExecutor:
     async def fail(self) -> ScenarioResult:
         return ScenarioResult(
             success=False,
-            messages=[],
+            messages=self.messages,
             reasoning="Scenario marked as failed with scenario.fail()",
             passed_criteria=self.scenario.criteria,
         )
