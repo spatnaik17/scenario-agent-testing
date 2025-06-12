@@ -22,7 +22,7 @@ from scenario.error_messages import (
 from scenario.scenario_agent_adapter import ScenarioAgentAdapter
 from scenario.scenario_executor import ScenarioExecutor
 
-from .types import ScenarioResult
+from .types import ScenarioResult, ScriptStep
 
 from openai.types.chat import ChatCompletionMessageParam
 
@@ -99,10 +99,9 @@ class Scenario(ScenarioConfig):
         if not agents and not kwargs.get("testing_agent"):
             raise Exception(default_config_error_message)
 
-
         agents = agents or [
             kwargs.get("testing_agent"),
-            agent, # type: ignore
+            agent,  # type: ignore
         ]
 
         # Ensure each agent is a ScenarioAgentAdapter
@@ -117,6 +116,18 @@ class Scenario(ScenarioConfig):
 
         super().__init__(**kwargs)
 
+    def script(self, script: List[ScriptStep]):
+        class ScriptedScenario:
+            def __init__(self, scenario: "Scenario"):
+                self._scenario = scenario
+
+            async def run(
+                self, context: Optional[Dict[str, Any]] = None
+            ) -> ScenarioResult:
+                return await self._scenario._run(context, script)
+
+        return ScriptedScenario(self)
+
     async def run(self, context: Optional[Dict[str, Any]] = None) -> ScenarioResult:
         """
         Run the scenario against the agent under test.
@@ -128,6 +139,13 @@ class Scenario(ScenarioConfig):
             ScenarioResult containing the test outcome
         """
 
+        return await self._run(context, None)
+
+    async def _run(
+        self,
+        context: Optional[Dict[str, Any]] = None,
+        script: Optional[List[ScriptStep]] = None,
+    ) -> ScenarioResult:
         # We'll use a thread pool to run the execution logic, we
         # require a separate thread because even though asyncio is
         # being used throughout, any user code on the callback can
@@ -140,7 +158,7 @@ class Scenario(ScenarioConfig):
 
                 try:
                     return loop.run_until_complete(
-                        ScenarioExecutor(self, context).run()
+                        ScenarioExecutor(self, context, script).run()
                     )
                 finally:
                     loop.close()
@@ -172,3 +190,23 @@ class Scenario(ScenarioConfig):
                 debug=debug,
             )
         )
+
+    # Scenario Scripting
+
+    def user(
+        self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
+    ) -> ScriptStep:
+        return lambda state: state.user(content)
+
+    def agent(
+        self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
+    ) -> ScriptStep:
+        return lambda state: state.agent(content)
+
+    def judge(
+        self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
+    ) -> ScriptStep:
+        return lambda state: state.judge(content)
+
+    def proceed(self, turns: Optional[int] = None) -> ScriptStep:
+        return lambda state: state.proceed(turns)

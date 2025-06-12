@@ -98,3 +98,67 @@ async def test_scenario_high_level_api_allow_to_skip_criteria():
 
     assert not result.success
     assert result.reasoning and "Reached maximum turns" in result.reasoning
+
+
+@pytest.mark.asyncio
+async def test_scenario_allow_scripted_scenario():
+    class MockAgent(ScenarioAgentAdapter):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> AgentReturnTypes:
+            assert input.new_messages == [
+                {
+                    "role": "user",
+                    "content": "Hi, I'm a hardcoded user message",
+                }
+            ]
+
+            return [
+                {
+                    "role": "assistant",
+                    "content": "Hey, how can I help you?",
+                }
+            ]
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.proceed(),
+        ]
+    ).run()
+
+    assert result.success
+
+
+@pytest.mark.asyncio
+async def test_scenario_allow_scripted_fails_if_script_ends_without_conclusion():
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+        ]
+    ).run()
+
+    assert not result.success
+    assert (
+        result.reasoning
+        and "Reached end of script without conclusion" in result.reasoning
+    )

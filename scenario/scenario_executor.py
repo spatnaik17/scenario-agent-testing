@@ -23,9 +23,12 @@ from scenario.utils import (
     print_openai_messages,
     show_spinner,
 )
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionUserMessageParam,
+)
 
-from .types import AgentInput, ScenarioAgentRole, ScenarioResult
+from .types import AgentInput, ScenarioAgentRole, ScenarioResult, ScriptStep
 from .error_messages import agent_response_not_awaitable
 from .cache import context_scenario
 from .scenario_agent_adapter import ScenarioAgentAdapter
@@ -42,6 +45,7 @@ class ScenarioExecutor:
     current_turn: int
 
     _context: Optional[Dict[str, Any]]
+    _script: List[ScriptStep]
     _agents: List[ScenarioAgentAdapter]
     _total_start_time: float
     _pending_messages: Dict[int, List[ChatCompletionMessageParam]]
@@ -50,11 +54,17 @@ class ScenarioExecutor:
     _pending_agents_on_turn: Set[ScenarioAgentAdapter] = set()
     _agent_times: Dict[int, float] = {}
 
-    def __init__(self, scenario: "Scenario", context: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        scenario: "Scenario",
+        context: Optional[Dict[str, Any]] = None,
+        script: Optional[List[ScriptStep]] = None,
+    ):
         super().__init__()
 
         self.scenario = scenario.model_copy()
         self._context = context
+        self._script = script or [scenario.proceed()]
         self.current_turn = 0
         self.reset()
 
@@ -127,10 +137,7 @@ class ScenarioExecutor:
             return await self.step()
 
         self._pending_agents_on_turn.remove(next_agent)
-        if current_role == ScenarioAgentRole.USER:
-            return await self._call_agent(idx, reverse_roles=True)
-        else:
-            return await self._call_agent(idx)
+        return await self._call_agent(idx, role=current_role)
 
     def _next_agent_for_role(
         self, role: ScenarioAgentRole
@@ -140,20 +147,25 @@ class ScenarioExecutor:
                 return idx, agent
         return -1, None
 
-    def _reached_max_turns(self) -> ScenarioResult:
+    def _reached_max_turns(self, error_message: Optional[str] = None) -> ScenarioResult:
         # If we reached max turns without conclusion, fail the test
         agent_roles_agents_idx = [
             idx
             for idx, agent in enumerate(self._agents)
             if ScenarioAgentRole.AGENT in agent.roles
         ]
-        agent_times = [self._agent_times[idx] for idx in agent_roles_agents_idx]
+        agent_times = [
+            self._agent_times[idx]
+            for idx in agent_roles_agents_idx
+            if idx in self._agent_times
+        ]
         agent_time = sum(agent_times)
 
         return ScenarioResult(
             success=False,
             messages=self.messages,
-            reasoning=f"Reached maximum turns ({self.scenario.max_turns or 10}) without conclusion",
+            reasoning=error_message
+            or f"Reached maximum turns ({self.scenario.max_turns or 10}) without conclusion",
             total_time=time.time() - self._total_start_time,
             agent_time=agent_time,
         )
@@ -174,20 +186,26 @@ class ScenarioExecutor:
 
         self.reset()
 
-        while True:
-            next_message = await self.step()
+        for script_step in self._script:
+            callable = script_step(self)
+            if isinstance(callable, Awaitable):
+                result = await callable
+            else:
+                result = callable
 
-            if isinstance(next_message, ScenarioResult):
-                return next_message
+            if isinstance(result, ScenarioResult):
+                return result
+
+        return self._reached_max_turns(
+            "Reached end of script without conclusion, if you don't have a manual way of ending the test, add a `scenario.proceed()` or `scenario.judge()` at the end of the script"
+        )
 
     async def _call_agent(
-        self, idx: int, reverse_roles: bool = False
+        self, idx: int, role: ScenarioAgentRole
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
         agent = self._agents[idx]
 
-        first_role = next(iter(agent.roles), "Unknown")
-
-        if first_role == ScenarioAgentRole.USER and self.scenario.debug:
+        if role == ScenarioAgentRole.USER and self.scenario.debug:
             print(
                 f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send"
             )
@@ -207,11 +225,15 @@ class ScenarioExecutor:
                 ]
 
         with show_spinner(
-            text="Judging..." if first_role == ScenarioAgentRole.JUDGE else f"{first_role.value if isinstance(first_role, ScenarioAgentRole) else first_role}:",
+            text=(
+                "Judging..."
+                if role == ScenarioAgentRole.JUDGE
+                else f"{role.value if isinstance(role, ScenarioAgentRole) else role}:"
+            ),
             color=(
                 "blue"
-                if first_role == ScenarioAgentRole.AGENT
-                else "green" if first_role == ScenarioAgentRole.USER else "yellow"
+                if role == ScenarioAgentRole.AGENT
+                else "green" if role == ScenarioAgentRole.USER else "yellow"
             ),
             enabled=self.scenario.verbose,
         ):
@@ -248,7 +270,8 @@ class ScenarioExecutor:
                 return agent_response
             else:
                 messages = convert_agent_return_types_to_openai_messages(
-                    agent_response, role="user" if reverse_roles else "assistant"
+                    agent_response,
+                    role="user" if role == ScenarioAgentRole.USER else "assistant",
                 )
 
             self.add_messages(messages, from_agent_idx=idx)
@@ -261,6 +284,14 @@ class ScenarioExecutor:
 
             return messages
 
+    def _scenario_name(self):
+        if self.scenario.verbose == 2:
+            return termcolor.colored(f"[Scenario: {self.scenario.name}] ", "yellow")
+        else:
+            return ""
+
+    # State access utils
+
     def last_message(self) -> ChatCompletionMessageParam:
         if len(self.messages) == 0:
             raise ValueError("No messages found")
@@ -272,8 +303,65 @@ class ScenarioExecutor:
             raise ValueError("No user messages found")
         return user_messages[-1]
 
-    def _scenario_name(self):
-        if self.scenario.verbose == 2:
-            return termcolor.colored(f"[Scenario: {self.scenario.name}] ", "yellow")
-        else:
-            return ""
+    # Scripting utils
+
+    async def user(
+        self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
+    ) -> None:
+        await self._script_call_agent(ScenarioAgentRole.USER, content)
+
+    async def agent(
+        self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
+    ) -> None:
+        await self._script_call_agent(ScenarioAgentRole.AGENT, content)
+
+    # TODO: force conclusion
+    async def judge(
+        self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
+    ) -> None:
+        await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
+
+    # TODO: on_turn and on_step callbacks
+    async def proceed(self, turns: Optional[int] = None) -> Optional[ScenarioResult]:
+        for _ in range(turns or sys.maxsize):
+            next_message = await self.step()
+
+            if isinstance(next_message, ScenarioResult):
+                return next_message
+
+        return None
+
+    async def _script_call_agent(
+        self,
+        role: ScenarioAgentRole,
+        content: Optional[Union[str, ChatCompletionMessageParam]] = None,
+    ) -> None:
+        idx, next_agent = self._next_agent_for_role(role)
+        if not next_agent:
+            self._new_turn()
+            idx, next_agent = self._next_agent_for_role(role)
+
+            if not next_agent:
+                if content:
+                    raise ValueError(
+                        f"Cannot generate a message for role `{role.value}` with content `{content}` because no agent with this role was found"
+                    )
+                raise ValueError(
+                    f"Cannot generate a message for role `{role.value}` because no agent with this role was found"
+                )
+
+        self._pending_agents_on_turn.remove(next_agent)
+        self._pending_roles_on_turn.remove(role)
+
+        if content:
+            if isinstance(content, str):
+                message = ChatCompletionUserMessageParam(role="user", content=content)
+            else:
+                message = content
+
+            self.add_message(message)
+            if self.scenario.verbose:
+                print_openai_messages(self._scenario_name(), [message])
+            return
+
+        await self._call_agent(idx, role=role)

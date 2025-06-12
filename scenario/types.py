@@ -1,6 +1,16 @@
 from enum import Enum
 from pydantic import BaseModel, Field
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Awaitable,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Optional,
+    Union,
+)
 
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
@@ -66,4 +76,13 @@ class ScenarioResult(BaseModel):
 
 AgentReturnTypes = Union[
     str, ChatCompletionMessageParam, List[ChatCompletionMessageParam], ScenarioResult
+]
+
+# TODO: remove the optional ScenarioResult return type from here, use events instead
+ScriptStep = Union[
+    Callable[["ScenarioExecutor"], None],
+    Callable[["ScenarioExecutor"], Optional[ScenarioResult]],
+    # Async as well
+    Callable[["ScenarioExecutor"], Awaitable[None]],
+    Callable[["ScenarioExecutor"], Awaitable[Optional[ScenarioResult]]],
 ]
