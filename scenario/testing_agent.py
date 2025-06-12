@@ -5,25 +5,23 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, Dict, List, Any, Optional, Union, cast
-from pydantic import BaseModel
+from typing import Optional, Type, cast
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
-from scenario.utils import safe_attr_or_key
+from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+from scenario.utils import reverse_roles
 
-from .result import ScenarioResult
-
-if TYPE_CHECKING:
-    from scenario.scenario import Scenario
+from .error_messages import testing_agent_not_configured_error_message
+from .types import AgentInput, AgentReturnTypes, ScenarioAgentRole, ScenarioResult
 
 
 logger = logging.getLogger("scenario")
 
 
-class TestingAgent(BaseModel):
+class TestingAgent(ScenarioAgentAdapter):
     """
     The Testing Agent that interacts with the agent under test.
 
@@ -33,7 +31,9 @@ class TestingAgent(BaseModel):
     3. Determining when to end the test and return a result
     """
 
-    model: str
+    roles = {ScenarioAgentRole.USER, ScenarioAgentRole.JUDGE}
+
+    model: str = ""
     api_key: Optional[str] = None
     temperature: float = 0.0
     max_tokens: Optional[int] = None
@@ -41,14 +41,36 @@ class TestingAgent(BaseModel):
     # To prevent pytest from thinking this is actually a test class
     __test__ = False
 
+    def __init__(self, input: AgentInput):
+        super().__init__(input)
+
+        if not self.model:
+            raise Exception(testing_agent_not_configured_error_message)
+
+    @classmethod
+    def with_config(
+        cls,
+        model: str,
+        api_key: Optional[str] = None,
+        temperature: float = 0.0,
+        max_tokens: Optional[int] = None,
+    ) -> Type["TestingAgent"]:
+        class TestingAgentWithConfig(cls):
+            def __init__(self, input: AgentInput):
+                self.model = model
+                self.api_key = api_key
+                self.temperature = temperature
+                self.max_tokens = max_tokens
+
+                super().__init__(input)
+
+        return TestingAgentWithConfig
+
     @scenario_cache(ignore=["scenario"])
-    def generate_next_message(
+    async def call(
         self,
-        scenario: "Scenario",
-        conversation: List[Dict[str, Any]],
-        first_message: bool = False,
-        last_message: bool = False,
-    ) -> Union[str, ScenarioResult]:
+        input: AgentInput,
+    ) -> AgentReturnTypes:
         """
         Generate the next message in the conversation based on history OR
         return a ScenarioResult if the test should conclude.
@@ -57,6 +79,8 @@ class TestingAgent(BaseModel):
           - A string message to send to the agent (if conversation should continue)
           - A ScenarioResult (if the test should conclude)
         """
+
+        scenario = input.scenario_state.scenario
 
         messages = [
             {
@@ -94,10 +118,15 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 """,
             },
             {"role": "assistant", "content": "Hello, how can I help you today?"},
-            *conversation,
+            *input.messages,
         ]
 
-        if last_message:
+        is_first_message = len(input.messages) == 0
+        is_last_message = (
+            input.scenario_state.current_turn == input.scenario_state.scenario.max_turns
+        )
+
+        if is_last_message:
             messages.append(
                 {
                     "role": "user",
@@ -115,23 +144,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
         # User to assistant role reversal
         # LLM models are biased to always be the assistant not the user, so we need to do this reversal otherwise models like GPT 4.5 is
         # super confused, and Claude 3.7 even starts throwing exceptions.
-        for message in messages:
-            # Can't reverse tool calls
-            if not safe_attr_or_key(message, "content") or safe_attr_or_key(
-                message, "tool_calls"
-            ):
-                continue
-
-            if type(message) == dict:
-                if message["role"] == "user":
-                    message["role"] = "assistant"
-                elif message["role"] == "assistant":
-                    message["role"] = "user"
-            else:
-                if getattr(message, "role", None) == "user":
-                    message.role = "assistant"
-                elif getattr(message, "role", None) == "assistant":
-                    message.role = "user"
+        messages = reverse_roles(messages)
 
         # Define the tool
         criteria_names = [
@@ -182,6 +195,16 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             }
         ]
 
+        enforce_judgment = input.requested_role == ScenarioAgentRole.JUDGE
+        has_criteria = len(scenario.criteria) > 0
+
+        if enforce_judgment and not has_criteria:
+            return ScenarioResult(
+                success=False,
+                messages=[],
+                reasoning="TestingAgent was called as a judge, but it has no criteria to judge against",
+            )
+
         response = cast(
             ModelResponse,
             completion(
@@ -189,8 +212,16 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                tools=tools if not first_message else None,
-                tool_choice="required" if last_message else None,
+                tools=(
+                    tools
+                    if (not is_first_message or enforce_judgment) and has_criteria
+                    else None
+                ),
+                tool_choice=(
+                    "required"
+                    if (is_last_message or enforce_judgment) and has_criteria
+                    else None
+                ),
             ),
         )
 
@@ -221,27 +252,13 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         ]
 
                         # Return the appropriate ScenarioResult based on the verdict
-                        if verdict == "success":
-                            return ScenarioResult.success_result(
-                                conversation=conversation,
-                                reasoning=reasoning,
-                                passed_criteria=passed_criteria,
-                            )
-                        elif verdict == "failure":
-                            return ScenarioResult.failure_result(
-                                conversation=conversation,
-                                reasoning=reasoning,
-                                passed_criteria=passed_criteria,
-                                failed_criteria=failed_criteria,
-                            )
-                        else:  # inconclusive
-                            return ScenarioResult(
-                                success=False,
-                                conversation=conversation,
-                                reasoning=reasoning,
-                                passed_criteria=passed_criteria,
-                                failed_criteria=failed_criteria,
-                            )
+                        return ScenarioResult(
+                            success=verdict == "success",
+                            messages=messages,
+                            reasoning=reasoning,
+                            passed_criteria=passed_criteria,
+                            failed_criteria=failed_criteria,
+                        )
                     except json.JSONDecodeError:
                         logger.error("Failed to parse tool call arguments")
 
@@ -255,7 +272,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                     )
                 raise Exception(f"No response from LLM: {response.__repr__()}")
 
-            return message_content
+            return {"role": "user", "content": message_content}
         else:
             raise Exception(
                 f"Unexpected response format from LLM: {response.__repr__()}"

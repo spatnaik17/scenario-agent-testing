@@ -1,11 +1,11 @@
-.PHONY: test example install ensure-uv bump-version
+.PHONY: test example install ensure-uv bump-version typecheck typecheck-pyright
 
 test:
-	PYTHONPATH=$$PYTHONPATH:. uv run pytest -s -vv $(filter-out $@,$(MAKECMDGOALS))
+	PYTHONPATH=$$PYTHONPATH:. uv run pytest -s -vv tests/ $(filter-out $@,$(MAKECMDGOALS))
 
 example:
 	@args="$(filter-out $@,$(MAKECMDGOALS))"; \
-	PYTHONPATH=$$PYTHONPATH:. uv run pytest -s -vv $$args
+	PYTHONPATH=$$PYTHONPATH:. uv run pytest -s -vv examples/ $$args
 
 install: ensure-uv
 	uv sync --all-groups --all-extras
@@ -24,6 +24,9 @@ bump-version:
 	@read -p "Proceed with version bump? [y/N] " confirm && [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || exit 1
 	uv run cz bump --major-version-zero --allow-no-commit
 	@echo "✅ Version bumped and tagged!"
+
+typecheck:
+	uv run pyright .
 
 %:
 	@:

@@ -30,20 +30,23 @@ Now create your first scenario and save it as `tests/test_vegetarian_recipe_agen
 ```python
 import pytest
 
-from scenario import Scenario, TestingAgent, scenario_cache
+from scenario import Scenario, TestingAgent, ScenarioAgentAdapter, AgentInput, AgentReturnTypes, scenario_cache
 
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
+
+
+# Create an adapter to call your agent
+class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
+    def __init__(self, input: AgentInput):
+        self.agent = VegetarianRecipeAgent()
+
+    async def call(self, input: AgentInput) -> AgentReturnTypes:
+        return self.agent.run(input.last_new_user_message_str())
 
 
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_vegetarian_recipe_agent():
-    agent = VegetarianRecipeAgent()
-
-    def vegetarian_recipe_agent(message, context):
-        # Call your agent here
-        return agent.run(message)
-
     # Define the simulated scenario
     scenario = Scenario(
         name="dinner idea",
@@ -100,7 +103,7 @@ class VegetarianRecipeAgent:
         message = response.choices[0].message  # type: ignore
         self.history.append(message)
 
-        return {"messages": [message]}
+        return [message]
 
 ```
 
@@ -152,6 +155,49 @@ result = await scenario.run()
 ```
 
 You can find a fully working Lovable Clone example in [examples/test_lovable_clone.py](examples/test_lovable_clone.py).
+
+## Specify a script for guiding the scenario
+
+You can specify a script for guiding the scenario by passing a list of steps to the `script` field.
+
+```python
+@pytest.mark.agent_test
+@pytest.mark.asyncio
+async def test_ai_assistant_agent():
+    scenario = Scenario(
+        name="false assumptions",
+        description="""
+            The agent makes false assumption about being an ATM bank, and user corrects it
+        """,
+        agent=AiAssistantAgentAdapter,
+        criteria=[
+            "user should get good recommendations on river crossing",
+            "agent should NOT follow up about ATM recommendation after user has corrected them they are just hiking",
+        ],
+        max_turns=5,
+    )
+
+    def check_if_tool_was_called(state: ScenarioExecutor) -> None:
+        assert state.has_tool_call("web_search")
+
+    result = await scenario.script(
+        [
+            # Define existing history of messages
+            scenario.user("how do I safely approach a bank?"),
+            # Or let it be generate automatically
+            scenario.agent(),
+            # Add custom assertions, for example making sure a tool was called
+            check_if_tool_was_called,
+            scenario.user(),
+            # Let the simulation proceed for 2 more turns
+            scenario.proceed(turns=2),
+            # Time to make a judgment call
+            scenario.judge(),
+        ]
+    ).run()
+
+    assert result.success
+```
 
 ## Debug mode
 

@@ -36,41 +36,99 @@ default_config_error_message = f"""
         result = scenario.run()
 
         assert result.success
-                          """
+"""
 
 
-def message_return_error_message(got: Any):
-    got_ = got.__repr__()
+testing_agent_not_configured_error_message = f"""
+
+ {termcolor.colored("->", "cyan")} Testing agent was initialized without a model, please set the model when defining the testing agent, for example:
+
+    TestingAgent.with_config(model="openai/gpt-4.1-mini")
+    {termcolor.colored("^" * 53, "green")}
+"""
+
+
+def message_return_error_message(got: Any, class_name: str):
+    got_ = repr(got)
     if len(got_) > 100:
         got_ = got_[:100] + "..."
 
     return f"""
- {termcolor.colored("->", "cyan")} Your agent returned:
+ {termcolor.colored("->", "cyan")} On the {termcolor.colored("call", "green")} method of the {class_name} agent adapter, you returned:
 
 {indent(got_, ' ' * 4)}
 
- {termcolor.colored("->", "cyan")} But your agent should return a dict with either a "message" string key or a "messages" key in OpenAI messages format so the testing agent can understand what happened. For example:
+ {termcolor.colored("->", "cyan")} But the adapter should return either a string, a dict on the OpenAI messages format, or a list of messages in the OpenAI messages format so the testing agent can understand what happened. For example:
 
-    def my_agent_under_test(message, context):
-        response = call_my_agent(message)
+    class MyAgentAdapter(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            response = call_my_agent(message)
 
-        return {{
-            "message": response.output_text
-            {termcolor.colored("^" * 31, "green")}
-        }}
+            return response.output_text
+            {termcolor.colored("^" * 27, "green")}
 
- {termcolor.colored("->", "cyan")} Alternatively, you can return a list of messages in OpenAI messages format, you can also optionally provide extra artifacts:
+ {termcolor.colored("->", "cyan")} Alternatively, you can return a list of messages in OpenAI messages format, this is useful for capturing tool calls and other before the final response:
 
-    def my_agent_under_test(message, context):
-        response = call_my_agent(message)
+    class MyAgentAdapter(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            response = call_my_agent(message)
 
-        return {{
-            "messages": [
-                {{"role": "assistant", "content": response}}
-                {termcolor.colored("^" * 42, "green")}
+            return [
+                {{"role": "assistant", "content": response.output_text}},
+                {termcolor.colored("^" * 55, "green")}
+            ]
+"""
+
+
+def message_invalid_agent_type(got: Any):
+    got_ = repr(got)
+    if len(got_) > 100:
+        got_ = got_[:100] + "..."
+
+    return f"""
+ {termcolor.colored("->", "cyan")} The {termcolor.colored("agent", "green")} argument of Scenario needs to receive a class that inherits from {termcolor.colored("ScenarioAgentAdapter", "green")}, but you passed:
+
+{indent(got_, ' ' * 4)}
+
+ {termcolor.colored("->", "cyan")} Instead, wrap your agent in a ScenarioAgentAdapter subclass. For example:
+
+    class MyAgentAdapter(ScenarioAgentAdapter):
+    {termcolor.colored("^" * 43, "green")}
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            response = call_my_agent(message)
+
+            return response.output_text
+
+ {termcolor.colored("->", "cyan")} And then you can use that on your scenario definition:
+
+    @pytest.mark.agent_test
+    def test_my_agent():
+        scenario = Scenario(
+            name="first scenario",
+            description=\"\"\"
+                Example scenario description to test your agent.
+            \"\"\",
+            agent=MyAgentAdapter,
+            {termcolor.colored("^" * 20, "green")}
+            criteria=[
+                "Requirement One",
+                "Requirement Two",
             ],
-            "extra": {{
-                # ... optional extra artifacts
-            }}
-        }}
-                          """
+        )
+        result = scenario.run()
+
+        assert result.success
+"""
+
+
+def agent_response_not_awaitable(class_name: str):
+    return f"""
+ {termcolor.colored("->", "cyan")} The {termcolor.colored("call", "green")} method of the {class_name} agent adapter returned a non-awaitable response, you probably forgot to add the {termcolor.colored("async", "green")} keyword to the method definition, make sure your code looks like this:
+
+    class {class_name}(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+        {termcolor.colored("^" * 5, "green")}
+            response = call_my_agent(message)
+
+            return response.output_text
+"""
