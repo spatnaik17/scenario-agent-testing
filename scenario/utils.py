@@ -131,6 +131,8 @@ def show_spinner(
 
         # Cursor up one line
         sys.stdout.write("\033[F")
+        # Erase the line
+        sys.stdout.write("\033[2K")
 
 
 def check_valid_return_type(return_value: Any, class_name: str) -> None:

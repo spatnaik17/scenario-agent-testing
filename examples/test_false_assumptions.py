@@ -35,13 +35,9 @@ async def test_ai_assistant_agent():
     scenario = Scenario(
         name="false assumptions",
         description="""
-            The user asks simply "how do I safely approach a bank?"
             The agent makes false assumption about being an ATM bank, and user corrects it
         """,
         agent=AiAssistantAgentAdapter,
-        # messages=[
-        #     {"role": "user", "content": "how do I safely approach a bank?"},
-        # ],
         criteria=[
             "user should get good recommendations on river crossing",
             "agent should NOT follow up about ATM recommendation after user has corrected them they are just hiking",
@@ -49,6 +45,14 @@ async def test_ai_assistant_agent():
         max_turns=5,
     )
 
-    result = await scenario.run()
+    result = await scenario.script(
+        [
+            scenario.user("how do I safely approach a bank?"),
+            scenario.agent(),
+            scenario.user(),
+            scenario.agent(),
+            scenario.judge(),
+        ]
+    ).run()
 
     assert result.success

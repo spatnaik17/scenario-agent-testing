@@ -84,6 +84,7 @@ class ScenarioExecutor:
                         messages=[],
                         new_messages=[],
                         context=self._context or {},
+                        requested_role=list(AgentClass.roles)[0],
                         scenario_state=self,
                     )
                 )
@@ -197,7 +198,12 @@ class ScenarioExecutor:
                 return result
 
         return self._reached_max_turns(
-            "Reached end of script without conclusion, if you don't have a manual way of ending the test, add a `scenario.proceed()` or `scenario.judge()` at the end of the script"
+            """Reached end of script without conclusion, add one of the following to the end of the script:
+
+- `scenario.proceed()` to let the simulation continue to play out
+- `scenario.judge()` to force criteria judgement
+- `scenario.succeed()` or `scenario.fail()` to end the test with an explicit result
+            """
         )
 
     async def _call_agent(
@@ -247,6 +253,7 @@ class ScenarioExecutor:
                     new_messages=self._pending_messages.get(idx, []),
                     # TODO: test context
                     context=self._context or {},
+                    requested_role=role,
                     scenario_state=self,
                 )
             )
@@ -315,11 +322,10 @@ class ScenarioExecutor:
     ) -> None:
         await self._script_call_agent(ScenarioAgentRole.AGENT, content)
 
-    # TODO: force conclusion
     async def judge(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
-    ) -> None:
-        await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
+    ) -> Optional[ScenarioResult]:
+        return await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
 
     # TODO: on_turn and on_step callbacks
     async def proceed(self, turns: Optional[int] = None) -> Optional[ScenarioResult]:
@@ -331,11 +337,27 @@ class ScenarioExecutor:
 
         return None
 
+    async def succeed(self) -> ScenarioResult:
+        return ScenarioResult(
+            success=True,
+            messages=[],
+            reasoning="Scenario marked as successful with scenario.succeed()",
+            passed_criteria=self.scenario.criteria,
+        )
+
+    async def fail(self) -> ScenarioResult:
+        return ScenarioResult(
+            success=False,
+            messages=[],
+            reasoning="Scenario marked as failed with scenario.fail()",
+            passed_criteria=self.scenario.criteria,
+        )
+
     async def _script_call_agent(
         self,
         role: ScenarioAgentRole,
         content: Optional[Union[str, ChatCompletionMessageParam]] = None,
-    ) -> None:
+    ) -> Optional[ScenarioResult]:
         idx, next_agent = self._next_agent_for_role(role)
         if not next_agent:
             self._new_turn()
@@ -364,4 +386,6 @@ class ScenarioExecutor:
                 print_openai_messages(self._scenario_name(), [message])
             return
 
-        await self._call_agent(idx, role=role)
+        result = await self._call_agent(idx, role=role)
+        if isinstance(result, ScenarioResult):
+            return result

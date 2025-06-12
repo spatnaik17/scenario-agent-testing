@@ -34,6 +34,7 @@ class AgentInput(BaseModel):
     messages: List[ChatCompletionMessageParam]
     new_messages: List[ChatCompletionMessageParam]
     context: Dict[str, Any]
+    requested_role: ScenarioAgentRole
     scenario_state: ScenarioExecutorType = Field(exclude=True)
 
     def last_new_user_message(self) -> ChatCompletionUserMessageParam:
@@ -72,6 +73,11 @@ class ScenarioResult(BaseModel):
     failed_criteria: List[str] = []
     total_time: Optional[float] = None
     agent_time: Optional[float] = None
+
+    def __repr__(self) -> str:
+        """Provide a concise representation for debugging."""
+        status = "PASSED" if self.success else "FAILED"
+        return f"ScenarioResult(success={self.success}, status={status}, reasoning='{self.reasoning or 'None'}')"
 
 
 AgentReturnTypes = Union[

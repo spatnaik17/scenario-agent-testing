@@ -1,7 +1,7 @@
 import pytest
 from scenario import Scenario, TestingAgent
 from scenario.scenario_agent_adapter import ScenarioAgentAdapter
-from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
+from scenario.types import AgentInput, AgentReturnTypes, ScenarioAgentRole, ScenarioResult
 
 
 class MockTestingAgent(TestingAgent):
@@ -141,7 +141,7 @@ async def test_scenario_allow_scripted_scenario():
 
 
 @pytest.mark.asyncio
-async def test_scenario_allow_scripted_fails_if_script_ends_without_conclusion():
+async def test_scenario_scripted_fails_if_script_ends_without_conclusion():
     Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
 
     scenario = Scenario(
@@ -162,3 +162,92 @@ async def test_scenario_allow_scripted_fails_if_script_ends_without_conclusion()
         result.reasoning
         and "Reached end of script without conclusion" in result.reasoning
     )
+
+
+@pytest.mark.asyncio
+async def test_scenario_scripted_force_success():
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.succeed(),
+        ]
+    ).run()
+
+    assert result.success
+    assert (
+        result.reasoning
+        and "Scenario marked as successful with scenario.succeed()" in result.reasoning
+    )
+
+
+@pytest.mark.asyncio
+async def test_scenario_scripted_force_failure():
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.fail(),
+        ]
+    ).run()
+
+    assert not result.success
+    assert (
+        result.reasoning
+        and "Scenario marked as failed with scenario.fail()" in result.reasoning
+    )
+
+
+@pytest.mark.asyncio
+async def test_scenario_scripted_force_judgment():
+    class MockTestingAgent(TestingAgent):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> AgentReturnTypes:
+            if input.requested_role == ScenarioAgentRole.JUDGE:
+                return ScenarioResult(
+                    success=True,
+                    messages=[],
+                    reasoning="judgement enforced",
+                    passed_criteria=["test criteria"],
+                )
+
+            return {"role": "user", "content": "Hi, I'm a user"}
+
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.agent(),
+            scenario.judge(),
+        ]
+    ).run()
+
+    assert result.success
+    assert result.reasoning and "judgement enforced" in result.reasoning

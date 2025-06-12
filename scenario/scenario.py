@@ -210,3 +210,9 @@ class Scenario(ScenarioConfig):
 
     def proceed(self, turns: Optional[int] = None) -> ScriptStep:
         return lambda state: state.proceed(turns)
+
+    def succeed(self) -> ScriptStep:
+        return lambda state: state.succeed()
+
+    def fail(self) -> ScriptStep:
+        return lambda state: state.fail()

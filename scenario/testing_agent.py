@@ -195,6 +195,16 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             }
         ]
 
+        enforce_judgment = input.requested_role == ScenarioAgentRole.JUDGE
+        has_criteria = len(scenario.criteria) > 0
+
+        if enforce_judgment and not has_criteria:
+            return ScenarioResult(
+                success=False,
+                messages=[],
+                reasoning="TestingAgent was called as a judge, but it has no criteria to judge against",
+            )
+
         response = cast(
             ModelResponse,
             completion(
@@ -202,8 +212,16 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                tools=tools if not is_first_message and len(scenario.criteria) > 0 else None,
-                tool_choice="required" if is_last_message and len(scenario.criteria) > 0 else None,
+                tools=(
+                    tools
+                    if (not is_first_message or enforce_judgment) and has_criteria
+                    else None
+                ),
+                tool_choice=(
+                    "required"
+                    if (is_last_message or enforce_judgment) and has_criteria
+                    else None
+                ),
             ),
         )
 
