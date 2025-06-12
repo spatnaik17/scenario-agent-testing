@@ -35,15 +35,18 @@ from scenario import Scenario, TestingAgent, ScenarioAgentAdapter, AgentInput, A
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 
 
+# Create an adapter to call your agent
+class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
+    def __init__(self, input: AgentInput):
+        self.agent = VegetarianRecipeAgent()
+
+    async def call(self, input: AgentInput) -> AgentReturnTypes:
+        return self.agent.run(input.last_new_user_message_str())
+
+
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_vegetarian_recipe_agent():
-    agent = VegetarianRecipeAgent()
-
-    class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
-        async def call(self, input: AgentInput) -> AgentReturnTypes:
-            return agent.run(input.last_new_user_message_str())
-
     # Define the simulated scenario
     scenario = Scenario(
         name="dinner idea",
