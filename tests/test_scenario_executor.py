@@ -8,34 +8,38 @@ from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
 from scenario.scenario_executor import ScenarioExecutor
 
 
+class MockTestingAgent(TestingAgent):
+    async def call(
+        self,
+        input: AgentInput,
+    ) -> Union[str, ScenarioResult]:
+        if len(input.messages) == 0:
+            return "Hi, I'm a user"
+
+        return ScenarioResult(
+            success=True,
+            messages=[],
+            reasoning="test reasoning",
+            passed_criteria=["test criteria"],
+        )
+
+
+class MockAgent(ScenarioAgentAdapter):
+    async def call(self, input: AgentInput) -> AgentReturnTypes:
+        return {"role": "assistant", "content": "Hey, how can I help you?"}
+
+
+scenario = Scenario(
+    name="test name",
+    description="test description",
+    agent=MockAgent,
+    testing_agent=MockTestingAgent.with_config(model="none"),
+    criteria=["test criteria"],
+)
+
+
 @pytest.mark.asyncio
 async def test_advance_a_step():
-    class MockTestingAgent(TestingAgent):
-        async def call(
-            self,
-            input: AgentInput,
-        ) -> Union[str, ScenarioResult]:
-            if len(input.messages) == 0:
-                return "Hi, I'm a user"
-
-            return ScenarioResult(
-                success=True,
-                messages=[],
-                reasoning="test reasoning",
-                passed_criteria=["test criteria"],
-            )
-
-    class MockAgent(ScenarioAgentAdapter):
-        async def call(self, input: AgentInput) -> AgentReturnTypes:
-            return {"role": "assistant", "content": "Hey, how can I help you?"}
-
-    scenario = Scenario(
-        name="test name",
-        description="test description",
-        agent=MockAgent,
-        testing_agent=MockTestingAgent.with_config(model="none"),
-        criteria=["test criteria"],
-    )
 
     executor = ScenarioExecutor(scenario)
 
@@ -128,3 +132,31 @@ async def test_sends_the_right_new_messages():
     # Run a second turn to trigger the new_messages assertion
     await executor.step()
     await executor.step()
+
+
+@pytest.mark.asyncio
+async def test_for_tool_calls():
+    executor = ScenarioExecutor(scenario)
+    executor.add_message(
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "123",
+                    "function": {"name": "foo", "arguments": "{}"},
+                    "type": "function",
+                }
+            ],
+        }
+    )
+
+    assert executor.last_tool_call("foo") == {
+        "id": "123",
+        "function": {"name": "foo", "arguments": "{}"},
+        "type": "function",
+    }
+    assert executor.last_tool_call("bar") is None
+
+    assert executor.has_tool_call("foo")
+    assert not executor.has_tool_call("bar")

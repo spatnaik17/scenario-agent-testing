@@ -28,6 +28,7 @@ from scenario.utils import (
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionUserMessageParam,
+    ChatCompletionMessageToolCallParam,
 )
 
 from .types import AgentInput, ScenarioAgentRole, ScenarioResult, ScriptStep
@@ -333,6 +334,17 @@ class ScenarioExecutor:
         if not user_messages:
             raise ValueError("No user messages found")
         return user_messages[-1]
+
+    def last_tool_call(self, tool_name: str) -> Optional[ChatCompletionMessageToolCallParam]:
+        for message in reversed(self.messages):
+            if message["role"] == "assistant" and "tool_calls" in message:
+                for tool_call in message["tool_calls"]:
+                    if tool_call["function"]["name"] == tool_name:
+                        return tool_call
+        return None
+
+    def has_tool_call(self, tool_name: str) -> bool:
+        return self.last_tool_call(tool_name) is not None
 
     # Scripting utils
 
