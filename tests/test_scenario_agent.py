@@ -31,6 +31,7 @@ async def test_should_be_able_to_override_scenario_agent():
         messages=[],
         new_messages=[],
         context={},
+        requested_role=ScenarioAgentRole.AGENT,
         scenario_state=cast(Any, None),
     )
 

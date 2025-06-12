@@ -312,6 +312,14 @@ class ScenarioExecutor:
 
     # Scripting utils
 
+    async def message(self, message: ChatCompletionMessageParam) -> None:
+        if message["role"] == "user":
+            await self._script_call_agent(ScenarioAgentRole.USER, message)
+        elif message["role"] == "assistant":
+            await self._script_call_agent(ScenarioAgentRole.AGENT, message)
+        else:
+            self.add_message(message)
+
     async def user(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> None:
@@ -328,6 +336,7 @@ class ScenarioExecutor:
         return await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
 
     # TODO: on_turn and on_step callbacks
+    # TODO: turns actually is steps right now
     async def proceed(self, turns: Optional[int] = None) -> Optional[ScenarioResult]:
         for _ in range(turns or sys.maxsize):
             next_message = await self.step()

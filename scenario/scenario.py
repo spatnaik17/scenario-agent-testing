@@ -193,6 +193,9 @@ class Scenario(ScenarioConfig):
 
     # Scenario Scripting
 
+    def message(self, message: ChatCompletionMessageParam) -> ScriptStep:
+        return lambda state: state.message(message)
+
     def user(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> ScriptStep:
