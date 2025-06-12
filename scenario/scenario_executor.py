@@ -335,7 +335,9 @@ class ScenarioExecutor:
             raise ValueError("No user messages found")
         return user_messages[-1]
 
-    def last_tool_call(self, tool_name: str) -> Optional[ChatCompletionMessageToolCallParam]:
+    def last_tool_call(
+        self, tool_name: str
+    ) -> Optional[ChatCompletionMessageToolCallParam]:
         for message in reversed(self.messages):
             if message["role"] == "assistant" and "tool_calls" in message:
                 for tool_call in message["tool_calls"]:

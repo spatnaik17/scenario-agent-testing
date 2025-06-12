@@ -1,7 +1,8 @@
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SkipValidation
 from typing import (
     TYPE_CHECKING,
+    Annotated,
     Any,
     Awaitable,
     Callable,
@@ -31,8 +32,9 @@ class ScenarioAgentRole(Enum):
 
 class AgentInput(BaseModel):
     thread_id: str
-    messages: List[ChatCompletionMessageParam]
-    new_messages: List[ChatCompletionMessageParam]
+    # Prevent pydantic from validating/parsing the messages and causing issues: https://github.com/pydantic/pydantic/issues/9541
+    messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
+    new_messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
     context: Dict[str, Any]
     requested_role: ScenarioAgentRole
     scenario_state: ScenarioExecutorType = Field(exclude=True)

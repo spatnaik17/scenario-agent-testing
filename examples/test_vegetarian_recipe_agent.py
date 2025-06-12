@@ -21,11 +21,12 @@ Scenario.configure(testing_agent=TestingAgent.with_config(model="openai/gpt-4o-m
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_vegetarian_recipe_agent():
-    agent = VegetarianRecipeAgent()
-
     class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
+        def __init__(self):
+            self.agent = VegetarianRecipeAgent()
+
         async def call(self, input: AgentInput) -> AgentReturnTypes:
-            return agent.run(input.last_new_user_message_str())
+            return self.agent.run(input.last_new_user_message_str())
 
     # Define the scenario
     scenario = Scenario(

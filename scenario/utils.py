@@ -1,6 +1,16 @@
 from contextlib import contextmanager
 import sys
-from typing import Any, List, Literal, Optional, Union, TypeVar, Awaitable, cast
+from typing import (
+    Any,
+    Iterator,
+    List,
+    Literal,
+    Optional,
+    Union,
+    TypeVar,
+    Awaitable,
+    cast,
+)
 from pydantic import BaseModel
 
 import json
@@ -17,11 +27,15 @@ from rich.errors import LiveError
 from scenario.error_messages import message_return_error_message
 from scenario.types import AgentReturnTypes, ScenarioResult
 
+T = TypeVar("T")
+
 
 class SerializableAndPydanticEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, BaseModel):
             return o.model_dump(exclude_unset=True)
+        if isinstance(o, Iterator):
+            return list(o)
         return super().default(o)
 
 
@@ -150,6 +164,13 @@ def check_valid_return_type(return_value: Any, class_name: str) -> None:
         )
         or isinstance(return_value, ScenarioResult)
     ):
+        try:
+            json.dumps(return_value, cls=SerializableAndPydanticEncoder)
+        except:
+            raise ValueError(
+                message_return_error_message(got=return_value, class_name=class_name)
+            )
+
         return
 
     raise ValueError(
@@ -183,6 +204,11 @@ def convert_agent_return_types_to_openai_messages(
         else:
             raise ValueError(f"Unexpected agent response type: {type(obj).__name__}")
 
+    def ensure_dict(
+        obj: T,
+    ) -> T:
+        return json.loads(json.dumps(obj, cls=SerializableAndPydanticEncoder))
+
     if isinstance(agent_response, str):
         return [
             (
@@ -193,11 +219,11 @@ def convert_agent_return_types_to_openai_messages(
         ]
     elif isinstance(agent_response, list):
         return [
-            convert_maybe_object_to_openai_message(message)
+            ensure_dict(convert_maybe_object_to_openai_message(message))
             for message in agent_response
         ]
     else:
-        return [convert_maybe_object_to_openai_message(agent_response)]
+        return [ensure_dict(convert_maybe_object_to_openai_message(agent_response))]
 
 
 def reverse_roles(
@@ -229,9 +255,6 @@ def reverse_roles(
                 message.role = "user"  # type: ignore
 
     return messages
-
-
-T = TypeVar("T")
 
 
 async def await_if_awaitable(value: T) -> T:
