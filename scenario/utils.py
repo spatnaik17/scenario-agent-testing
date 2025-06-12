@@ -229,3 +229,13 @@ def reverse_roles(
                 message.role = "user"  # type: ignore
 
     return messages
+
+
+T = TypeVar("T")
+
+
+async def await_if_awaitable(value: T) -> T:
+    if isinstance(value, Awaitable):
+        return await value
+    else:
+        return value

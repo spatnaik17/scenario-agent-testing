@@ -3,6 +3,8 @@ Scenario module: defines the core Scenario class for agent testing.
 """
 
 from typing import (
+    Awaitable,
+    Callable,
     List,
     Dict,
     Any,
@@ -211,8 +213,23 @@ class Scenario(ScenarioConfig):
     ) -> ScriptStep:
         return lambda state: state.judge(content)
 
-    def proceed(self, turns: Optional[int] = None) -> ScriptStep:
-        return lambda state: state.proceed(turns)
+    def proceed(
+        self,
+        turns: Optional[int] = None,
+        on_turn: Optional[
+            Union[
+                Callable[[ScenarioExecutor], None],
+                Callable[[ScenarioExecutor], Awaitable[None]],
+            ]
+        ] = None,
+        on_step: Optional[
+            Union[
+                Callable[[ScenarioExecutor], None],
+                Callable[[ScenarioExecutor], Awaitable[None]],
+            ]
+        ] = None,
+    ) -> ScriptStep:
+        return lambda state: state.proceed(turns, on_turn, on_step)
 
     def succeed(self) -> ScriptStep:
         return lambda state: state.succeed()

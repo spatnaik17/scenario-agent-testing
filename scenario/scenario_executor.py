@@ -6,6 +6,7 @@ import sys
 from typing import (
     TYPE_CHECKING,
     Awaitable,
+    Callable,
     Dict,
     List,
     Any,
@@ -18,6 +19,7 @@ import time
 import termcolor
 
 from scenario.utils import (
+    await_if_awaitable,
     check_valid_return_type,
     convert_agent_return_types_to_openai_messages,
     print_openai_messages,
@@ -132,13 +134,24 @@ class ScenarioExecutor:
         return result
 
     async def _step(
-        self, go_to_next_turn=True
+        self,
+        go_to_next_turn=True,
+        on_turn: Optional[
+            Union[
+                Callable[["ScenarioExecutor"], None],
+                Callable[["ScenarioExecutor"], Awaitable[None]],
+            ]
+        ] = None,
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult, None]:
         if len(self._pending_roles_on_turn) == 0:
             if not go_to_next_turn:
                 return None
 
             self._new_turn()
+
+            if on_turn:
+                await await_if_awaitable(on_turn(self))
+
             if self.current_turn >= (self.scenario.max_turns or 10):
                 return self._reached_max_turns()
 
@@ -146,7 +159,7 @@ class ScenarioExecutor:
         idx, next_agent = self._next_agent_for_role(current_role)
         if not next_agent:
             self._pending_roles_on_turn.pop(0)
-            return await self._step(go_to_next_turn=go_to_next_turn)
+            return await self._step(go_to_next_turn=go_to_next_turn, on_turn=on_turn)
 
         self._pending_agents_on_turn.remove(next_agent)
         return await self._call_agent(idx, role=current_role)
@@ -346,26 +359,44 @@ class ScenarioExecutor:
     ) -> Optional[ScenarioResult]:
         return await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
 
-    # TODO: on_turn and on_step callbacks
-    async def proceed(self, turns: Optional[int] = None) -> Optional[ScenarioResult]:
+    async def proceed(
+        self,
+        turns: Optional[int] = None,
+        on_turn: Optional[
+            Union[
+                Callable[["ScenarioExecutor"], None],
+                Callable[["ScenarioExecutor"], Awaitable[None]],
+            ]
+        ] = None,
+        on_step: Optional[
+            Union[
+                Callable[["ScenarioExecutor"], None],
+                Callable[["ScenarioExecutor"], Awaitable[None]],
+            ]
+        ] = None,
+    ) -> Optional[ScenarioResult]:
         initial_turn: Optional[int] = None
         while True:
             next_message = await self._step(
+                on_turn=on_turn,
                 go_to_next_turn=(
                     turns is None
                     or initial_turn is None
                     or (self.current_turn + 1 < initial_turn + turns)
-                )
+                ),
             )
 
             if initial_turn is None:
                 initial_turn = self.current_turn
 
-            if isinstance(next_message, ScenarioResult):
-                return next_message
-
             if next_message is None:
                 break
+
+            if on_step:
+                await await_if_awaitable(on_step(self))
+
+            if isinstance(next_message, ScenarioResult):
+                return next_message
 
     async def succeed(self) -> ScenarioResult:
         return ScenarioResult(

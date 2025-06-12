@@ -1,6 +1,7 @@
 import pytest
 from scenario import Scenario, TestingAgent
 from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+from scenario.scenario_executor import ScenarioExecutor
 from scenario.types import (
     AgentInput,
     AgentReturnTypes,
@@ -329,6 +330,7 @@ async def test_scenario_proceeds_the_amount_of_turns_specified():
     assert result.success
     assert len(result.messages) == 6
 
+
 @pytest.mark.asyncio
 async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_halfway_through_a_turn():
     class MockTestingAgent(TestingAgent):
@@ -357,3 +359,76 @@ async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_
 
     assert result.success
     assert len(result.messages) == 4
+
+
+@pytest.mark.asyncio
+async def test_scenario_accepts_custom_callbacks():
+    class MockAgent(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            return [{"role": "tool", "tool_call_id": "tool_call_id", "content": "{}"}]
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    def check_for_tool_calls(state: ScenarioExecutor) -> None:
+        assert state.last_message()["role"] == "tool"
+
+    result = await scenario.script(
+        [
+            scenario.user("Hi, I'm a hardcoded user message"),
+            scenario.agent(),
+            check_for_tool_calls,
+            scenario.succeed(),
+        ]
+    ).run()
+
+    assert result.success
+
+
+@pytest.mark.asyncio
+async def test_scenario_accepts_on_turn_and_on_step_callbacks():
+    class MockAgent(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            if input.scenario_state.current_turn == 0:
+                return {"role": "assistant", "content": "Hey, how can I help you?"}
+            else:
+                return [
+                    {"role": "tool", "tool_call_id": "tool_call_id", "content": "{}"}
+                ]
+
+    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+
+    scenario = Scenario(
+        name="test name",
+        description="test description",
+        agent=MockAgent,
+        criteria=["test criteria"],
+    )
+
+    step_calls = 0
+
+    def check_for_tool_calls(state: ScenarioExecutor) -> None:
+        if state.current_turn > 1:
+            assert state.last_message()["role"] == "tool"
+
+    def increment_step_calls(state: ScenarioExecutor) -> None:
+        nonlocal step_calls
+        step_calls += 1
+
+    result = await scenario.script(
+        [
+            scenario.proceed(
+                on_turn=check_for_tool_calls,
+                on_step=increment_step_calls,
+            ),
+        ]
+    ).run()
+
+    assert result.success
+    assert step_calls == 3
