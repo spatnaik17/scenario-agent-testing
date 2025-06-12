@@ -6,8 +6,14 @@ This example demonstrates testing an AI agent that generates vegetarian recipes.
 
 import pytest
 
-from scenario import Scenario, TestingAgent, scenario_cache, ScenarioAgentAdapter
-from scenario.types import AgentInput, AgentReturnTypes
+from scenario import (
+    Scenario,
+    TestingAgent,
+    scenario_cache,
+    ScenarioAgentAdapter,
+    AgentInput,
+    AgentReturnTypes,
+)
 
 Scenario.configure(testing_agent=TestingAgent.with_config(model="openai/gpt-4o-mini"))
 

@@ -30,7 +30,7 @@ Now create your first scenario and save it as `tests/test_vegetarian_recipe_agen
 ```python
 import pytest
 
-from scenario import Scenario, TestingAgent, scenario_cache
+from scenario import Scenario, TestingAgent, ScenarioAgentAdapter, AgentInput, AgentReturnTypes, scenario_cache
 
 Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 
@@ -40,9 +40,9 @@ Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
 async def test_vegetarian_recipe_agent():
     agent = VegetarianRecipeAgent()
 
-    def vegetarian_recipe_agent(message, context):
-        # Call your agent here
-        return agent.run(message)
+    class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
+        async def call(self, input: AgentInput) -> AgentReturnTypes:
+            return agent.run(input.last_new_user_message_str())
 
     # Define the simulated scenario
     scenario = Scenario(
@@ -100,7 +100,7 @@ class VegetarianRecipeAgent:
         message = response.choices[0].message  # type: ignore
         self.history.append(message)
 
-        return {"messages": [message]}
+        return [message]
 
 ```
 
