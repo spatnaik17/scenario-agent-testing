@@ -5,7 +5,7 @@ import pytest
 from openai.types.chat import ChatCompletionMessageParam
 import scenario
 
-scenario.configure(default_model="anthropic/claude-3-5-sonnet-latest")
+scenario.configure(default_model="openai/gpt-4.1-nano")
 
 
 class Agent(scenario.AgentAdapter):
@@ -31,14 +31,15 @@ async def test_ai_assistant_agent():
     result = await scenario.run(
         name="false assumptions",
         description="""
-            The agent makes false assumption that the user is talking about an ATM bank, and user corrects it
+            The agent makes false assumption that the user is talking about an ATM bank, and user corrects it that they actually mean river banks
         """,
         agents=[
             Agent(),
-            scenario.TestingAgent(
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
                 criteria=[
                     "user should get good recommendations on river crossing",
-                    "agent should NOT follow up about ATM recommendation after user has corrected them they are just hiking",
+                    "agent should NOT keep following up about ATM recommendation after user has corrected them that they are actually just hiking",
                 ],
             ),
         ],

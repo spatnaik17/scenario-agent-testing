@@ -33,7 +33,7 @@ class AgentInput(BaseModel):
     # Prevent pydantic from validating/parsing the messages and causing issues: https://github.com/pydantic/pydantic/issues/9541
     messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
     new_messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
-    requested_role: AgentRole
+    judgment_request: bool = False
     scenario_state: ScenarioExecutorType = Field(exclude=True)
 
     def last_new_user_message(self) -> ChatCompletionUserMessageParam:

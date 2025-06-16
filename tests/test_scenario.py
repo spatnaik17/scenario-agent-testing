@@ -2,20 +2,25 @@ import pytest
 import scenario
 
 
-class MockTestingAgent(scenario.TestingAgent):
+class MockJudgeAgent(scenario.JudgeAgent):
     async def call(
         self,
         input: scenario.AgentInput,
     ) -> scenario.AgentReturnTypes:
-        if len(input.messages) == 0:
-            return {"role": "user", "content": "Hi, I'm a user"}
-
         return scenario.ScenarioResult(
             success=True,
             messages=[],
             reasoning="test reasoning",
             passed_criteria=["test criteria"],
         )
+
+
+class MockUserSimulatorAgent(scenario.UserSimulatorAgent):
+    async def call(
+        self,
+        input: scenario.AgentInput,
+    ) -> scenario.AgentReturnTypes:
+        return {"role": "user", "content": "Hi, I'm a user"}
 
 
 class MockAgent(scenario.AgentAdapter):
@@ -32,7 +37,8 @@ async def test_scenario_high_level_api():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(
                 criteria=["test criteria"],
             ),
         ],
@@ -51,7 +57,8 @@ async def test_scenario_high_level_api_allow_to_config_directly():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(
                 model="none",
                 criteria=["test criteria"],
             ),
@@ -63,7 +70,7 @@ async def test_scenario_high_level_api_allow_to_config_directly():
 
 @pytest.mark.asyncio
 async def test_scenario_high_level_api_allow_to_skip_criteria():
-    class MockTestingAgent(scenario.TestingAgent):
+    class MockJudgeAgent(scenario.JudgeAgent):
         async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
             return {"role": "user", "content": "Hi, I'm a user"}
 
@@ -74,7 +81,8 @@ async def test_scenario_high_level_api_allow_to_skip_criteria():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(),
         ],
         max_turns=2,
     )
@@ -111,7 +119,8 @@ async def test_scenario_allow_scripted_scenario():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -150,7 +159,8 @@ async def test_scenario_allow_scripted_scenario_with_lower_level_openai_messages
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.message(
@@ -172,7 +182,8 @@ async def test_scenario_scripted_fails_if_script_ends_without_conclusion():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -195,7 +206,8 @@ async def test_scenario_scripted_force_success():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -219,7 +231,8 @@ async def test_scenario_scripted_force_failure():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -236,12 +249,12 @@ async def test_scenario_scripted_force_failure():
 
 @pytest.mark.asyncio
 async def test_scenario_scripted_force_judgment():
-    class MockTestingAgent(scenario.TestingAgent):
+    class MockJudgeAgent(scenario.JudgeAgent):
         async def call(
             self,
             input: scenario.AgentInput,
         ) -> scenario.AgentReturnTypes:
-            if input.requested_role == scenario.AgentRole.JUDGE:
+            if input.judgment_request:
                 return scenario.ScenarioResult(
                     success=True,
                     messages=[],
@@ -249,7 +262,7 @@ async def test_scenario_scripted_force_judgment():
                     passed_criteria=["test criteria"],
                 )
 
-            return {"role": "user", "content": "Hi, I'm a user"}
+            return []
 
     scenario.configure(default_model="none")
 
@@ -258,7 +271,8 @@ async def test_scenario_scripted_force_judgment():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -273,7 +287,7 @@ async def test_scenario_scripted_force_judgment():
 
 @pytest.mark.asyncio
 async def test_scenario_proceeds_the_amount_of_turns_specified():
-    class MockTestingAgent(scenario.TestingAgent):
+    class MockJudgeAgent(scenario.JudgeAgent):
         async def call(
             self,
             input: scenario.AgentInput,
@@ -287,7 +301,8 @@ async def test_scenario_proceeds_the_amount_of_turns_specified():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -303,12 +318,12 @@ async def test_scenario_proceeds_the_amount_of_turns_specified():
 
 @pytest.mark.asyncio
 async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_halfway_through_a_turn():
-    class MockTestingAgent(scenario.TestingAgent):
+    class MockJudgeAgent(scenario.JudgeAgent):
         async def call(
             self,
             input: scenario.AgentInput,
         ) -> scenario.AgentReturnTypes:
-            return {"role": "user", "content": "Hi, I'm a user"}
+            return []
 
     scenario.configure(default_model="none")
 
@@ -317,7 +332,8 @@ async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -346,7 +362,8 @@ async def test_scenario_accepts_custom_callbacks():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.user("Hi, I'm a hardcoded user message"),
@@ -387,7 +404,8 @@ async def test_scenario_accepts_on_turn_and_on_step_callbacks():
         description="test description",
         agents=[
             MockAgent(),
-            MockTestingAgent(criteria=["test criteria"]),
+            MockUserSimulatorAgent(),
+            MockJudgeAgent(criteria=["test criteria"]),
         ],
         script=[
             scenario.proceed(

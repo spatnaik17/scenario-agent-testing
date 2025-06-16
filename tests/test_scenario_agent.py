@@ -29,7 +29,7 @@ async def test_should_be_able_to_override_scenario_agent():
         thread_id="1",
         messages=[],
         new_messages=[],
-        requested_role=AgentRole.AGENT,
+        judgment_request=False,
         scenario_state=cast(Any, None),
     )
 

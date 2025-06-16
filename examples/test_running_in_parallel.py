@@ -17,14 +17,14 @@ load_dotenv()
 
 import scenario
 
-scenario.configure(default_model="openai/gpt-4o-mini")
+scenario.configure(default_model="openai/gpt-4.1-mini")
 
 
 class VegetarianRecipeAgentAdapter(AgentAdapter):
     @scenario.cache()
     async def call(self, input: AgentInput) -> AgentReturnTypes:
         response = litellm.completion(
-            model="openai/gpt-4o-mini",
+            model="openai/gpt-4.1-mini",
             messages=[
                 {
                     "role": "system",
@@ -49,7 +49,8 @@ async def test_vegetarian_recipe_agent():
         description="User is looking for a dinner idea",
         agents=[
             VegetarianRecipeAgentAdapter(),
-            scenario.TestingAgent(
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
                 criteria=[
                     "Recipe agent generates a vegetarian recipe",
                     "Recipe includes a list of ingredients",
@@ -75,7 +76,8 @@ async def test_user_is_hungry():
         description="User is very very hungry, they say they could eat a cow",
         agents=[
             VegetarianRecipeAgentAdapter(),
-            scenario.TestingAgent(
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
                 criteria=[
                     "Recipe agent generates a vegetarian recipe",
                     "Recipe includes a list of ingredients",

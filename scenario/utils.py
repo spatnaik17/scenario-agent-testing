@@ -12,6 +12,7 @@ from typing import (
     cast,
 )
 from pydantic import BaseModel
+import copy
 
 import json
 
@@ -236,11 +237,16 @@ def reverse_roles(
         messages: The list of messages to reverse the roles of.
     """
 
-    for message in messages.copy():
+    reversed_messages = []
+    for message in messages:
+        message = copy.deepcopy(message)
         # Can't reverse tool calls
         if not safe_attr_or_key(message, "content") or safe_attr_or_key(
             message, "tool_calls"
         ):
+            # If no content nor tool calls, we should skip it entirely, as anthropic may generate some invalid ones e.g. pure {"role": "assistant"}
+            if safe_attr_or_key(message, "tool_calls"):
+                reversed_messages.append(message)
             continue
 
         if type(message) == dict:
@@ -254,7 +260,9 @@ def reverse_roles(
             elif getattr(message, "role", None) == "assistant":
                 message.role = "user"  # type: ignore
 
-    return messages
+        reversed_messages.append(message)
+
+    return reversed_messages
 
 
 async def await_if_awaitable(value: T) -> T:

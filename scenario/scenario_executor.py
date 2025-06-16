@@ -221,7 +221,7 @@ class ScenarioExecutor:
         self, role: AgentRole
     ) -> Tuple[int, Optional[AgentAdapter]]:
         for idx, agent in enumerate(self.agents):
-            if role in agent.roles and agent in self._pending_agents_on_turn:
+            if role == agent.role and agent in self._pending_agents_on_turn:
                 return idx, agent
         return -1, None
 
@@ -230,7 +230,7 @@ class ScenarioExecutor:
         agent_roles_agents_idx = [
             idx
             for idx, agent in enumerate(self.agents)
-            if AgentRole.AGENT in agent.roles
+            if agent.role == AgentRole.AGENT
         ]
         agent_times = [
             self._agent_times[idx]
@@ -284,7 +284,7 @@ class ScenarioExecutor:
         )
 
     async def _call_agent(
-        self, idx: int, role: AgentRole
+        self, idx: int, role: AgentRole, request_judgment: bool = False
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
         agent = self.agents[idx]
 
@@ -328,7 +328,7 @@ class ScenarioExecutor:
                     thread_id=self.thread_id,
                     messages=self.messages,
                     new_messages=self._pending_messages.get(idx, []),
-                    requested_role=role,
+                    judgment_request=request_judgment,
                     scenario_state=self,
                 )
             )
@@ -421,7 +421,9 @@ class ScenarioExecutor:
     async def judge(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> Optional[ScenarioResult]:
-        return await self._script_call_agent(AgentRole.JUDGE, content)
+        return await self._script_call_agent(
+            AgentRole.JUDGE, content, request_judgment=True
+        )
 
     async def proceed(
         self,
@@ -481,6 +483,7 @@ class ScenarioExecutor:
         self,
         role: AgentRole,
         content: Optional[Union[str, ChatCompletionMessageParam]] = None,
+        request_judgment: bool = False,
     ) -> Optional[ScenarioResult]:
         idx, next_agent = self._next_agent_for_role(role)
         if not next_agent:
@@ -488,12 +491,21 @@ class ScenarioExecutor:
             idx, next_agent = self._next_agent_for_role(role)
 
             if not next_agent:
+                role_class = (
+                    "a scenario.UserSimulatorAgent()"
+                    if role == AgentRole.USER
+                    else (
+                        "a scenario.JudgeAgent()"
+                        if role == AgentRole.JUDGE
+                        else "your agent"
+                    )
+                )
                 if content:
                     raise ValueError(
-                        f"Cannot generate a message for role `{role.value}` with content `{content}` because no agent with this role was found"
+                        f"Cannot generate a message for role `{role.value}` with content `{content}` because no agent with this role was found, please add {role_class} to the scenario `agents` list"
                     )
                 raise ValueError(
-                    f"Cannot generate a message for role `{role.value}` because no agent with this role was found"
+                    f"Cannot generate a message for role `{role.value}` because no agent with this role was found, please add {role_class} to the scenario `agents` list"
                 )
 
         self._pending_agents_on_turn.remove(next_agent)
@@ -510,6 +522,8 @@ class ScenarioExecutor:
                 print_openai_messages(self._scenario_name(), [message])
             return
 
-        result = await self._call_agent(idx, role=role)
+        result = await self._call_agent(
+            idx, role=role, request_judgment=request_judgment
+        )
         if isinstance(result, ScenarioResult):
             return result

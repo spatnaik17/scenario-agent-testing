@@ -1,7 +1,3 @@
-"""
-TestingAgent module: defines the testing agent that interacts with the agent under test.
-"""
-
 import json
 import logging
 import re
@@ -12,7 +8,6 @@ from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
 from scenario.agent_adapter import AgentAdapter
-from scenario.utils import reverse_roles
 from scenario.config import ModelConfig, ScenarioConfig
 
 from .error_messages import agent_not_configured_error_message
@@ -22,26 +17,15 @@ from .types import AgentInput, AgentReturnTypes, AgentRole, ScenarioResult
 logger = logging.getLogger("scenario")
 
 
-class TestingAgent(AgentAdapter):
-    """
-    The Testing Agent that interacts with the agent under test.
-
-    This agent is responsible for:
-    1. Generating messages to send to the agent based on the scenario
-    2. Evaluating the responses from the agent against the success/failure criteria
-    3. Determining when to end the test and return a result
-    """
-
-    roles = {AgentRole.USER, AgentRole.JUDGE}
+class JudgeAgent(AgentAdapter):
+    role = AgentRole.JUDGE
 
     model: str
     api_key: Optional[str]
     temperature: float
     max_tokens: Optional[int]
     criteria: List[str]
-
-    # To prevent pytest from thinking this is actually a test class
-    __test__ = False
+    system_prompt: Optional[str]
 
     def __init__(
         self,
@@ -51,11 +35,14 @@ class TestingAgent(AgentAdapter):
         api_key: Optional[str] = None,
         temperature: float = 0.0,
         max_tokens: Optional[int] = None,
+        # Override the default system prompt for the judge agent
+        system_prompt: Optional[str] = None,
     ):
         self.criteria = criteria or []
         self.api_key = api_key
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self.system_prompt = system_prompt
 
         if model:
             self.model = model
@@ -91,7 +78,7 @@ class TestingAgent(AgentAdapter):
         return a ScenarioResult if the test should conclude.
 
         Returns either:
-          - A string message to send to the agent (if conversation should continue)
+          - An empty list of messages (if the test should continue)
           - A ScenarioResult (if the test should conclude)
         """
 
@@ -100,14 +87,15 @@ class TestingAgent(AgentAdapter):
         messages = [
             {
                 "role": "system",
-                "content": f"""
+                "content": self.system_prompt
+                or f"""
 <role>
-You are pretending to be a user, you are testing an AI Agent (shown as the user role) based on a scenario.
-Approach this naturally, as a human user would, with very short inputs, few words, all lowercase, imperative, not periods, like when they google or talk to chatgpt.
+You are an LLM as a judge watching a simulated conversation as it plays out live to determine if the agent under test meets the criteria or not.
 </role>
 
 <goal>
-Your goal (assistant) is to interact with the Agent Under Test (user) as if you were a human user to see if it can complete the scenario successfully.
+Your goal is to determine if you already have enough information to make a verdict of the scenario below, or if the conversation should continue for longer.
+If you do have enough information, use the finish_test tool to determine if all the criteria have been met, if not, use the continue_test tool to let the next step play out.
 </goal>
 
 <scenario>
@@ -118,25 +106,15 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 {"\n".join([f"{idx + 1}. {criterion}" for idx, criterion in enumerate(self.criteria)])}
 </criteria>
 
-<execution_flow>
-1. Generate the first message to start the scenario
-2. After the Agent Under Test (user) responds, generate the next message to send to the Agent Under Test, keep repeating step 2 until criterias match
-3. If the test should end, use the finish_test tool to determine if all the criteria have been met
-</execution_flow>
-
 <rules>
-1. Test should end immediately if a criteria mentioning something the agent should NOT do is met
-2. Test should continue until all scenario goals have been met to try going through all the criteria
-3. DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
-4. DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, wait for the user to do it
+- Be strict, do not let the conversation continue if the agent already broke one of the "do not" or "should not" criterias.
+- DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
 </rules>
 """,
             },
-            {"role": "assistant", "content": "Hello, how can I help you today?"},
             *input.messages,
         ]
 
-        is_first_message = len(input.messages) == 0
         is_last_message = (
             input.scenario_state.current_turn == input.scenario_state.config.max_turns
         )
@@ -156,12 +134,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 }
             )
 
-        # User to assistant role reversal
-        # LLM models are biased to always be the assistant not the user, so we need to do this reversal otherwise models like GPT 4.5 is
-        # super confused, and Claude 3.7 even starts throwing exceptions.
-        messages = reverse_roles(messages)
-
-        # Define the tool
+        # Define the tools
         criteria_names = [
             re.sub(
                 r"[^a-zA-Z0-9]",
@@ -171,6 +144,20 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             for criterion in self.criteria
         ]
         tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "continue_test",
+                    "description": "Continue the test with the next step",
+                    "strict": True,
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": [],
+                        "additionalProperties": False,
+                    },
+                },
+            },
             {
                 "type": "function",
                 "function": {
@@ -207,10 +194,10 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         "additionalProperties": False,
                     },
                 },
-            }
+            },
         ]
 
-        enforce_judgment = input.requested_role == AgentRole.JUDGE
+        enforce_judgment = input.judgment_request
         has_criteria = len(self.criteria) > 0
 
         if enforce_judgment and not has_criteria:
@@ -227,15 +214,11 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                tools=(
-                    tools
-                    if (not is_first_message or enforce_judgment) and has_criteria
-                    else None
-                ),
+                tools=tools,
                 tool_choice=(
-                    "required"
+                    {"type": "function", "function": {"name": "finish_test"}}
                     if (is_last_message or enforce_judgment) and has_criteria
-                    else None
+                    else "required"
                 ),
             ),
         )
@@ -247,6 +230,9 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             # Check if the LLM chose to use the tool
             if message.tool_calls:
                 tool_call = message.tool_calls[0]
+                if tool_call.function.name == "continue_test":
+                    return []
+
                 if tool_call.function.name == "finish_test":
                     # Parse the tool call arguments
                     try:
@@ -268,26 +254,27 @@ if you don't have enough information to make a verdict, say inconclusive with ma
 
                         # Return the appropriate ScenarioResult based on the verdict
                         return ScenarioResult(
-                            success=verdict == "success",
+                            success=verdict == "success" and len(failed_criteria) == 0,
                             messages=messages,
                             reasoning=reasoning,
                             passed_criteria=passed_criteria,
                             failed_criteria=failed_criteria,
                         )
                     except json.JSONDecodeError:
-                        logger.error("Failed to parse tool call arguments")
+                        raise Exception(
+                            f"Failed to parse tool call arguments from judge agent: {tool_call.function.arguments}"
+                        )
 
-            # If no tool call use the message content as next message
-            message_content = message.content
-            if message_content is None:
-                # If invalid tool call, raise an error
-                if message.tool_calls:
+                else:
                     raise Exception(
-                        f"Invalid tool call from testing agent: {message.tool_calls.__repr__()}"
+                        f"Invalid tool call from judge agent: {tool_call.function.name}"
                     )
-                raise Exception(f"No response from LLM: {response.__repr__()}")
 
-            return {"role": "user", "content": message_content}
+            else:
+                raise Exception(
+                    f"Invalid response from judge agent, tool calls not found: {message.__repr__()}"
+                )
+
         else:
             raise Exception(
                 f"Unexpected response format from LLM: {response.__repr__()}"

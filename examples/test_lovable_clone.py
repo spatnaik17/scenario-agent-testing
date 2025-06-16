@@ -35,7 +35,8 @@ async def test_lovable_clone():
         """,
         agents=[
             LovableAgentAdapter(template_path=template_path),
-            scenario.TestingAgent(
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
                 criteria=[
                     "agent reads the files before go and making changes",
                     "agent modified the index.css file, not only the Index.tsx file",
@@ -45,6 +46,13 @@ async def test_lovable_clone():
                     "agent should NOT produce incomplete code or be too lazy to finish",
                 ],
             ),
+        ],
+        script=[
+            scenario.user("create a landing page for my dog walking startup"),
+            scenario.agent(),
+            scenario.user(),
+            scenario.agent(),
+            scenario.judge(),
         ],
         max_turns=5,
     )

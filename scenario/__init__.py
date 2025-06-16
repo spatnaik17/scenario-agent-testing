@@ -9,7 +9,8 @@ from .config import ScenarioConfig
 # Then import modules with dependencies
 from .scenario_executor import ScenarioExecutor
 from .agent_adapter import AgentAdapter
-from .testing_agent import TestingAgent
+from .judge_agent import JudgeAgent
+from .user_simulator_agent import UserSimulatorAgent
 from .cache import scenario_cache
 from .script import message, user, agent, judge, proceed, succeed, fail
 
@@ -47,7 +48,8 @@ __all__ = [
     # Classes
     "ScenarioExecutor",
     "AgentAdapter",
-    "TestingAgent",
+    "UserSimulatorAgent",
+    "JudgeAgent",
 
     # Plugins
     "pytest_configure",

@@ -8,7 +8,7 @@ import pytest
 import scenario
 import litellm
 
-scenario.configure(default_model="openai/gpt-4o-mini")
+scenario.configure(default_model="openai/gpt-4.1-mini")
 
 
 @pytest.mark.agent_test
@@ -24,12 +24,11 @@ async def test_vegetarian_recipe_agent():
         description="""
             It's saturday evening, the user is very hungry and tired,
             but have no money to order out, so they are looking for a recipe.
-
-            The user never mentions they want a vegetarian recipe.
         """,
         agents=[
             Agent(),
-            scenario.TestingAgent(
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
                 criteria=[
                     "Agent should not ask more than two follow-up questions",
                     "Agent should generate a recipe",
@@ -52,7 +51,7 @@ import litellm
 @scenario.cache()
 def vegetarian_recipe_agent(messages) -> scenario.AgentReturnTypes:
     response = litellm.completion(
-        model="openai/gpt-4o-mini",
+        model="openai/gpt-4.1-mini",
         messages=[
             {
                 "role": "system",
