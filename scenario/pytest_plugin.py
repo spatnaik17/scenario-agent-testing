@@ -7,13 +7,15 @@ from typing import TypedDict
 import functools
 from termcolor import colored
 
+from scenario.config import ScenarioConfig
 from scenario.types import ScenarioResult
 
-from .scenario import Scenario
+from .scenario_executor import ScenarioExecutor
+import scenario
 
 
 class ScenarioReporterResults(TypedDict):
-    scenario: Scenario
+    scenario: ScenarioExecutor
     result: ScenarioResult
 
 
@@ -22,7 +24,7 @@ class ScenarioReporter:
     def __init__(self):
         self.results: list[ScenarioReporterResults] = []
 
-    def add_result(self, scenario, result):
+    def add_result(self, scenario: ScenarioExecutor, result: ScenarioResult):
         """Add a test result to the reporter."""
         self.results.append({"scenario": scenario, "result": result})
 
@@ -94,7 +96,9 @@ class ScenarioReporter:
 
             if hasattr(result, "passed_criteria") and result.passed_criteria:
                 criteria_count = len(result.passed_criteria)
-                total_criteria = len(scenario.criteria)
+                total_criteria = len(result.passed_criteria) + len(
+                    result.failed_criteria
+                )
                 criteria_color = (
                     "green" if criteria_count == total_criteria else "yellow"
                 )
@@ -115,7 +119,7 @@ class ScenarioReporter:
 
 
 # Store the original run method
-original_run = Scenario.run
+original_run = ScenarioExecutor._run
 
 
 @pytest.hookimpl(trylast=True)
@@ -128,7 +132,7 @@ def pytest_configure(config):
 
     if config.getoption("--debug"):
         print(colored("\nScenario debug mode enabled (--debug).", "yellow"))
-        Scenario.configure(verbose=True, debug=True)
+        ScenarioConfig.configure(verbose=True, debug=True)
 
     # Create a global reporter instance
     config._scenario_reporter = ScenarioReporter()
@@ -149,7 +153,7 @@ def pytest_configure(config):
         return result
 
     # Apply the patch
-    Scenario.run = auto_reporting_run
+    ScenarioExecutor._run = auto_reporting_run
 
 
 @pytest.hookimpl(trylast=True)
@@ -160,7 +164,7 @@ def pytest_unconfigure(config):
         config._scenario_reporter.print_report()
 
     # Restore the original method
-    Scenario.run = original_run
+    ScenarioExecutor._run = original_run
 
 
 @pytest.fixture

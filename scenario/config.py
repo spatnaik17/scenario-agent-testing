@@ -2,15 +2,14 @@
 Configuration module for Scenario.
 """
 
-from typing import TYPE_CHECKING, Any, Optional, Type, Union
+from typing import Optional, Union, ClassVar
 from pydantic import BaseModel
 
-if TYPE_CHECKING:
-    from scenario.scenario_agent_adapter import ScenarioAgentAdapter
-
-    ScenarioAgentType = ScenarioAgentAdapter
-else:
-    ScenarioAgentType = Any
+class ModelConfig(BaseModel):
+    model: str
+    api_key: Optional[str] = None
+    temperature: float = 0.0
+    max_tokens: Optional[int] = None
 
 
 class ScenarioConfig(BaseModel):
@@ -21,11 +20,34 @@ class ScenarioConfig(BaseModel):
     such as the LLM provider and model to use for the testing agent.
     """
 
-    testing_agent: Optional[Type[ScenarioAgentType]] = None
+    default_model: Optional[Union[str, ModelConfig]] = None
     max_turns: Optional[int] = 10
     verbose: Optional[Union[bool, int]] = True
     cache_key: Optional[str] = None
     debug: Optional[bool] = False
+
+    default_config: ClassVar[Optional["ScenarioConfig"]] = None
+
+    @classmethod
+    def configure(
+        cls,
+        default_model: Optional[str] = None,
+        max_turns: Optional[int] = None,
+        verbose: Optional[Union[bool, int]] = None,
+        cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
+    ) -> None:
+        existing_config = cls.default_config or ScenarioConfig()
+
+        cls.default_config = existing_config.merge(
+            ScenarioConfig(
+                default_model=default_model,
+                max_turns=max_turns,
+                verbose=verbose,
+                cache_key=cache_key,
+                debug=debug,
+            )
+        )
 
     def merge(self, other: "ScenarioConfig") -> "ScenarioConfig":
         return ScenarioConfig(

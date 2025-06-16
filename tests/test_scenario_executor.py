@@ -1,8 +1,8 @@
 from typing import Union
 
 import pytest
-from scenario import Scenario, TestingAgent
-from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+from scenario import TestingAgent
+from scenario.agent_adapter import AgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
 
 from scenario.scenario_executor import ScenarioExecutor
@@ -24,24 +24,22 @@ class MockTestingAgent(TestingAgent):
         )
 
 
-class MockAgent(ScenarioAgentAdapter):
+class MockAgent(AgentAdapter):
     async def call(self, input: AgentInput) -> AgentReturnTypes:
         return {"role": "assistant", "content": "Hey, how can I help you?"}
-
-
-scenario = Scenario(
-    name="test name",
-    description="test description",
-    agent=MockAgent,
-    testing_agent=MockTestingAgent.with_config(model="none"),
-    criteria=["test criteria"],
-)
 
 
 @pytest.mark.asyncio
 async def test_advance_a_step():
 
-    executor = ScenarioExecutor(scenario)
+    executor = ScenarioExecutor(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockTestingAgent(model="none", criteria=["test criteria"]),
+        ],
+    )
 
     assert executor.messages == [], "starts with no messages"
 
@@ -95,7 +93,7 @@ async def test_sends_the_right_new_messages():
                 passed_criteria=["test criteria"],
             )
 
-    class MockAgent(ScenarioAgentAdapter):
+    class MockAgent(AgentAdapter):
         async def call(self, input: AgentInput) -> AgentReturnTypes:
             if input.scenario_state.current_turn == 0:
                 assert input.new_messages == [
@@ -113,15 +111,14 @@ async def test_sends_the_right_new_messages():
                 ]
                 return {"role": "assistant", "content": "Is it working?"}
 
-    scenario = Scenario(
+    executor = ScenarioExecutor(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        testing_agent=MockTestingAgent.with_config(model="none"),
-        criteria=["test criteria"],
+        agents=[
+            MockAgent(),
+            MockTestingAgent(model="none", criteria=["test criteria"]),
+        ],
     )
-
-    executor = ScenarioExecutor(scenario)
 
     # Run first turn
     await executor.step()
@@ -136,7 +133,14 @@ async def test_sends_the_right_new_messages():
 
 @pytest.mark.asyncio
 async def test_for_tool_calls():
-    executor = ScenarioExecutor(scenario)
+    executor = ScenarioExecutor(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockTestingAgent(model="none", criteria=["test criteria"]),
+        ],
+    )
     executor.add_message(
         {
             "role": "assistant",

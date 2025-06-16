@@ -5,23 +5,24 @@ TestingAgent module: defines the testing agent that interacts with the agent und
 import json
 import logging
 import re
-from typing import Optional, Type, cast
+from typing import List, Optional, cast
 
 from litellm import Choices, completion
 from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
-from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+from scenario.agent_adapter import AgentAdapter
 from scenario.utils import reverse_roles
+from scenario.config import ModelConfig, ScenarioConfig
 
-from .error_messages import testing_agent_not_configured_error_message
-from .types import AgentInput, AgentReturnTypes, ScenarioAgentRole, ScenarioResult
+from .error_messages import agent_not_configured_error_message
+from .types import AgentInput, AgentReturnTypes, AgentRole, ScenarioResult
 
 
 logger = logging.getLogger("scenario")
 
 
-class TestingAgent(ScenarioAgentAdapter):
+class TestingAgent(AgentAdapter):
     """
     The Testing Agent that interacts with the agent under test.
 
@@ -31,42 +32,56 @@ class TestingAgent(ScenarioAgentAdapter):
     3. Determining when to end the test and return a result
     """
 
-    roles = {ScenarioAgentRole.USER, ScenarioAgentRole.JUDGE}
+    roles = {AgentRole.USER, AgentRole.JUDGE}
 
-    model: str = ""
-    api_key: Optional[str] = None
-    temperature: float = 0.0
-    max_tokens: Optional[int] = None
+    model: str
+    api_key: Optional[str]
+    temperature: float
+    max_tokens: Optional[int]
+    criteria: List[str]
 
     # To prevent pytest from thinking this is actually a test class
     __test__ = False
 
-    def __init__(self, input: AgentInput):
-        super().__init__(input)
-
-        if not self.model:
-            raise Exception(testing_agent_not_configured_error_message)
-
-    @classmethod
-    def with_config(
-        cls,
-        model: str,
+    def __init__(
+        self,
+        *,
+        criteria: Optional[List[str]] = None,
+        model: Optional[str] = None,
         api_key: Optional[str] = None,
         temperature: float = 0.0,
         max_tokens: Optional[int] = None,
-    ) -> Type["TestingAgent"]:
-        class TestingAgentWithConfig(cls):
-            def __init__(self, input: AgentInput):
-                self.model = model
-                self.api_key = api_key
-                self.temperature = temperature
-                self.max_tokens = max_tokens
+    ):
+        self.criteria = criteria or []
+        self.api_key = api_key
+        self.temperature = temperature
+        self.max_tokens = max_tokens
 
-                super().__init__(input)
+        if model:
+            self.model = model
 
-        return TestingAgentWithConfig
+        if ScenarioConfig.default_config is not None and isinstance(
+            ScenarioConfig.default_config.default_model, str
+        ):
+            self.model = model or ScenarioConfig.default_config.default_model
+        elif ScenarioConfig.default_config is not None and isinstance(
+            ScenarioConfig.default_config.default_model, ModelConfig
+        ):
+            self.model = model or ScenarioConfig.default_config.default_model.model
+            self.api_key = (
+                api_key or ScenarioConfig.default_config.default_model.api_key
+            )
+            self.temperature = (
+                temperature or ScenarioConfig.default_config.default_model.temperature
+            )
+            self.max_tokens = (
+                max_tokens or ScenarioConfig.default_config.default_model.max_tokens
+            )
 
-    @scenario_cache(ignore=["scenario"])
+        if not hasattr(self, "model"):
+            raise Exception(agent_not_configured_error_message("TestingAgent"))
+
+    @scenario_cache()
     async def call(
         self,
         input: AgentInput,
@@ -80,7 +95,7 @@ class TestingAgent(ScenarioAgentAdapter):
           - A ScenarioResult (if the test should conclude)
         """
 
-        scenario = input.scenario_state.scenario
+        scenario = input.scenario_state
 
         messages = [
             {
@@ -100,7 +115,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 </scenario>
 
 <criteria>
-{"\n".join([f"{idx + 1}. {criterion}" for idx, criterion in enumerate(scenario.criteria)])}
+{"\n".join([f"{idx + 1}. {criterion}" for idx, criterion in enumerate(self.criteria)])}
 </criteria>
 
 <execution_flow>
@@ -123,7 +138,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 
         is_first_message = len(input.messages) == 0
         is_last_message = (
-            input.scenario_state.current_turn == input.scenario_state.scenario.max_turns
+            input.scenario_state.current_turn == input.scenario_state.config.max_turns
         )
 
         if is_last_message:
@@ -153,7 +168,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                 "_",
                 criterion.replace(" ", "_").replace("'", "").lower(),
             )[:70]
-            for criterion in scenario.criteria
+            for criterion in self.criteria
         ]
         tools = [
             {
@@ -172,7 +187,7 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                                         "enum": [True, False, "inconclusive"],
                                         "description": criterion,
                                     }
-                                    for idx, criterion in enumerate(scenario.criteria)
+                                    for idx, criterion in enumerate(self.criteria)
                                 },
                                 "required": criteria_names,
                                 "additionalProperties": False,
@@ -195,8 +210,8 @@ if you don't have enough information to make a verdict, say inconclusive with ma
             }
         ]
 
-        enforce_judgment = input.requested_role == ScenarioAgentRole.JUDGE
-        has_criteria = len(scenario.criteria) > 0
+        enforce_judgment = input.requested_role == AgentRole.JUDGE
+        has_criteria = len(self.criteria) > 0
 
         if enforce_judgment and not has_criteria:
             return ScenarioResult(
@@ -241,12 +256,12 @@ if you don't have enough information to make a verdict, say inconclusive with ma
                         criteria = args.get("criteria", {})
 
                         passed_criteria = [
-                            scenario.criteria[idx]
+                            self.criteria[idx]
                             for idx, criterion in enumerate(criteria.values())
                             if criterion == True
                         ]
                         failed_criteria = [
-                            scenario.criteria[idx]
+                            self.criteria[idx]
                             for idx, criterion in enumerate(criteria.values())
                             if criterion == False
                         ]

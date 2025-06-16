@@ -4,7 +4,6 @@ ScenarioExecutor module: holds the scenario execution logic and state, orchestra
 
 import sys
 from typing import (
-    TYPE_CHECKING,
     Awaitable,
     Callable,
     Dict,
@@ -17,7 +16,10 @@ from typing import (
 )
 import time
 import termcolor
+import asyncio
+import concurrent.futures
 
+from scenario.config import ScenarioConfig
 from scenario.utils import (
     await_if_awaitable,
     check_valid_return_type,
@@ -31,72 +33,122 @@ from openai.types.chat import (
     ChatCompletionMessageToolCallParam,
 )
 
-from .types import AgentInput, ScenarioAgentRole, ScenarioResult, ScriptStep
+from .types import AgentInput, AgentRole, ScenarioResult, ScriptStep
 from .error_messages import agent_response_not_awaitable
 from .cache import context_scenario
-from .scenario_agent_adapter import ScenarioAgentAdapter
+from .agent_adapter import AgentAdapter
+from .script import proceed
 from pksuid import PKSUID
-
-if TYPE_CHECKING:
-    from scenario.scenario import Scenario
 
 
 class ScenarioExecutor:
-    scenario: "Scenario"
+    name: str
+    description: str
+    agents: List[AgentAdapter]
+    script: List[ScriptStep]
+
+    config: ScenarioConfig
+
     messages: List[ChatCompletionMessageParam]
     thread_id: str
     current_turn: int
 
     _context: Optional[Dict[str, Any]]
-    _script: List[ScriptStep]
-    _agents: List[ScenarioAgentAdapter]
     _total_start_time: float
     _pending_messages: Dict[int, List[ChatCompletionMessageParam]]
 
-    _pending_roles_on_turn: List[ScenarioAgentRole] = []
-    _pending_agents_on_turn: Set[ScenarioAgentAdapter] = set()
+    _pending_roles_on_turn: List[AgentRole] = []
+    _pending_agents_on_turn: Set[AgentAdapter] = set()
     _agent_times: Dict[int, float] = {}
 
     def __init__(
         self,
-        scenario: "Scenario",
-        context: Optional[Dict[str, Any]] = None,
+        name: str,
+        description: str,
+        agents: List[AgentAdapter] = [],
         script: Optional[List[ScriptStep]] = None,
+        # Config
+        max_turns: Optional[int] = None,
+        verbose: Optional[Union[bool, int]] = None,
+        cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
     ):
-        super().__init__()
+        self.name = name
+        self.description = description
+        self.agents = agents
+        self.script = script or [proceed()]
 
-        self.scenario = scenario.model_copy()
-        self._context = context
-        self._script = script or [scenario.proceed()]
+        config = ScenarioConfig(
+            max_turns=max_turns,
+            verbose=verbose,
+            cache_key=cache_key,
+            debug=debug,
+        )
+        self.config = (
+            ScenarioConfig.default_config.merge(config)
+            if ScenarioConfig.default_config
+            else config
+        )
+
         self.current_turn = 0
         self.reset()
 
+    @classmethod
+    async def run(
+        cls,
+        name: str,
+        description: str,
+        agents: List[AgentAdapter] = [],
+        max_turns: Optional[int] = None,
+        verbose: Optional[Union[bool, int]] = None,
+        cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
+        script: Optional[List[ScriptStep]] = None,
+    ) -> ScenarioResult:
+        scenario = cls(
+            name=name,
+            description=description,
+            agents=agents,
+            max_turns=max_turns,
+            verbose=verbose,
+            cache_key=cache_key,
+            debug=debug,
+            script=script,
+        )
+
+        # We'll use a thread pool to run the execution logic, we
+        # require a separate thread because even though asyncio is
+        # being used throughout, any user code on the callback can
+        # be blocking, preventing them from running scenarios in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+
+            def run_in_thread():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                try:
+                    return loop.run_until_complete(scenario._run())
+                finally:
+                    loop.close()
+
+            # Run the function in the thread pool and await its result
+            # This converts the thread's execution into a Future that the current
+            # event loop can await without blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(executor, run_in_thread)
+            return result
+
     def reset(self):
         self.messages = []
-        self._agents = []
         self._pending_messages = {}
         self.thread_id = str(PKSUID("thread"))
         self._total_start_time = time.time()
         self._agent_times = {}
 
-        for AgentClass in self.scenario.agents:
-            self._agents.append(
-                AgentClass(
-                    input=AgentInput(
-                        thread_id=self.thread_id,
-                        messages=[],
-                        new_messages=[],
-                        context=self._context or {},
-                        requested_role=list(AgentClass.roles)[0],
-                        scenario_state=self,
-                    )
-                )
-            )
-
         self._new_turn()
         self.current_turn = 0
 
-        context_scenario.set(self.scenario)
+        context_scenario.set(self)
 
     def add_message(
         self, message: ChatCompletionMessageParam, from_agent_idx: Optional[int] = None
@@ -104,7 +156,7 @@ class ScenarioExecutor:
         self.messages.append(message)
 
         # Broadcast the message to other agents
-        for idx, _ in enumerate(self._agents):
+        for idx, _ in enumerate(self.agents):
             if idx == from_agent_idx:
                 continue
             if idx not in self._pending_messages:
@@ -120,11 +172,11 @@ class ScenarioExecutor:
             self.add_message(message, from_agent_idx)
 
     def _new_turn(self):
-        self._pending_agents_on_turn = set(self._agents)
+        self._pending_agents_on_turn = set(self.agents)
         self._pending_roles_on_turn = [
-            ScenarioAgentRole.USER,
-            ScenarioAgentRole.AGENT,
-            ScenarioAgentRole.JUDGE,
+            AgentRole.USER,
+            AgentRole.AGENT,
+            AgentRole.JUDGE,
         ]
         self.current_turn += 1
 
@@ -153,7 +205,7 @@ class ScenarioExecutor:
             if on_turn:
                 await await_if_awaitable(on_turn(self))
 
-            if self.current_turn >= (self.scenario.max_turns or 10):
+            if self.current_turn >= (self.config.max_turns or 10):
                 return self._reached_max_turns()
 
         current_role = self._pending_roles_on_turn[0]
@@ -166,9 +218,9 @@ class ScenarioExecutor:
         return await self._call_agent(idx, role=current_role)
 
     def _next_agent_for_role(
-        self, role: ScenarioAgentRole
-    ) -> Tuple[int, Optional[ScenarioAgentAdapter]]:
-        for idx, agent in enumerate(self._agents):
+        self, role: AgentRole
+    ) -> Tuple[int, Optional[AgentAdapter]]:
+        for idx, agent in enumerate(self.agents):
             if role in agent.roles and agent in self._pending_agents_on_turn:
                 return idx, agent
         return -1, None
@@ -177,8 +229,8 @@ class ScenarioExecutor:
         # If we reached max turns without conclusion, fail the test
         agent_roles_agents_idx = [
             idx
-            for idx, agent in enumerate(self._agents)
-            if ScenarioAgentRole.AGENT in agent.roles
+            for idx, agent in enumerate(self.agents)
+            if AgentRole.AGENT in agent.roles
         ]
         agent_times = [
             self._agent_times[idx]
@@ -191,12 +243,12 @@ class ScenarioExecutor:
             success=False,
             messages=self.messages,
             reasoning=error_message
-            or f"Reached maximum turns ({self.scenario.max_turns or 10}) without conclusion",
+            or f"Reached maximum turns ({self.config.max_turns or 10}) without conclusion",
             total_time=time.time() - self._total_start_time,
             agent_time=agent_time,
         )
 
-    async def run(self) -> ScenarioResult:
+    async def _run(self) -> ScenarioResult:
         """
         Run a scenario against the agent under test.
 
@@ -207,12 +259,12 @@ class ScenarioExecutor:
             ScenarioResult containing the test outcome
         """
 
-        if self.scenario.verbose:
+        if self.config.verbose:
             print("")  # new line
 
         self.reset()
 
-        for script_step in self._script:
+        for script_step in self.script:
             callable = script_step(self)
             if isinstance(callable, Awaitable):
                 result = await callable
@@ -232,11 +284,11 @@ class ScenarioExecutor:
         )
 
     async def _call_agent(
-        self, idx: int, role: ScenarioAgentRole
+        self, idx: int, role: AgentRole
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
-        agent = self._agents[idx]
+        agent = self.agents[idx]
 
-        if role == ScenarioAgentRole.USER and self.scenario.debug:
+        if role == AgentRole.USER and self.config.debug:
             print(
                 f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send"
             )
@@ -258,15 +310,15 @@ class ScenarioExecutor:
         with show_spinner(
             text=(
                 "Judging..."
-                if role == ScenarioAgentRole.JUDGE
-                else f"{role.value if isinstance(role, ScenarioAgentRole) else role}:"
+                if role == AgentRole.JUDGE
+                else f"{role.value if isinstance(role, AgentRole) else role}:"
             ),
             color=(
                 "blue"
-                if role == ScenarioAgentRole.AGENT
-                else "green" if role == ScenarioAgentRole.USER else "yellow"
+                if role == AgentRole.AGENT
+                else "green" if role == AgentRole.USER else "yellow"
             ),
-            enabled=self.scenario.verbose,
+            enabled=self.config.verbose,
         ):
             start_time = time.time()
 
@@ -276,8 +328,6 @@ class ScenarioExecutor:
                     thread_id=self.thread_id,
                     messages=self.messages,
                     new_messages=self._pending_messages.get(idx, []),
-                    # TODO: test context
-                    context=self._context or {},
                     requested_role=role,
                     scenario_state=self,
                 )
@@ -303,12 +353,12 @@ class ScenarioExecutor:
             else:
                 messages = convert_agent_return_types_to_openai_messages(
                     agent_response,
-                    role="user" if role == ScenarioAgentRole.USER else "assistant",
+                    role="user" if role == AgentRole.USER else "assistant",
                 )
 
             self.add_messages(messages, from_agent_idx=idx)
 
-            if messages and self.scenario.verbose:
+            if messages and self.config.verbose:
                 print_openai_messages(
                     self._scenario_name(),
                     [m for m in messages if m["role"] != "system"],
@@ -317,8 +367,8 @@ class ScenarioExecutor:
             return messages
 
     def _scenario_name(self):
-        if self.scenario.verbose == 2:
-            return termcolor.colored(f"[Scenario: {self.scenario.name}] ", "yellow")
+        if self.config.verbose == 2:
+            return termcolor.colored(f"[Scenario: {self.name}] ", "yellow")
         else:
             return ""
 
@@ -352,26 +402,26 @@ class ScenarioExecutor:
 
     async def message(self, message: ChatCompletionMessageParam) -> None:
         if message["role"] == "user":
-            await self._script_call_agent(ScenarioAgentRole.USER, message)
+            await self._script_call_agent(AgentRole.USER, message)
         elif message["role"] == "assistant":
-            await self._script_call_agent(ScenarioAgentRole.AGENT, message)
+            await self._script_call_agent(AgentRole.AGENT, message)
         else:
             self.add_message(message)
 
     async def user(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> None:
-        await self._script_call_agent(ScenarioAgentRole.USER, content)
+        await self._script_call_agent(AgentRole.USER, content)
 
     async def agent(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> None:
-        await self._script_call_agent(ScenarioAgentRole.AGENT, content)
+        await self._script_call_agent(AgentRole.AGENT, content)
 
     async def judge(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> Optional[ScenarioResult]:
-        return await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
+        return await self._script_call_agent(AgentRole.JUDGE, content)
 
     async def proceed(
         self,
@@ -412,25 +462,24 @@ class ScenarioExecutor:
             if isinstance(next_message, ScenarioResult):
                 return next_message
 
-    async def succeed(self) -> ScenarioResult:
+    async def succeed(self, reasoning: Optional[str] = None) -> ScenarioResult:
         return ScenarioResult(
             success=True,
             messages=self.messages,
-            reasoning="Scenario marked as successful with scenario.succeed()",
-            passed_criteria=self.scenario.criteria,
+            reasoning=reasoning
+            or "Scenario marked as successful with scenario.succeed()",
         )
 
-    async def fail(self) -> ScenarioResult:
+    async def fail(self, reasoning: Optional[str] = None) -> ScenarioResult:
         return ScenarioResult(
             success=False,
             messages=self.messages,
-            reasoning="Scenario marked as failed with scenario.fail()",
-            passed_criteria=self.scenario.criteria,
+            reasoning=reasoning or "Scenario marked as failed with scenario.fail()",
         )
 
     async def _script_call_agent(
         self,
-        role: ScenarioAgentRole,
+        role: AgentRole,
         content: Optional[Union[str, ChatCompletionMessageParam]] = None,
     ) -> Optional[ScenarioResult]:
         idx, next_agent = self._next_agent_for_role(role)
@@ -457,7 +506,7 @@ class ScenarioExecutor:
                 message = content
 
             self.add_message(message)
-            if self.scenario.verbose:
+            if self.config.verbose:
                 print_openai_messages(self._scenario_name(), [message])
             return
 

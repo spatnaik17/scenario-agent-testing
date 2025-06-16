@@ -11,10 +11,11 @@ import wrapt
 from scenario.utils import SerializableWithStringFallback
 
 if TYPE_CHECKING:
-    from scenario.scenario import Scenario
+    from scenario.scenario_executor import ScenarioExecutor
 
 
 context_scenario = ContextVar("scenario")
+
 
 def get_cache() -> Memory:
     """Get a cross-platform cache directory for scenario."""
@@ -23,14 +24,16 @@ def get_cache() -> Memory:
 
     return Memory(location=os.environ.get("SCENARIO_CACHE_DIR", cache_dir), verbose=0)
 
+
 memory = get_cache()
+
 
 def scenario_cache(ignore=[]):
     @wrapt.decorator
     def wrapper(wrapped: Callable, instance=None, args=[], kwargs={}):
-        scenario: "Scenario" = context_scenario.get()
+        scenario: "ScenarioExecutor" = context_scenario.get()
 
-        if not scenario.cache_key:
+        if not scenario.config.cache_key:
             return wrapped(*args, **kwargs)
 
         sig = inspect.signature(wrapped)
@@ -45,8 +48,8 @@ def scenario_cache(ignore=[]):
 
         cache_key = json.dumps(
             {
-                "cache_key": scenario.cache_key,
-                "scenario": scenario.model_dump(exclude={"agent"}),
+                "cache_key": scenario.config.cache_key,
+                "scenario": scenario.config.model_dump(exclude={"agents"}),
                 "all_args": all_args,
             },
             cls=SerializableWithStringFallback,

@@ -6,8 +6,6 @@ from typing import (
     Any,
     Awaitable,
     Callable,
-    Coroutine,
-    Dict,
     List,
     Optional,
     Union,
@@ -24,7 +22,7 @@ else:
     ScenarioExecutorType = Any
 
 
-class ScenarioAgentRole(Enum):
+class AgentRole(Enum):
     USER = "User"
     AGENT = "Agent"
     JUDGE = "Judge"
@@ -35,8 +33,7 @@ class AgentInput(BaseModel):
     # Prevent pydantic from validating/parsing the messages and causing issues: https://github.com/pydantic/pydantic/issues/9541
     messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
     new_messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
-    context: Dict[str, Any]
-    requested_role: ScenarioAgentRole
+    requested_role: AgentRole
     scenario_state: ScenarioExecutorType = Field(exclude=True)
 
     def last_new_user_message(self) -> ChatCompletionUserMessageParam:

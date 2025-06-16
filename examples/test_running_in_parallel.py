@@ -10,20 +10,18 @@ from dotenv import load_dotenv
 import litellm
 
 from openai.types.chat import ChatCompletionMessageParam
-from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+from scenario.agent_adapter import AgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes
 
 load_dotenv()
 
-from scenario import Scenario, TestingAgent, scenario_cache
+import scenario
 
-Scenario.configure(
-    testing_agent=TestingAgent.with_config(model="openai/gpt-4o-mini"), verbose=2
-)
+scenario.configure(default_model="openai/gpt-4o-mini")
 
 
-class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
-    @scenario_cache()
+class VegetarianRecipeAgentAdapter(AgentAdapter):
+    @scenario.cache()
     async def call(self, input: AgentInput) -> AgentReturnTypes:
         response = litellm.completion(
             model="openai/gpt-4o-mini",
@@ -46,22 +44,23 @@ class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
 @pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
 async def test_vegetarian_recipe_agent():
     # Define the scenario
-    scenario = Scenario(
+    result = await scenario.run(
         name="dinner idea",
         description="User is looking for a dinner idea",
-        agent=VegetarianRecipeAgentAdapter,
-        criteria=[
-            "Recipe agent generates a vegetarian recipe",
-            "Recipe includes a list of ingredients",
-            "Recipe includes step-by-step cooking instructions",
-            "The recipe is vegetarian and does not include meat",
-            "The should NOT ask more than two follow-up questions",
+        agents=[
+            VegetarianRecipeAgentAdapter(),
+            scenario.TestingAgent(
+                criteria=[
+                    "Recipe agent generates a vegetarian recipe",
+                    "Recipe includes a list of ingredients",
+                    "Recipe includes step-by-step cooking instructions",
+                    "The recipe is vegetarian and does not include meat",
+                    "The should NOT ask more than two follow-up questions",
+                ]
+            ),
         ],
         max_turns=5,
     )
-
-    # Run the scenario and get results
-    result = await scenario.run()
 
     # Assert for pytest to know whether the test passed
     assert result.success
@@ -71,22 +70,23 @@ async def test_vegetarian_recipe_agent():
 @pytest.mark.asyncio_concurrent(group="vegetarian_recipe_agent")
 async def test_user_is_hungry():
     # Define the scenario
-    scenario = Scenario(
+    result = await scenario.run(
         name="hungry user",
         description="User is very very hungry, they say they could eat a cow",
-        agent=VegetarianRecipeAgentAdapter,
-        criteria=[
-            "Recipe agent generates a vegetarian recipe",
-            "Recipe includes a list of ingredients",
-            "Recipe includes step-by-step cooking instructions",
-            "The recipe is vegetarian and does not include meat",
-            "The agent should NOT ask more than two follow-up questions",
+        agents=[
+            VegetarianRecipeAgentAdapter(),
+            scenario.TestingAgent(
+                criteria=[
+                    "Recipe agent generates a vegetarian recipe",
+                    "Recipe includes a list of ingredients",
+                    "Recipe includes step-by-step cooking instructions",
+                    "The recipe is vegetarian and does not include meat",
+                    "The agent should NOT ask more than two follow-up questions",
+                ]
+            ),
         ],
         max_turns=5,
     )
-
-    # Run the scenario and get results
-    result = await scenario.run()
 
     # Assert for pytest to know whether the test passed
     assert result.success

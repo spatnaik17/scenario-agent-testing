@@ -3,29 +3,50 @@ Scenario: A testing library for conversational agents.
 """
 
 # First import non-dependent modules
-from .types import ScenarioResult, AgentInput, ScenarioAgentRole, AgentReturnTypes
+from .types import ScenarioResult, AgentInput, AgentRole, AgentReturnTypes
 from .config import ScenarioConfig
 
 # Then import modules with dependencies
-from .scenario_agent_adapter import ScenarioAgentAdapter
+from .scenario_executor import ScenarioExecutor
+from .agent_adapter import AgentAdapter
 from .testing_agent import TestingAgent
-from .scenario import Scenario
 from .cache import scenario_cache
+from .script import message, user, agent, judge, proceed, succeed, fail
 
 # Import pytest plugin components
 from .pytest_plugin import pytest_configure, scenario_reporter
 
+run = ScenarioExecutor.run
+configure = ScenarioConfig.configure
+default_config = ScenarioConfig.default_config
+cache = scenario_cache
+
 __all__ = [
+    # Functions
+    "run",
+    "configure",
+    "default_config",
+    "cache",
+
+    # Script
+    "message",
+    "proceed",
+    "succeed",
+    "fail",
+    "judge",
+    "agent",
+    "user",
+
     # Types
     "ScenarioResult",
     "AgentInput",
-    "ScenarioAgentRole",
+    "AgentRole",
     "ScenarioConfig",
     "AgentReturnTypes",
 
     # Classes
-    "Scenario",
-    "ScenarioAgentAdapter",
+    "ScenarioExecutor",
+    "AgentAdapter",
     "TestingAgent",
 
     # Plugins

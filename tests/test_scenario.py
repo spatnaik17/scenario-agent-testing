@@ -1,24 +1,16 @@
 import pytest
-from scenario import Scenario, TestingAgent
-from scenario.scenario_agent_adapter import ScenarioAgentAdapter
-from scenario.scenario_executor import ScenarioExecutor
-from scenario.types import (
-    AgentInput,
-    AgentReturnTypes,
-    ScenarioAgentRole,
-    ScenarioResult,
-)
+import scenario
 
 
-class MockTestingAgent(TestingAgent):
+class MockTestingAgent(scenario.TestingAgent):
     async def call(
         self,
-        input: AgentInput,
-    ) -> AgentReturnTypes:
+        input: scenario.AgentInput,
+    ) -> scenario.AgentReturnTypes:
         if len(input.messages) == 0:
             return {"role": "user", "content": "Hi, I'm a user"}
 
-        return ScenarioResult(
+        return scenario.ScenarioResult(
             success=True,
             messages=[],
             reasoning="test reasoning",
@@ -26,81 +18,66 @@ class MockTestingAgent(TestingAgent):
         )
 
 
-class MockAgent(ScenarioAgentAdapter):
-    async def call(self, input: AgentInput) -> AgentReturnTypes:
+class MockAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
         return {"role": "assistant", "content": "Hey, how can I help you?"}
 
 
 @pytest.mark.asyncio
 async def test_scenario_high_level_api():
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
+        agents=[
+            MockAgent(),
+            MockTestingAgent(
+                criteria=["test criteria"],
+            ),
+        ],
     )
-
-    result = await scenario.run()
 
     assert result.success
 
 
 @pytest.mark.asyncio
-async def test_scenario_high_level_api_allow_to_pass_agents_as_list():
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+async def test_scenario_high_level_api_allow_to_config_directly():
+    # Make sure config is not set to allow this
+    scenario.default_config = None
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agents=[MockTestingAgent.with_config(model="openai/gpt-4.1-mini"), MockAgent],
-        criteria=["test criteria"],
+        agents=[
+            MockAgent(),
+            MockTestingAgent(
+                model="none",
+                criteria=["test criteria"],
+            ),
+        ],
     )
-
-    result = await scenario.run()
 
     assert result.success
-
-
-@pytest.mark.asyncio
-async def test_scenario_high_level_api_allow_to_skip_testing_agent_if_given_agents_list():
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
-    # Make sure default testing agent is not set to allow this
-    Scenario.default_config.testing_agent = None
-
-    scenario = Scenario(
-        name="test name",
-        description="test description",
-        agents=[MockAgent],
-        max_turns=2,
-    )
-
-    result = await scenario.run()
-
-    assert not result.success
-    assert result.reasoning and "Reached maximum turns" in result.reasoning
 
 
 @pytest.mark.asyncio
 async def test_scenario_high_level_api_allow_to_skip_criteria():
-    class MockTestingAgent(TestingAgent):
-        async def call(
-            self,
-            input: AgentInput,
-        ) -> AgentReturnTypes:
+    class MockTestingAgent(scenario.TestingAgent):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
             return {"role": "user", "content": "Hi, I'm a user"}
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
+        agents=[
+            MockAgent(),
+            MockTestingAgent(),
+        ],
         max_turns=2,
     )
-
-    result = await scenario.run()
 
     assert not result.success
     assert result.reasoning and "Reached maximum turns" in result.reasoning
@@ -108,11 +85,11 @@ async def test_scenario_high_level_api_allow_to_skip_criteria():
 
 @pytest.mark.asyncio
 async def test_scenario_allow_scripted_scenario():
-    class MockAgent(ScenarioAgentAdapter):
+    class MockAgent(scenario.AgentAdapter):
         async def call(
             self,
-            input: AgentInput,
-        ) -> AgentReturnTypes:
+            input: scenario.AgentInput,
+        ) -> scenario.AgentReturnTypes:
             assert input.new_messages == [
                 {
                     "role": "user",
@@ -127,32 +104,31 @@ async def test_scenario_allow_scripted_scenario():
                 }
             ]
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.proceed(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
 
 
 @pytest.mark.asyncio
 async def test_scenario_allow_scripted_scenario_with_lower_level_openai_messages():
-    class MockAgent(ScenarioAgentAdapter):
+    class MockAgent(scenario.AgentAdapter):
         async def call(
             self,
-            input: AgentInput,
-        ) -> AgentReturnTypes:
+            input: scenario.AgentInput,
+        ) -> scenario.AgentReturnTypes:
             assert input.new_messages == [
                 {
                     "role": "user",
@@ -167,43 +143,41 @@ async def test_scenario_allow_scripted_scenario_with_lower_level_openai_messages
                 }
             ]
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.message(
                 {"role": "user", "content": "Hi, I'm a hardcoded user message"}
             ),
             scenario.proceed(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
 
 
 @pytest.mark.asyncio
 async def test_scenario_scripted_fails_if_script_ends_without_conclusion():
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
-        ]
-    ).run()
+        ],
+    )
 
     assert not result.success
     assert (
@@ -214,21 +188,20 @@ async def test_scenario_scripted_fails_if_script_ends_without_conclusion():
 
 @pytest.mark.asyncio
 async def test_scenario_scripted_force_success():
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.succeed(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
     assert (
@@ -239,21 +212,20 @@ async def test_scenario_scripted_force_success():
 
 @pytest.mark.asyncio
 async def test_scenario_scripted_force_failure():
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.fail(),
-        ]
-    ).run()
+        ],
+    )
 
     assert not result.success
     assert (
@@ -264,13 +236,13 @@ async def test_scenario_scripted_force_failure():
 
 @pytest.mark.asyncio
 async def test_scenario_scripted_force_judgment():
-    class MockTestingAgent(TestingAgent):
+    class MockTestingAgent(scenario.TestingAgent):
         async def call(
             self,
-            input: AgentInput,
-        ) -> AgentReturnTypes:
-            if input.requested_role == ScenarioAgentRole.JUDGE:
-                return ScenarioResult(
+            input: scenario.AgentInput,
+        ) -> scenario.AgentReturnTypes:
+            if input.requested_role == scenario.AgentRole.JUDGE:
+                return scenario.ScenarioResult(
                     success=True,
                     messages=[],
                     reasoning="judgement enforced",
@@ -279,22 +251,21 @@ async def test_scenario_scripted_force_judgment():
 
             return {"role": "user", "content": "Hi, I'm a user"}
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.agent(),
             scenario.judge(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
     assert result.reasoning and "judgement enforced" in result.reasoning
@@ -302,30 +273,29 @@ async def test_scenario_scripted_force_judgment():
 
 @pytest.mark.asyncio
 async def test_scenario_proceeds_the_amount_of_turns_specified():
-    class MockTestingAgent(TestingAgent):
+    class MockTestingAgent(scenario.TestingAgent):
         async def call(
             self,
-            input: AgentInput,
-        ) -> AgentReturnTypes:
+            input: scenario.AgentInput,
+        ) -> scenario.AgentReturnTypes:
             return {"role": "user", "content": "Hi, I'm a user"}
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.agent(),
             scenario.proceed(turns=2),
             scenario.succeed(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
     assert len(result.messages) == 6
@@ -333,29 +303,28 @@ async def test_scenario_proceeds_the_amount_of_turns_specified():
 
 @pytest.mark.asyncio
 async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_halfway_through_a_turn():
-    class MockTestingAgent(TestingAgent):
+    class MockTestingAgent(scenario.TestingAgent):
         async def call(
             self,
-            input: AgentInput,
-        ) -> AgentReturnTypes:
+            input: scenario.AgentInput,
+        ) -> scenario.AgentReturnTypes:
             return {"role": "user", "content": "Hi, I'm a user"}
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
+    result = await scenario.run(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    result = await scenario.script(
-        [
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.proceed(turns=2),
             scenario.succeed(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
     assert len(result.messages) == 4
@@ -363,38 +332,37 @@ async def test_scenario_proceeds_the_amount_of_turns_specified_as_expected_when_
 
 @pytest.mark.asyncio
 async def test_scenario_accepts_custom_callbacks():
-    class MockAgent(ScenarioAgentAdapter):
-        async def call(self, input: AgentInput) -> AgentReturnTypes:
+    class MockAgent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
             return [{"role": "tool", "tool_call_id": "tool_call_id", "content": "{}"}]
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
+    scenario.configure(default_model="none")
 
-    scenario = Scenario(
-        name="test name",
-        description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
-
-    def check_for_tool_calls(state: ScenarioExecutor) -> None:
+    def check_for_tool_calls(state: scenario.ScenarioExecutor) -> None:
         assert state.last_message()["role"] == "tool"
 
-    result = await scenario.script(
-        [
+    result = await scenario.run(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.user("Hi, I'm a hardcoded user message"),
             scenario.agent(),
             check_for_tool_calls,
             scenario.succeed(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
 
 
 @pytest.mark.asyncio
 async def test_scenario_accepts_on_turn_and_on_step_callbacks():
-    class MockAgent(ScenarioAgentAdapter):
-        async def call(self, input: AgentInput) -> AgentReturnTypes:
+    class MockAgent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
             if input.scenario_state.current_turn == 0:
                 return {"role": "assistant", "content": "Hey, how can I help you?"}
             else:
@@ -402,33 +370,32 @@ async def test_scenario_accepts_on_turn_and_on_step_callbacks():
                     {"role": "tool", "tool_call_id": "tool_call_id", "content": "{}"}
                 ]
 
-    Scenario.configure(testing_agent=MockTestingAgent.with_config(model="none"))
-
-    scenario = Scenario(
-        name="test name",
-        description="test description",
-        agent=MockAgent,
-        criteria=["test criteria"],
-    )
+    scenario.configure(default_model="none")
 
     step_calls = 0
 
-    def check_for_tool_calls(state: ScenarioExecutor) -> None:
+    def check_for_tool_calls(state: scenario.ScenarioExecutor) -> None:
         if state.current_turn > 1:
             assert state.last_message()["role"] == "tool"
 
-    def increment_step_calls(state: ScenarioExecutor) -> None:
+    def increment_step_calls(state: scenario.ScenarioExecutor) -> None:
         nonlocal step_calls
         step_calls += 1
 
-    result = await scenario.script(
-        [
+    result = await scenario.run(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockTestingAgent(criteria=["test criteria"]),
+        ],
+        script=[
             scenario.proceed(
                 on_turn=check_for_tool_calls,
                 on_step=increment_step_calls,
             ),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
     assert step_calls == 3
