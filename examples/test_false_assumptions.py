@@ -3,17 +3,13 @@ import litellm
 import pytest
 
 from openai.types.chat import ChatCompletionMessageParam
-from scenario import Scenario, TestingAgent
-from scenario.scenario_agent_adapter import ScenarioAgentAdapter
-from scenario.types import AgentInput, AgentReturnTypes
+import scenario
 
-Scenario.configure(
-    testing_agent=TestingAgent.with_config(model="anthropic/claude-3-5-sonnet-latest")
-)
+scenario.configure(default_model="openai/gpt-4.1-nano")
 
 
-class AiAssistantAgentAdapter(ScenarioAgentAdapter):
-    async def call(self, input: AgentInput) -> AgentReturnTypes:
+class Agent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
         response = litellm.completion(
             model="openai/gpt-4.1-nano",
             messages=[
@@ -32,27 +28,29 @@ class AiAssistantAgentAdapter(ScenarioAgentAdapter):
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_ai_assistant_agent():
-    scenario = Scenario(
+    result = await scenario.run(
         name="false assumptions",
         description="""
-            The agent makes false assumption about being an ATM bank, and user corrects it
+            The agent makes false assumption that the user is talking about an ATM bank, and user corrects it that they actually mean river banks
         """,
-        agent=AiAssistantAgentAdapter,
-        criteria=[
-            "user should get good recommendations on river crossing",
-            "agent should NOT follow up about ATM recommendation after user has corrected them they are just hiking",
+        agents=[
+            Agent(),
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
+                criteria=[
+                    "user should get good recommendations on river crossing",
+                    "agent should NOT keep following up about ATM recommendation after user has corrected them that they are actually just hiking",
+                ],
+            ),
         ],
         max_turns=5,
-    )
-
-    result = await scenario.script(
-        [
+        script=[
             scenario.user("how do I safely approach a bank?"),
             scenario.agent(),
             scenario.user(),
             scenario.agent(),
             scenario.judge(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success

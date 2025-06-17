@@ -1,21 +1,17 @@
-from typing import Union
-
 import pytest
-from scenario import Scenario, TestingAgent
-from scenario.scenario_agent_adapter import ScenarioAgentAdapter
+import scenario
+from scenario import JudgeAgent, UserSimulatorAgent
+from scenario.agent_adapter import AgentAdapter
 from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
 
 from scenario.scenario_executor import ScenarioExecutor
 
 
-class MockTestingAgent(TestingAgent):
+class MockJudgeAgent(JudgeAgent):
     async def call(
         self,
         input: AgentInput,
-    ) -> Union[str, ScenarioResult]:
-        if len(input.messages) == 0:
-            return "Hi, I'm a user"
-
+    ) -> scenario.AgentReturnTypes:
         return ScenarioResult(
             success=True,
             messages=[],
@@ -24,78 +20,93 @@ class MockTestingAgent(TestingAgent):
         )
 
 
-class MockAgent(ScenarioAgentAdapter):
+class MockUserSimulatorAgent(UserSimulatorAgent):
+    async def call(
+        self,
+        input: AgentInput,
+    ) -> scenario.AgentReturnTypes:
+        return "Hi, I'm a user"
+
+
+class MockAgent(AgentAdapter):
     async def call(self, input: AgentInput) -> AgentReturnTypes:
         return {"role": "assistant", "content": "Hey, how can I help you?"}
 
 
-scenario = Scenario(
-    name="test name",
-    description="test description",
-    agent=MockAgent,
-    testing_agent=MockTestingAgent.with_config(model="none"),
-    criteria=["test criteria"],
-)
-
-
 @pytest.mark.asyncio
 async def test_advance_a_step():
+    class MockJudgeAgent(JudgeAgent):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> scenario.AgentReturnTypes:
+            return []
 
-    executor = ScenarioExecutor(scenario)
+    executor = ScenarioExecutor(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockUserSimulatorAgent(model="none"),
+            MockJudgeAgent(model="none", criteria=["test criteria"]),
+        ],
+    )
 
-    assert executor.messages == [], "starts with no messages"
+    assert executor._state.messages == [], "starts with no messages"
 
+    # User
     await executor.step()
 
-    assert executor.messages == [
+    assert executor._state.messages == [
         {"role": "user", "content": "Hi, I'm a user"},
     ], "starts with the user message"
 
-    assert executor.current_turn == 0, "stays at turn 0 until agent replied"
+    assert executor._state.current_turn == 0, "stays at turn 0 until agent replied"
 
+    # Assistent
     await executor.step()
 
-    assert executor.messages == [
+    assert executor._state.messages == [
         {"role": "user", "content": "Hi, I'm a user"},
         {"role": "assistant", "content": "Hey, how can I help you?"},
-    ], "starts with the user message"
+    ], "adds the assistant message"
 
-    assert executor.current_turn == 0, "stays at turn 0 until next step"
+    assert executor._state.current_turn == 0, "stays at turn 0 until next step"
 
+    # Judge
     await executor.step()
 
-    assert executor.current_turn == 1, "increments turn"
+    assert executor._state.messages == [
+        {"role": "user", "content": "Hi, I'm a user"},
+        {"role": "assistant", "content": "Hey, how can I help you?"},
+    ], "keeps the same messages because no judgment was made"
+
+    assert executor._state.current_turn == 0, "stays at turn 0 until next step"
+
+    # Next user step
+    await executor.step()
+
+    assert executor._state.current_turn == 1, "increments turn"
 
 
 @pytest.mark.asyncio
 async def test_sends_the_right_new_messages():
-    class MockTestingAgent(TestingAgent):
+    class MockJudgeAgent(JudgeAgent):
         async def call(
             self,
             input: AgentInput,
-        ) -> Union[str, ScenarioResult]:
-            if input.scenario_state.current_turn == 0:
-                assert input.new_messages == []
-                return "Hi, I'm a user"
+        ) -> scenario.AgentReturnTypes:
+            if input.scenario_state.current_turn > 1:
+                return ScenarioResult(
+                    success=True,
+                    messages=[],
+                    reasoning="test reasoning",
+                    passed_criteria=["test criteria"],
+                )
 
-            if input.scenario_state.current_turn == 1:
-                assert input.messages == [
-                    {"role": "user", "content": "Hi, I'm a user"},
-                    {"role": "assistant", "content": "Hey, how can I help you?"},
-                ]
-                assert input.new_messages == [
-                    {"role": "assistant", "content": "Hey, how can I help you?"}
-                ]
-                return "You can help me testing"
+            return []
 
-            return ScenarioResult(
-                success=True,
-                messages=[],
-                reasoning="test reasoning",
-                passed_criteria=["test criteria"],
-            )
-
-    class MockAgent(ScenarioAgentAdapter):
+    class MockAgent(AgentAdapter):
         async def call(self, input: AgentInput) -> AgentReturnTypes:
             if input.scenario_state.current_turn == 0:
                 assert input.new_messages == [
@@ -113,21 +124,42 @@ async def test_sends_the_right_new_messages():
                 ]
                 return {"role": "assistant", "content": "Is it working?"}
 
-    scenario = Scenario(
+    class MockUserSimulatorAgent(UserSimulatorAgent):
+        async def call(
+            self,
+            input: AgentInput,
+        ) -> scenario.AgentReturnTypes:
+            if input.scenario_state.current_turn == 0:
+                assert input.new_messages == []
+                return "Hi, I'm a user"
+
+            if input.scenario_state.current_turn == 1:
+                assert input.messages == [
+                    {"role": "user", "content": "Hi, I'm a user"},
+                    {"role": "assistant", "content": "Hey, how can I help you?"},
+                ]
+                assert input.new_messages == [
+                    {"role": "assistant", "content": "Hey, how can I help you?"}
+                ]
+                return "You can help me testing"
+
+            raise Exception("Should not be called")
+
+    executor = ScenarioExecutor(
         name="test name",
         description="test description",
-        agent=MockAgent,
-        testing_agent=MockTestingAgent.with_config(model="none"),
-        criteria=["test criteria"],
+        agents=[
+            MockAgent(),
+            MockUserSimulatorAgent(model="none"),
+            MockJudgeAgent(model="none", criteria=["test criteria"]),
+        ],
     )
-
-    executor = ScenarioExecutor(scenario)
 
     # Run first turn
     await executor.step()
     await executor.step()
 
-    assert executor.current_turn == 0
+    assert executor._state.current_turn == 0
 
     # Run a second turn to trigger the new_messages assertion
     await executor.step()
@@ -136,7 +168,15 @@ async def test_sends_the_right_new_messages():
 
 @pytest.mark.asyncio
 async def test_for_tool_calls():
-    executor = ScenarioExecutor(scenario)
+    executor = ScenarioExecutor(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockUserSimulatorAgent(model="none"),
+            MockJudgeAgent(model="none", criteria=["test criteria"]),
+        ],
+    )
     executor.add_message(
         {
             "role": "assistant",
@@ -151,12 +191,12 @@ async def test_for_tool_calls():
         }
     )
 
-    assert executor.last_tool_call("foo") == {
+    assert executor._state.last_tool_call("foo") == {
         "id": "123",
         "function": {"name": "foo", "arguments": "{}"},
         "type": "function",
     }
-    assert executor.last_tool_call("bar") is None
+    assert executor._state.last_tool_call("bar") is None
 
-    assert executor.has_tool_call("foo")
-    assert not executor.has_tool_call("bar")
+    assert executor._state.has_tool_call("foo")
+    assert not executor._state.has_tool_call("bar")

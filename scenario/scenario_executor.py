@@ -1,10 +1,13 @@
 """
-ScenarioExecutor module: holds the scenario execution logic and state, orchestrating the conversation between the testing agent and the agent under test.
+Scenario execution engine for agent testing.
+
+This module contains the core ScenarioExecutor class that orchestrates the execution
+of scenario tests, managing the interaction between user simulators, agents under test,
+and judge agents to determine test success or failure.
 """
 
 import sys
 from typing import (
-    TYPE_CHECKING,
     Awaitable,
     Callable,
     Dict,
@@ -17,7 +20,10 @@ from typing import (
 )
 import time
 import termcolor
+import asyncio
+import concurrent.futures
 
+from scenario.config import ScenarioConfig
 from scenario.utils import (
     await_if_awaitable,
     check_valid_return_type,
@@ -28,83 +34,346 @@ from scenario.utils import (
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionUserMessageParam,
-    ChatCompletionMessageToolCallParam,
 )
 
-from .types import AgentInput, ScenarioAgentRole, ScenarioResult, ScriptStep
+from .types import AgentInput, AgentRole, ScenarioResult, ScriptStep
 from .error_messages import agent_response_not_awaitable
 from .cache import context_scenario
-from .scenario_agent_adapter import ScenarioAgentAdapter
+from .agent_adapter import AgentAdapter
+from .script import proceed
 from pksuid import PKSUID
-
-if TYPE_CHECKING:
-    from scenario.scenario import Scenario
+from .scenario_state import ScenarioState
 
 
 class ScenarioExecutor:
-    scenario: "Scenario"
-    messages: List[ChatCompletionMessageParam]
-    thread_id: str
-    current_turn: int
+    """
+    Core orchestrator for scenario-based agent testing.
 
-    _context: Optional[Dict[str, Any]]
-    _script: List[ScriptStep]
-    _agents: List[ScenarioAgentAdapter]
+    The ScenarioExecutor manages the complete lifecycle of a scenario test, including:
+    - Orchestrating conversations between user simulators, agents, and judges
+    - Managing turn-based execution flow
+    - Handling script-based scenario control
+    - Collecting and reporting test results
+    - Supporting debug mode for interactive testing
+
+    This class serves as both a builder (for configuration) and an executor (for running tests).
+    Most users will interact with it through the high-level `scenario.run()` function rather
+    than instantiating it directly.
+
+    Attributes:
+        name: Human-readable name for the scenario
+        description: Detailed description of what the scenario tests
+        agents: List of agent adapters participating in the scenario
+        script: Optional list of script steps to control scenario flow
+        config: Configuration settings for execution behavior
+
+    Example:
+        ```python
+        # Direct instantiation (less common)
+        executor = ScenarioExecutor(
+            name="weather query test",
+            description="User asks about weather, agent should provide helpful response",
+            agents=[
+                weather_agent,
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
+            ],
+            max_turns=10,
+            verbose=True
+        )
+        result = await executor._run()
+
+        # Preferred high-level API
+        result = await scenario.run(
+            name="weather query test",
+            description="User asks about weather, agent should provide helpful response",
+            agents=[
+                weather_agent,
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
+            ]
+        )
+        ```
+
+    Note:
+        - Scenarios run in isolated thread pools to support parallel execution
+        - All agent interactions are cached when cache_key is configured
+        - Debug mode allows step-by-step execution with user intervention
+        - Results include detailed timing information and conversation history
+    """
+    name: str
+    description: str
+    agents: List[AgentAdapter]
+    script: List[ScriptStep]
+
+    config: ScenarioConfig
+
+    _state: ScenarioState
     _total_start_time: float
     _pending_messages: Dict[int, List[ChatCompletionMessageParam]]
 
-    _pending_roles_on_turn: List[ScenarioAgentRole] = []
-    _pending_agents_on_turn: Set[ScenarioAgentAdapter] = set()
+    _pending_roles_on_turn: List[AgentRole] = []
+    _pending_agents_on_turn: Set[AgentAdapter] = set()
     _agent_times: Dict[int, float] = {}
 
     def __init__(
         self,
-        scenario: "Scenario",
-        context: Optional[Dict[str, Any]] = None,
+        name: str,
+        description: str,
+        agents: List[AgentAdapter] = [],
         script: Optional[List[ScriptStep]] = None,
+        # Config
+        max_turns: Optional[int] = None,
+        verbose: Optional[Union[bool, int]] = None,
+        cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
     ):
-        super().__init__()
+        """
+        Initialize a scenario executor.
 
-        self.scenario = scenario.model_copy()
-        self._context = context
-        self._script = script or [scenario.proceed()]
-        self.current_turn = 0
+        Args:
+            name: Human-readable name for the scenario (used in reports and logs)
+            description: Detailed description of what the scenario tests.
+                        This guides the user simulator's behavior and provides context.
+            agents: List of agent adapters participating in the scenario.
+                   Typically includes: agent under test, user simulator, and judge.
+            script: Optional list of script steps to control scenario flow.
+                   If not provided, defaults to automatic proceeding.
+            max_turns: Maximum number of conversation turns before timeout.
+                      Overrides global configuration for this scenario.
+            verbose: Whether to show detailed output during execution.
+                    Can be True/False or integer level (2 for extra details).
+            cache_key: Cache key for deterministic behavior across runs.
+                      Overrides global configuration for this scenario.
+            debug: Whether to enable debug mode with step-by-step execution.
+                  Overrides global configuration for this scenario.
+
+        Example:
+            ```python
+            executor = ScenarioExecutor(
+                name="customer service test",
+                description="Customer has a billing question and needs help",
+                agents=[
+                    customer_service_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=[
+                        "Agent is polite and professional",
+                        "Agent addresses the billing question",
+                        "Agent provides clear next steps"
+                    ])
+                ],
+                max_turns=15,
+                verbose=True,
+                debug=False
+            )
+            ```
+        """
+        self.name = name
+        self.description = description
+        self.agents = agents
+        self.script = script or [proceed()]
+
+        config = ScenarioConfig(
+            max_turns=max_turns,
+            verbose=verbose,
+            cache_key=cache_key,
+            debug=debug,
+        )
+        self.config = (ScenarioConfig.default_config or ScenarioConfig()).merge(config)
+
         self.reset()
 
+    @classmethod
+    async def run(
+        cls,
+        name: str,
+        description: str,
+        agents: List[AgentAdapter] = [],
+        max_turns: Optional[int] = None,
+        verbose: Optional[Union[bool, int]] = None,
+        cache_key: Optional[str] = None,
+        debug: Optional[bool] = None,
+        script: Optional[List[ScriptStep]] = None,
+    ) -> ScenarioResult:
+        """
+        High-level interface for running a scenario test.
+
+        This is the main entry point for executing scenario tests. It creates a
+        ScenarioExecutor instance and runs it in an isolated thread pool to support
+        parallel execution and prevent blocking.
+
+        Args:
+            name: Human-readable name for the scenario
+            description: Detailed description of what the scenario tests
+            agents: List of agent adapters (agent under test, user simulator, judge)
+            max_turns: Maximum conversation turns before timeout (default: 10)
+            verbose: Show detailed output during execution
+            cache_key: Cache key for deterministic behavior
+            debug: Enable debug mode for step-by-step execution
+            script: Optional script steps to control scenario flow
+
+        Returns:
+            ScenarioResult containing the test outcome, conversation history,
+            success/failure status, and detailed reasoning
+
+        Example:
+            ```python
+            import scenario
+
+            # Simple scenario with automatic flow
+            result = await scenario.run(
+                name="help request",
+                description="User asks for help with a technical problem",
+                agents=[
+                    my_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
+                ]
+            )
+
+            # Scripted scenario with custom evaluations
+            result = await scenario.run(
+                name="custom interaction",
+                description="Test specific conversation flow",
+                agents=[
+                    my_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
+                ],
+                script=[
+                    scenario.user("Hello"),
+                    scenario.agent(),
+                    custom_eval,
+                    scenario.succeed()
+                ]
+            )
+
+            # Results analysis
+            print(f"Test {'PASSED' if result.success else 'FAILED'}")
+            print(f"Reasoning: {result.reasoning}")
+            print(f"Conversation had {len(result.messages)} messages")
+            ```
+
+        Note:
+            - Runs in isolated thread pool to support parallel execution
+            - Blocks until scenario completes or times out
+            - All agent calls are automatically cached when cache_key is set
+            - Exception handling ensures clean resource cleanup
+        """
+        scenario = cls(
+            name=name,
+            description=description,
+            agents=agents,
+            max_turns=max_turns,
+            verbose=verbose,
+            cache_key=cache_key,
+            debug=debug,
+            script=script,
+        )
+
+        # We'll use a thread pool to run the execution logic, we
+        # require a separate thread because even though asyncio is
+        # being used throughout, any user code on the callback can
+        # be blocking, preventing them from running scenarios in parallel
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+
+            def run_in_thread():
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
+                try:
+                    return loop.run_until_complete(scenario._run())
+                finally:
+                    loop.close()
+
+            # Run the function in the thread pool and await its result
+            # This converts the thread's execution into a Future that the current
+            # event loop can await without blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(executor, run_in_thread)
+            return result
+
     def reset(self):
-        self.messages = []
-        self._agents = []
+        """
+        Reset the scenario executor to initial state.
+
+        This method reinitializes all internal state for a fresh scenario run,
+        including conversation history, turn counters, and agent timing information.
+        Called automatically during initialization and can be used to rerun scenarios.
+
+        Example:
+            ```python
+            executor = ScenarioExecutor(...)
+
+            # Run first test
+            result1 = await executor._run()
+
+            # Reset and run again
+            executor.reset()
+            result2 = await executor._run()
+            ```
+        """
+        self._state = ScenarioState(
+            description=self.description,
+            messages=[],
+            thread_id=str(PKSUID("thread")),
+            current_turn=0,
+            config=self.config,
+            _executor=self,
+        )
+        # Pydantic doesn't actually set the _executor field from the constructor, as it's private, so we need to do it manually
+        self._state._executor = self
+
         self._pending_messages = {}
-        self.thread_id = str(PKSUID("thread"))
         self._total_start_time = time.time()
         self._agent_times = {}
 
-        for AgentClass in self.scenario.agents:
-            self._agents.append(
-                AgentClass(
-                    input=AgentInput(
-                        thread_id=self.thread_id,
-                        messages=[],
-                        new_messages=[],
-                        context=self._context or {},
-                        requested_role=list(AgentClass.roles)[0],
-                        scenario_state=self,
-                    )
-                )
-            )
-
         self._new_turn()
-        self.current_turn = 0
+        self._state.current_turn = 0
 
-        context_scenario.set(self.scenario)
+        context_scenario.set(self)
 
     def add_message(
         self, message: ChatCompletionMessageParam, from_agent_idx: Optional[int] = None
     ):
-        self.messages.append(message)
+        """
+        Add a message to the conversation and broadcast to other agents.
+
+        This method adds a message to the conversation history and makes it available
+        to other agents in their next call. It's used internally by the executor
+        and can be called from script steps to inject custom messages.
+
+        Args:
+            message: OpenAI-compatible message to add to the conversation
+            from_agent_idx: Index of the agent that generated this message.
+                           Used to avoid broadcasting the message back to its creator.
+
+        Example:
+            ```python
+            def inject_system_message(state: ScenarioState) -> None:
+                state._executor.add_message({
+                    "role": "system",
+                    "content": "The user is now in a hurry"
+                })
+
+            # Use in script
+            result = await scenario.run(
+                name="system message test",
+                agents=[agent, user_sim, judge],
+                script=[
+                    scenario.user("Hello"),
+                    scenario.agent(),
+                    inject_system_message,
+                    scenario.user(),  # Will see the system message
+                    scenario.succeed()
+                ]
+            )
+            ```
+        """
+        self._state.messages.append(message)
 
         # Broadcast the message to other agents
-        for idx, _ in enumerate(self._agents):
+        for idx, _ in enumerate(self.agents):
             if idx == from_agent_idx:
                 continue
             if idx not in self._pending_messages:
@@ -116,19 +385,57 @@ class ScenarioExecutor:
         messages: List[ChatCompletionMessageParam],
         from_agent_idx: Optional[int] = None,
     ):
+        """
+        Add multiple messages to the conversation.
+
+        Convenience method for adding multiple messages at once. Each message
+        is added individually using add_message().
+
+        Args:
+            messages: List of OpenAI-compatible messages to add
+            from_agent_idx: Index of the agent that generated these messages
+
+        Example:
+            ```python
+            # Agent returns multiple messages for a complex interaction
+            messages = [
+                {"role": "assistant", "content": "Let me search for that..."},
+                {"role": "assistant", "content": "Here's what I found: ..."}
+            ]
+            executor.add_messages(messages, from_agent_idx=0)
+            ```
+        """
         for message in messages:
             self.add_message(message, from_agent_idx)
 
     def _new_turn(self):
-        self._pending_agents_on_turn = set(self._agents)
+        self._pending_agents_on_turn = set(self.agents)
         self._pending_roles_on_turn = [
-            ScenarioAgentRole.USER,
-            ScenarioAgentRole.AGENT,
-            ScenarioAgentRole.JUDGE,
+            AgentRole.USER,
+            AgentRole.AGENT,
+            AgentRole.JUDGE,
         ]
-        self.current_turn += 1
+        self._state.current_turn += 1
 
     async def step(self) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
+        """
+        Execute a single step in the scenario.
+
+        A step consists of calling the next agent in the current turn's sequence
+        and processing their response. This method is used internally by the
+        scenario execution flow.
+
+        Returns:
+            Either a list of messages (if the scenario continues) or a
+            ScenarioResult (if the scenario should end)
+
+        Raises:
+            ValueError: If no result is returned from the internal step method
+
+        Note:
+            This is primarily an internal method. Most users should use the
+            high-level run() method or script DSL functions instead.
+        """
         result = await self._step()
         if result is None:
             raise ValueError("No result from step")
@@ -139,8 +446,8 @@ class ScenarioExecutor:
         go_to_next_turn=True,
         on_turn: Optional[
             Union[
-                Callable[["ScenarioExecutor"], None],
-                Callable[["ScenarioExecutor"], Awaitable[None]],
+                Callable[["ScenarioState"], None],
+                Callable[["ScenarioState"], Awaitable[None]],
             ]
         ] = None,
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult, None]:
@@ -151,9 +458,9 @@ class ScenarioExecutor:
             self._new_turn()
 
             if on_turn:
-                await await_if_awaitable(on_turn(self))
+                await await_if_awaitable(on_turn(self._state))
 
-            if self.current_turn >= (self.scenario.max_turns or 10):
+            if self._state.current_turn >= (self.config.max_turns or 10):
                 return self._reached_max_turns()
 
         current_role = self._pending_roles_on_turn[0]
@@ -166,10 +473,10 @@ class ScenarioExecutor:
         return await self._call_agent(idx, role=current_role)
 
     def _next_agent_for_role(
-        self, role: ScenarioAgentRole
-    ) -> Tuple[int, Optional[ScenarioAgentAdapter]]:
-        for idx, agent in enumerate(self._agents):
-            if role in agent.roles and agent in self._pending_agents_on_turn:
+        self, role: AgentRole
+    ) -> Tuple[int, Optional[AgentAdapter]]:
+        for idx, agent in enumerate(self.agents):
+            if role == agent.role and agent in self._pending_agents_on_turn:
                 return idx, agent
         return -1, None
 
@@ -177,8 +484,8 @@ class ScenarioExecutor:
         # If we reached max turns without conclusion, fail the test
         agent_roles_agents_idx = [
             idx
-            for idx, agent in enumerate(self._agents)
-            if ScenarioAgentRole.AGENT in agent.roles
+            for idx, agent in enumerate(self.agents)
+            if agent.role == AgentRole.AGENT
         ]
         agent_times = [
             self._agent_times[idx]
@@ -189,14 +496,14 @@ class ScenarioExecutor:
 
         return ScenarioResult(
             success=False,
-            messages=self.messages,
+            messages=self._state.messages,
             reasoning=error_message
-            or f"Reached maximum turns ({self.scenario.max_turns or 10}) without conclusion",
+            or f"Reached maximum turns ({self.config.max_turns or 10}) without conclusion",
             total_time=time.time() - self._total_start_time,
             agent_time=agent_time,
         )
 
-    async def run(self) -> ScenarioResult:
+    async def _run(self) -> ScenarioResult:
         """
         Run a scenario against the agent under test.
 
@@ -207,13 +514,13 @@ class ScenarioExecutor:
             ScenarioResult containing the test outcome
         """
 
-        if self.scenario.verbose:
+        if self.config.verbose:
             print("")  # new line
 
         self.reset()
 
-        for script_step in self._script:
-            callable = script_step(self)
+        for script_step in self.script:
+            callable = script_step(self._state)
             if isinstance(callable, Awaitable):
                 result = await callable
             else:
@@ -232,11 +539,11 @@ class ScenarioExecutor:
         )
 
     async def _call_agent(
-        self, idx: int, role: ScenarioAgentRole
+        self, idx: int, role: AgentRole, request_judgment: bool = False
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
-        agent = self._agents[idx]
+        agent = self.agents[idx]
 
-        if role == ScenarioAgentRole.USER and self.scenario.debug:
+        if role == AgentRole.USER and self.config.debug:
             print(
                 f"\n{self._scenario_name()}{termcolor.colored('[Debug Mode]', 'yellow')} Press enter to continue or type a message to send"
             )
@@ -258,28 +565,26 @@ class ScenarioExecutor:
         with show_spinner(
             text=(
                 "Judging..."
-                if role == ScenarioAgentRole.JUDGE
-                else f"{role.value if isinstance(role, ScenarioAgentRole) else role}:"
+                if role == AgentRole.JUDGE
+                else f"{role.value if isinstance(role, AgentRole) else role}:"
             ),
             color=(
                 "blue"
-                if role == ScenarioAgentRole.AGENT
-                else "green" if role == ScenarioAgentRole.USER else "yellow"
+                if role == AgentRole.AGENT
+                else "green" if role == AgentRole.USER else "yellow"
             ),
-            enabled=self.scenario.verbose,
+            enabled=self.config.verbose,
         ):
             start_time = time.time()
 
             agent_response = agent.call(
                 AgentInput(
                     # TODO: test thread_id
-                    thread_id=self.thread_id,
-                    messages=self.messages,
+                    thread_id=self._state.thread_id,
+                    messages=self._state.messages,
                     new_messages=self._pending_messages.get(idx, []),
-                    # TODO: test context
-                    context=self._context or {},
-                    requested_role=role,
-                    scenario_state=self,
+                    judgment_request=request_judgment,
+                    scenario_state=self._state,
                 )
             )
             if not isinstance(agent_response, Awaitable):
@@ -303,12 +608,12 @@ class ScenarioExecutor:
             else:
                 messages = convert_agent_return_types_to_openai_messages(
                     agent_response,
-                    role="user" if role == ScenarioAgentRole.USER else "assistant",
+                    role="user" if role == AgentRole.USER else "assistant",
                 )
 
             self.add_messages(messages, from_agent_idx=idx)
 
-            if messages and self.scenario.verbose:
+            if messages and self.config.verbose:
                 print_openai_messages(
                     self._scenario_name(),
                     [m for m in messages if m["role"] != "system"],
@@ -317,75 +622,51 @@ class ScenarioExecutor:
             return messages
 
     def _scenario_name(self):
-        if self.scenario.verbose == 2:
-            return termcolor.colored(f"[Scenario: {self.scenario.name}] ", "yellow")
+        if self.config.verbose == 2:
+            return termcolor.colored(f"[Scenario: {self.name}] ", "yellow")
         else:
             return ""
-
-    # State access utils
-
-    def last_message(self) -> ChatCompletionMessageParam:
-        if len(self.messages) == 0:
-            raise ValueError("No messages found")
-        return self.messages[-1]
-
-    def last_user_message(self) -> ChatCompletionUserMessageParam:
-        user_messages = [m for m in self.messages if m["role"] == "user"]
-        if not user_messages:
-            raise ValueError("No user messages found")
-        return user_messages[-1]
-
-    def last_tool_call(
-        self, tool_name: str
-    ) -> Optional[ChatCompletionMessageToolCallParam]:
-        for message in reversed(self.messages):
-            if message["role"] == "assistant" and "tool_calls" in message:
-                for tool_call in message["tool_calls"]:
-                    if tool_call["function"]["name"] == tool_name:
-                        return tool_call
-        return None
-
-    def has_tool_call(self, tool_name: str) -> bool:
-        return self.last_tool_call(tool_name) is not None
 
     # Scripting utils
 
     async def message(self, message: ChatCompletionMessageParam) -> None:
         if message["role"] == "user":
-            await self._script_call_agent(ScenarioAgentRole.USER, message)
+            await self._script_call_agent(AgentRole.USER, message)
         elif message["role"] == "assistant":
-            await self._script_call_agent(ScenarioAgentRole.AGENT, message)
+            await self._script_call_agent(AgentRole.AGENT, message)
         else:
             self.add_message(message)
 
     async def user(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> None:
-        await self._script_call_agent(ScenarioAgentRole.USER, content)
+        await self._script_call_agent(AgentRole.USER, content)
 
     async def agent(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> None:
-        await self._script_call_agent(ScenarioAgentRole.AGENT, content)
+        await self._script_call_agent(AgentRole.AGENT, content)
 
     async def judge(
         self, content: Optional[Union[str, ChatCompletionMessageParam]] = None
     ) -> Optional[ScenarioResult]:
-        return await self._script_call_agent(ScenarioAgentRole.JUDGE, content)
+        return await self._script_call_agent(
+            AgentRole.JUDGE, content, request_judgment=True
+        )
 
     async def proceed(
         self,
         turns: Optional[int] = None,
         on_turn: Optional[
             Union[
-                Callable[["ScenarioExecutor"], None],
-                Callable[["ScenarioExecutor"], Awaitable[None]],
+                Callable[["ScenarioState"], None],
+                Callable[["ScenarioState"], Awaitable[None]],
             ]
         ] = None,
         on_step: Optional[
             Union[
-                Callable[["ScenarioExecutor"], None],
-                Callable[["ScenarioExecutor"], Awaitable[None]],
+                Callable[["ScenarioState"], None],
+                Callable[["ScenarioState"], Awaitable[None]],
             ]
         ] = None,
     ) -> Optional[ScenarioResult]:
@@ -396,42 +677,42 @@ class ScenarioExecutor:
                 go_to_next_turn=(
                     turns is None
                     or initial_turn is None
-                    or (self.current_turn + 1 < initial_turn + turns)
+                    or (self._state.current_turn + 1 < initial_turn + turns)
                 ),
             )
 
             if initial_turn is None:
-                initial_turn = self.current_turn
+                initial_turn = self._state.current_turn
 
             if next_message is None:
                 break
 
             if on_step:
-                await await_if_awaitable(on_step(self))
+                await await_if_awaitable(on_step(self._state))
 
             if isinstance(next_message, ScenarioResult):
                 return next_message
 
-    async def succeed(self) -> ScenarioResult:
+    async def succeed(self, reasoning: Optional[str] = None) -> ScenarioResult:
         return ScenarioResult(
             success=True,
-            messages=self.messages,
-            reasoning="Scenario marked as successful with scenario.succeed()",
-            passed_criteria=self.scenario.criteria,
+            messages=self._state.messages,
+            reasoning=reasoning
+            or "Scenario marked as successful with scenario.succeed()",
         )
 
-    async def fail(self) -> ScenarioResult:
+    async def fail(self, reasoning: Optional[str] = None) -> ScenarioResult:
         return ScenarioResult(
             success=False,
-            messages=self.messages,
-            reasoning="Scenario marked as failed with scenario.fail()",
-            passed_criteria=self.scenario.criteria,
+            messages=self._state.messages,
+            reasoning=reasoning or "Scenario marked as failed with scenario.fail()",
         )
 
     async def _script_call_agent(
         self,
-        role: ScenarioAgentRole,
+        role: AgentRole,
         content: Optional[Union[str, ChatCompletionMessageParam]] = None,
+        request_judgment: bool = False,
     ) -> Optional[ScenarioResult]:
         idx, next_agent = self._next_agent_for_role(role)
         if not next_agent:
@@ -439,12 +720,21 @@ class ScenarioExecutor:
             idx, next_agent = self._next_agent_for_role(role)
 
             if not next_agent:
+                role_class = (
+                    "a scenario.UserSimulatorAgent()"
+                    if role == AgentRole.USER
+                    else (
+                        "a scenario.JudgeAgent()"
+                        if role == AgentRole.JUDGE
+                        else "your agent"
+                    )
+                )
                 if content:
                     raise ValueError(
-                        f"Cannot generate a message for role `{role.value}` with content `{content}` because no agent with this role was found"
+                        f"Cannot generate a message for role `{role.value}` with content `{content}` because no agent with this role was found, please add {role_class} to the scenario `agents` list"
                     )
                 raise ValueError(
-                    f"Cannot generate a message for role `{role.value}` because no agent with this role was found"
+                    f"Cannot generate a message for role `{role.value}` because no agent with this role was found, please add {role_class} to the scenario `agents` list"
                 )
 
         self._pending_agents_on_turn.remove(next_agent)
@@ -457,10 +747,12 @@ class ScenarioExecutor:
                 message = content
 
             self.add_message(message)
-            if self.scenario.verbose:
+            if self.config.verbose:
                 print_openai_messages(self._scenario_name(), [message])
             return
 
-        result = await self._call_agent(idx, role=role)
+        result = await self._call_agent(
+            idx, role=role, request_judgment=request_judgment
+        )
         if isinstance(result, ScenarioResult):
             return result

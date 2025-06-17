@@ -3,48 +3,18 @@ from typing import Any
 import termcolor
 
 
-default_config_error_message = f"""
+def agent_not_configured_error_message(class_name: str):
+    return f"""
 
- {termcolor.colored("->", "cyan")} Please set a default config with at least a testing_agent model for running your scenarios at the top of your test file, for example:
+ {termcolor.colored("->", "cyan")} {class_name} was initialized without a model, please set the model when defining the testing agent, for example:
 
-    from scenario import Scenario, TestingAgent
+    {class_name}(model="openai/gpt-4.1-mini")
+    {termcolor.colored("^" * (29 + len(class_name)), "green")}
 
-    Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
-    {termcolor.colored("^" * 74, "green")}
+ {termcolor.colored("->", "cyan")} Alternatively, you can set the default model globally, for example:
 
-    @pytest.mark.agent_test
-    def test_vegetarian_recipe_agent():
-        scenario = Scenario(
-            # ...
-        )
-        result = scenario.run()
-
-        assert result.success
-
-
- {termcolor.colored("->", "cyan")} Alternatively, you can set the config specifically for this scenario:
-
-    from scenario import Scenario, TestingAgent
-
-    @pytest.mark.agent_test
-    def test_vegetarian_recipe_agent():
-        scenario = Scenario(
-            # ...
-            testing_agent=TestingAgent(model="openai/gpt-4o-mini")
-            {termcolor.colored("^" * 54, "green")}
-        )
-        result = scenario.run()
-
-        assert result.success
-"""
-
-
-testing_agent_not_configured_error_message = f"""
-
- {termcolor.colored("->", "cyan")} Testing agent was initialized without a model, please set the model when defining the testing agent, for example:
-
-    TestingAgent.with_config(model="openai/gpt-4.1-mini")
-    {termcolor.colored("^" * 53, "green")}
+    scenario.configure(default_model="openai/gpt-4.1-mini")
+    {termcolor.colored("^" * 55, "green")}
 """
 
 

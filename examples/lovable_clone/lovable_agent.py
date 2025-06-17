@@ -14,7 +14,10 @@ template_path = os.path.join(os.path.dirname(__file__), "template")
 
 
 class LovableAgent:
-    def __init__(self):
+    template_path: str
+    history: list[ModelMessage]
+
+    def __init__(self, template_path: str):
         agent = Agent(
             "anthropic:claude-3-5-sonnet-latest",
             system_prompt=f"""
@@ -102,13 +105,12 @@ class LovableAgent:
 
         self.agent = agent
         self.history: list[ModelMessage] = []
-
-    async def process_user_message(
-        self, message: str, template_path: str, debug: bool = False
-    ) -> tuple[str, list[ChatCompletionMessageParam]]:
         self.template_path = template_path
 
-        tree = generate_directory_tree(template_path)
+    async def process_user_message(
+        self, message: str, debug: bool = False
+    ) -> tuple[str, list[ChatCompletionMessageParam]]:
+        tree = generate_directory_tree(self.template_path)
 
         user_prompt = f"""{message}
 

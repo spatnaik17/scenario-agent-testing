@@ -726,6 +726,15 @@ wheels = [
 ]
 
 [[package]]
+name = "function-schema"
+version = "0.4.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/0e/3046a510678c5e714cd8001948408018f236d2ba8daff43598962db87682/function_schema-0.4.5.tar.gz", hash = "sha256:98cb074089f9d64499b66875f6b9ad86745d9133f8c627566fd1cca863e6a79e", size = 6088 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8e/7b/ff5677ffd205b657a765f4ac209e892e0464d49e54bdafd8655654405cc6/function_schema-0.4.5-py3-none-any.whl", hash = "sha256:1b34fea31ecb25b643056b35f1be17b78639fd39aceff8a3de4673795b59a2d2", size = 7822 },
+]
+
+[[package]]
 name = "google-auth"
 version = "2.39.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1029,14 +1038,18 @@ dependencies = [
 dev = [
     { name = "black" },
     { name = "commitizen" },
+    { name = "function-schema" },
     { name = "isort" },
     { name = "pre-commit" },
+    { name = "pydantic-ai" },
+    { name = "pyright" },
     { name = "pytest-cov" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "commitizen" },
+    { name = "function-schema" },
     { name = "pre-commit" },
     { name = "pydantic-ai" },
     { name = "pyright" },
@@ -1047,12 +1060,15 @@ dev = [
 requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "commitizen", marker = "extra == 'dev'" },
+    { name = "function-schema", marker = "extra == 'dev'" },
     { name = "isort", marker = "extra == 'dev'" },
     { name = "joblib", specifier = ">=1.4.2" },
     { name = "litellm", specifier = ">=1.49.0" },
     { name = "pksuid", specifier = ">=1.1.2" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pydantic", specifier = ">=2.7.0" },
+    { name = "pydantic-ai", marker = "extra == 'dev'" },
+    { name = "pyright", marker = "extra == 'dev'" },
     { name = "pytest", specifier = ">=8.1.1" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", marker = "extra == 'dev'" },
@@ -1065,6 +1081,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "commitizen", specifier = ">=4.8.3" },
+    { name = "function-schema", specifier = ">=0.4.5" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pydantic-ai", specifier = ">=0.0.52" },
     { name = "pyright", specifier = ">=1.1.401" },
