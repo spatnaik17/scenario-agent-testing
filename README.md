@@ -8,17 +8,15 @@
 
 Scenario is an Agent Testing Framework for testing AI agents through Simulation Testing.
 
-You define the conversation scenario and let it play out, it will keep chatting back and forth with _your_ agent until it reaches the desired goal or detects an unexpected behavior based on the criteria you defined.
-
-- Test your agents end-to-end conversations with specified scenarios to capture both happy paths and edge cases
-- Full flexibility of how much you want to guide the conversation, from fully scripted scenarios to completely automated simulations
-- Run evaluations at any point of the conversation, designed for multi-turn
-- Works in combination with any testing and LLM evaluation frameworks, completely agnostic
-- Works with any LLM and Agent Framework, easy integration
+- Test real agent behavior by simulating users in different scenarios and edge cases
+- Evaluate and judge at any point of the conversation, powerful multi-turn control
+- Combine it with any LLM eval framework or custom evals, agnostic by design
+- Integrate with your Agent by implementing just one `call()` method
+- Available for Python, TypeScript and Go
 
 [📺 Video Tutorial](https://www.youtube.com/watch?v=f8NLpkY0Av4)
 
-### See also
+### In other languages
 
 - [Scenario TypeScript](https://github.com/langwatch/scenario-ts/)
 - [Scenario Go](https://github.com/langwatch/scenario-go/)
@@ -62,9 +60,7 @@ async def test_weather_agent():
 ```
 
 > [!NOTE]
-> This is a very basic example, keep reading to see how to run a simulation completely script-free, using a Judge Agent to evaluate in real-time.
-
-Check out more examples in the [examples folder](./examples/).
+> Check out more examples in the [examples folder](./examples/).
 
 ## Getting Started
 
@@ -155,7 +151,7 @@ pytest -s tests/test_vegetarian_recipe_agent.py
 
 This is how it will look like:
 
-[![asciicast](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
+[![asciicast](./assets/ascii-cinema.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
 
 You can find the same code example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
 
