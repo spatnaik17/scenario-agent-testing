@@ -6,13 +6,13 @@
 
 # Scenario
 
-Scenario is an Agent Testing Framework for testing AI agents through Simulation Testing.
+Scenario is an Agent Testing Framework based on simulations, it can:
 
 - Test real agent behavior by simulating users in different scenarios and edge cases
 - Evaluate and judge at any point of the conversation, powerful multi-turn control
 - Combine it with any LLM eval framework or custom evals, agnostic by design
-- Integrate with your Agent by implementing just one `call()` method
-- Available for Python, TypeScript and Go
+- Integrate your Agent by implementing just one `call()` method
+- Available in Python, TypeScript and Go
 
 [📺 Video Tutorial](https://www.youtube.com/watch?v=f8NLpkY0Av4)
 
