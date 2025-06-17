@@ -1,3 +1,11 @@
+"""
+Utility functions for scenario execution and message handling.
+
+This module provides various utility functions used throughout the Scenario framework,
+including message formatting, validation, role reversal, and UI components like spinners
+for better user experience during scenario execution.
+"""
+
 from contextlib import contextmanager
 import sys
 from typing import (
@@ -32,6 +40,22 @@ T = TypeVar("T")
 
 
 class SerializableAndPydanticEncoder(json.JSONEncoder):
+    """
+    JSON encoder that handles Pydantic models and iterators.
+
+    This encoder extends the standard JSON encoder to handle Pydantic BaseModel
+    instances and iterator objects, converting them to serializable formats.
+    Used for caching and logging scenarios that contain complex objects.
+
+    Example:
+        ```python
+        data = {
+            "model": SomeBaseModel(field="value"),
+            "iterator": iter([1, 2, 3])
+        }
+        json.dumps(data, cls=SerializableAndPydanticEncoder)
+        ```
+    """
     def default(self, o):
         if isinstance(o, BaseModel):
             return o.model_dump(exclude_unset=True)
@@ -41,6 +65,21 @@ class SerializableAndPydanticEncoder(json.JSONEncoder):
 
 
 class SerializableWithStringFallback(SerializableAndPydanticEncoder):
+    """
+    JSON encoder with string fallback for non-serializable objects.
+
+    This encoder extends SerializableAndPydanticEncoder by providing a string
+    fallback for any object that cannot be serialized normally. This ensures
+    that logging and caching operations never fail due to serialization issues.
+
+    Example:
+        ```python
+        # This will work even with complex non-serializable objects
+        data = {"function": lambda x: x, "complex_object": SomeComplexClass()}
+        json.dumps(data, cls=SerializableWithStringFallback)
+        # Result: {"function": "<function <lambda> at 0x...>", "complex_object": "..."}
+        ```
+    """
     def default(self, o):
         try:
             return super().default(o)
@@ -49,6 +88,25 @@ class SerializableWithStringFallback(SerializableAndPydanticEncoder):
 
 
 def safe_list_at(list, index, default=None):
+    """
+    Safely get an item from a list by index with a default fallback.
+
+    Args:
+        list: The list to access
+        index: The index to retrieve
+        default: Value to return if index is out of bounds
+
+    Returns:
+        The item at the index, or the default value if index is invalid
+
+    Example:
+        ```python
+        items = ["a", "b", "c"]
+        print(safe_list_at(items, 1))    # "b"
+        print(safe_list_at(items, 10))   # None
+        print(safe_list_at(items, 10, "default"))  # "default"
+        ```
+    """
     try:
         return list[index]
     except:
@@ -56,16 +114,85 @@ def safe_list_at(list, index, default=None):
 
 
 def safe_attr_or_key(obj, attr_or_key, default=None):
+    """
+    Safely get an attribute or dictionary key from an object.
+
+    Tries to get the value as an attribute first, then as a dictionary key,
+    returning the default if neither exists.
+
+    Args:
+        obj: Object to access (can have attributes or be dict-like)
+        attr_or_key: Name of attribute or key to retrieve
+        default: Value to return if attribute/key doesn't exist
+
+    Returns:
+        The attribute/key value, or the default if not found
+
+    Example:
+        ```python
+        class MyClass:
+            attr = "value"
+
+        obj = MyClass()
+        dict_obj = {"key": "value"}
+
+        print(safe_attr_or_key(obj, "attr"))     # "value"
+        print(safe_attr_or_key(dict_obj, "key")) # "value"
+        print(safe_attr_or_key(obj, "missing"))  # None
+        ```
+    """
     return getattr(obj, attr_or_key, obj.get(attr_or_key))
 
 
 def title_case(string):
+    """
+    Convert snake_case string to Title Case.
+
+    Args:
+        string: Snake_case string to convert
+
+    Returns:
+        String converted to Title Case
+
+    Example:
+        ```python
+        print(title_case("user_simulator_agent"))  # "User Simulator Agent"
+        print(title_case("api_key"))               # "Api Key"
+        ```
+    """
     return " ".join(word.capitalize() for word in string.split("_"))
 
 
 def print_openai_messages(
     scenario_name: str, messages: list[ChatCompletionMessageParam]
 ):
+    """
+    Print OpenAI-format messages with colored formatting for readability.
+
+    This function formats and prints conversation messages with appropriate
+    colors and formatting for different message types (user, assistant, tool calls, etc.).
+    Used for verbose output during scenario execution.
+
+    Args:
+        scenario_name: Name of the scenario (used as prefix)
+        messages: List of OpenAI-compatible messages to print
+
+    Example:
+        ```python
+        messages = [
+            {"role": "user", "content": "Hello"},
+            {"role": "assistant", "content": "Hi there!"},
+            {"role": "assistant", "tool_calls": [{"function": {"name": "search"}}]}
+        ]
+        print_openai_messages("Test Scenario", messages)
+        ```
+
+    Note:
+        - User messages are printed in green
+        - Assistant messages are printed in blue
+        - Tool calls are printed in magenta with formatted JSON
+        - Long JSON content is truncated for readability
+    """
     for msg in messages:
         role = safe_attr_or_key(msg, "role")
         content = safe_attr_or_key(msg, "content")
@@ -100,6 +227,19 @@ def print_openai_messages(
 
 
 def _take_maybe_json_first_lines(string, max_lines=5):
+    """
+    Truncate string content and format JSON if possible.
+
+    Internal utility function that attempts to format content as JSON
+    and truncates it to a reasonable number of lines for display.
+
+    Args:
+        string: Content to format and truncate
+        max_lines: Maximum number of lines to show
+
+    Returns:
+        Formatted and potentially truncated string
+    """
     content = str(string)
     try:
         content = json.dumps(json.loads(content), indent=2)
@@ -115,6 +255,19 @@ console = Console()
 
 
 class TextFirstSpinner(Spinner):
+    """
+    Custom spinner that displays text before the spinning animation.
+
+    This class extends Rich's Spinner to show descriptive text followed
+    by the spinning animation, improving the user experience during
+    scenario execution by clearly indicating what operation is happening.
+
+    Args:
+        name: Name of the spinner animation style
+        text: Descriptive text to show before the spinner
+        color: Color for the descriptive text
+        **kwargs: Additional arguments passed to the base Spinner class
+    """
     def __init__(self, name, text: str, color: str, **kwargs):
         super().__init__(
             name, "", style="bold white", **kwargs
@@ -133,6 +286,32 @@ class TextFirstSpinner(Spinner):
 def show_spinner(
     text: str, color: str = "white", enabled: Optional[Union[bool, int]] = None
 ):
+    """
+    Context manager for displaying a spinner during long-running operations.
+
+    Shows a spinning indicator with descriptive text while code executes
+    within the context. Automatically cleans up the spinner display when
+    the operation completes.
+
+    Args:
+        text: Descriptive text to show next to the spinner
+        color: Color for the descriptive text
+        enabled: Whether to show the spinner (respects verbose settings)
+
+    Example:
+        ```python
+        with show_spinner("Calling agent...", color="blue", enabled=True):
+            response = await agent.call(input_data)
+
+        # Spinner automatically disappears when block completes
+        print("Agent call completed")
+        ```
+
+    Note:
+        - Spinner is automatically cleaned up when context exits
+        - Gracefully handles multi-threading scenarios where multiple spinners might conflict
+        - Cursor positioning ensures clean terminal output
+    """
     if not enabled:
         yield
     else:
@@ -151,6 +330,31 @@ def show_spinner(
 
 
 def check_valid_return_type(return_value: Any, class_name: str) -> None:
+    """
+    Validate that an agent's return value is in the expected format.
+
+    This function ensures that agent adapters return values in one of the
+    supported formats (string, OpenAI message, list of messages, or ScenarioResult).
+    It also verifies that the returned data is JSON-serializable for caching.
+
+    Args:
+        return_value: The value returned by an agent's call method
+        class_name: Name of the agent class (for error messages)
+
+    Raises:
+        ValueError: If the return value is not in a supported format
+
+    Example:
+        ```python
+        # Valid return values
+        check_valid_return_type("Hello world", "MyAgent")  # OK
+        check_valid_return_type({"role": "assistant", "content": "Hi"}, "MyAgent")  # OK
+        check_valid_return_type([{"role": "assistant", "content": "Hi"}], "MyAgent")  # OK
+
+        # Invalid return value
+        check_valid_return_type(42, "MyAgent")  # Raises ValueError
+        ```
+    """
     def _is_valid_openai_message(message: Any) -> bool:
         return (isinstance(message, dict) and "role" in message) or (
             isinstance(message, BaseModel) and hasattr(message, "role")
@@ -182,6 +386,43 @@ def check_valid_return_type(return_value: Any, class_name: str) -> None:
 def convert_agent_return_types_to_openai_messages(
     agent_response: AgentReturnTypes, role: Literal["user", "assistant"]
 ) -> List[ChatCompletionMessageParam]:
+    """
+    Convert various agent return types to standardized OpenAI message format.
+
+    This function normalizes different return types from agent adapters into
+    a consistent list of OpenAI-compatible messages that can be used throughout
+    the scenario execution pipeline.
+
+    Args:
+        agent_response: Response from an agent adapter call
+        role: The role to assign to string responses ("user" or "assistant")
+
+    Returns:
+        List of OpenAI-compatible messages
+
+    Raises:
+        ValueError: If agent_response is a ScenarioResult (which should be handled separately)
+
+    Example:
+        ```python
+        # String response
+        messages = convert_agent_return_types_to_openai_messages("Hello", "assistant")
+        # Result: [{"role": "assistant", "content": "Hello"}]
+
+        # Dict response
+        response = {"role": "assistant", "content": "Hi", "tool_calls": [...]}
+        messages = convert_agent_return_types_to_openai_messages(response, "assistant")
+        # Result: [{"role": "assistant", "content": "Hi", "tool_calls": [...]}]
+
+        # List response
+        responses = [
+            {"role": "assistant", "content": "Thinking..."},
+            {"role": "assistant", "content": "Here's the answer"}
+        ]
+        messages = convert_agent_return_types_to_openai_messages(responses, "assistant")
+        # Result: Same list, validated and normalized
+        ```
+    """
     if isinstance(agent_response, ScenarioResult):
         raise ValueError(
             "Unexpectedly tried to convert a ScenarioResult to openai messages",

@@ -1,5 +1,9 @@
 """
-ScenarioExecutor module: holds the scenario execution logic and state, orchestrating the conversation between the testing agent and the agent under test.
+Scenario execution engine for agent testing.
+
+This module contains the core ScenarioExecutor class that orchestrates the execution
+of scenario tests, managing the interaction between user simulators, agents under test,
+and judge agents to determine test success or failure.
 """
 
 import sys
@@ -42,6 +46,61 @@ from .scenario_state import ScenarioState
 
 
 class ScenarioExecutor:
+    """
+    Core orchestrator for scenario-based agent testing.
+
+    The ScenarioExecutor manages the complete lifecycle of a scenario test, including:
+    - Orchestrating conversations between user simulators, agents, and judges
+    - Managing turn-based execution flow
+    - Handling script-based scenario control
+    - Collecting and reporting test results
+    - Supporting debug mode for interactive testing
+
+    This class serves as both a builder (for configuration) and an executor (for running tests).
+    Most users will interact with it through the high-level `scenario.run()` function rather
+    than instantiating it directly.
+
+    Attributes:
+        name: Human-readable name for the scenario
+        description: Detailed description of what the scenario tests
+        agents: List of agent adapters participating in the scenario
+        script: Optional list of script steps to control scenario flow
+        config: Configuration settings for execution behavior
+
+    Example:
+        ```python
+        # Direct instantiation (less common)
+        executor = ScenarioExecutor(
+            name="weather query test",
+            description="User asks about weather, agent should provide helpful response",
+            agents=[
+                weather_agent,
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
+            ],
+            max_turns=10,
+            verbose=True
+        )
+        result = await executor._run()
+
+        # Preferred high-level API
+        result = await scenario.run(
+            name="weather query test",
+            description="User asks about weather, agent should provide helpful response",
+            agents=[
+                weather_agent,
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
+            ]
+        )
+        ```
+
+    Note:
+        - Scenarios run in isolated thread pools to support parallel execution
+        - All agent interactions are cached when cache_key is configured
+        - Debug mode allows step-by-step execution with user intervention
+        - Results include detailed timing information and conversation history
+    """
     name: str
     description: str
     agents: List[AgentAdapter]
@@ -69,6 +128,46 @@ class ScenarioExecutor:
         cache_key: Optional[str] = None,
         debug: Optional[bool] = None,
     ):
+        """
+        Initialize a scenario executor.
+
+        Args:
+            name: Human-readable name for the scenario (used in reports and logs)
+            description: Detailed description of what the scenario tests.
+                        This guides the user simulator's behavior and provides context.
+            agents: List of agent adapters participating in the scenario.
+                   Typically includes: agent under test, user simulator, and judge.
+            script: Optional list of script steps to control scenario flow.
+                   If not provided, defaults to automatic proceeding.
+            max_turns: Maximum number of conversation turns before timeout.
+                      Overrides global configuration for this scenario.
+            verbose: Whether to show detailed output during execution.
+                    Can be True/False or integer level (2 for extra details).
+            cache_key: Cache key for deterministic behavior across runs.
+                      Overrides global configuration for this scenario.
+            debug: Whether to enable debug mode with step-by-step execution.
+                  Overrides global configuration for this scenario.
+
+        Example:
+            ```python
+            executor = ScenarioExecutor(
+                name="customer service test",
+                description="Customer has a billing question and needs help",
+                agents=[
+                    customer_service_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=[
+                        "Agent is polite and professional",
+                        "Agent addresses the billing question",
+                        "Agent provides clear next steps"
+                    ])
+                ],
+                max_turns=15,
+                verbose=True,
+                debug=False
+            )
+            ```
+        """
         self.name = name
         self.description = description
         self.agents = agents
@@ -96,6 +195,71 @@ class ScenarioExecutor:
         debug: Optional[bool] = None,
         script: Optional[List[ScriptStep]] = None,
     ) -> ScenarioResult:
+        """
+        High-level interface for running a scenario test.
+
+        This is the main entry point for executing scenario tests. It creates a
+        ScenarioExecutor instance and runs it in an isolated thread pool to support
+        parallel execution and prevent blocking.
+
+        Args:
+            name: Human-readable name for the scenario
+            description: Detailed description of what the scenario tests
+            agents: List of agent adapters (agent under test, user simulator, judge)
+            max_turns: Maximum conversation turns before timeout (default: 10)
+            verbose: Show detailed output during execution
+            cache_key: Cache key for deterministic behavior
+            debug: Enable debug mode for step-by-step execution
+            script: Optional script steps to control scenario flow
+
+        Returns:
+            ScenarioResult containing the test outcome, conversation history,
+            success/failure status, and detailed reasoning
+
+        Example:
+            ```python
+            import scenario
+
+            # Simple scenario with automatic flow
+            result = await scenario.run(
+                name="help request",
+                description="User asks for help with a technical problem",
+                agents=[
+                    my_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
+                ]
+            )
+
+            # Scripted scenario with custom evaluations
+            result = await scenario.run(
+                name="custom interaction",
+                description="Test specific conversation flow",
+                agents=[
+                    my_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
+                ],
+                script=[
+                    scenario.user("Hello"),
+                    scenario.agent(),
+                    custom_eval,
+                    scenario.succeed()
+                ]
+            )
+
+            # Results analysis
+            print(f"Test {'PASSED' if result.success else 'FAILED'}")
+            print(f"Reasoning: {result.reasoning}")
+            print(f"Conversation had {len(result.messages)} messages")
+            ```
+
+        Note:
+            - Runs in isolated thread pool to support parallel execution
+            - Blocks until scenario completes or times out
+            - All agent calls are automatically cached when cache_key is set
+            - Exception handling ensures clean resource cleanup
+        """
         scenario = cls(
             name=name,
             description=description,
@@ -130,6 +294,25 @@ class ScenarioExecutor:
             return result
 
     def reset(self):
+        """
+        Reset the scenario executor to initial state.
+
+        This method reinitializes all internal state for a fresh scenario run,
+        including conversation history, turn counters, and agent timing information.
+        Called automatically during initialization and can be used to rerun scenarios.
+
+        Example:
+            ```python
+            executor = ScenarioExecutor(...)
+
+            # Run first test
+            result1 = await executor._run()
+
+            # Reset and run again
+            executor.reset()
+            result2 = await executor._run()
+            ```
+        """
         self._state = ScenarioState(
             description=self.description,
             messages=[],
@@ -153,6 +336,40 @@ class ScenarioExecutor:
     def add_message(
         self, message: ChatCompletionMessageParam, from_agent_idx: Optional[int] = None
     ):
+        """
+        Add a message to the conversation and broadcast to other agents.
+
+        This method adds a message to the conversation history and makes it available
+        to other agents in their next call. It's used internally by the executor
+        and can be called from script steps to inject custom messages.
+
+        Args:
+            message: OpenAI-compatible message to add to the conversation
+            from_agent_idx: Index of the agent that generated this message.
+                           Used to avoid broadcasting the message back to its creator.
+
+        Example:
+            ```python
+            def inject_system_message(state: ScenarioState) -> None:
+                state._executor.add_message({
+                    "role": "system",
+                    "content": "The user is now in a hurry"
+                })
+
+            # Use in script
+            result = await scenario.run(
+                name="system message test",
+                agents=[agent, user_sim, judge],
+                script=[
+                    scenario.user("Hello"),
+                    scenario.agent(),
+                    inject_system_message,
+                    scenario.user(),  # Will see the system message
+                    scenario.succeed()
+                ]
+            )
+            ```
+        """
         self._state.messages.append(message)
 
         # Broadcast the message to other agents
@@ -168,6 +385,26 @@ class ScenarioExecutor:
         messages: List[ChatCompletionMessageParam],
         from_agent_idx: Optional[int] = None,
     ):
+        """
+        Add multiple messages to the conversation.
+
+        Convenience method for adding multiple messages at once. Each message
+        is added individually using add_message().
+
+        Args:
+            messages: List of OpenAI-compatible messages to add
+            from_agent_idx: Index of the agent that generated these messages
+
+        Example:
+            ```python
+            # Agent returns multiple messages for a complex interaction
+            messages = [
+                {"role": "assistant", "content": "Let me search for that..."},
+                {"role": "assistant", "content": "Here's what I found: ..."}
+            ]
+            executor.add_messages(messages, from_agent_idx=0)
+            ```
+        """
         for message in messages:
             self.add_message(message, from_agent_idx)
 
@@ -181,6 +418,24 @@ class ScenarioExecutor:
         self._state.current_turn += 1
 
     async def step(self) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
+        """
+        Execute a single step in the scenario.
+
+        A step consists of calling the next agent in the current turn's sequence
+        and processing their response. This method is used internally by the
+        scenario execution flow.
+
+        Returns:
+            Either a list of messages (if the scenario continues) or a
+            ScenarioResult (if the scenario should end)
+
+        Raises:
+            ValueError: If no result is returned from the internal step method
+
+        Note:
+            This is primarily an internal method. Most users should use the
+            high-level run() method or script DSL functions instead.
+        """
         result = await self._step()
         if result is None:
             raise ValueError("No result from step")

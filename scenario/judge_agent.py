@@ -1,3 +1,12 @@
+"""
+Judge agent module for evaluating scenario conversations.
+
+This module provides the JudgeAgent class, which evaluates ongoing conversations
+between users and agents to determine if success criteria are met. The judge
+makes real-time decisions about whether scenarios should continue or end with
+success/failure verdicts.
+"""
+
 import json
 import logging
 import re
@@ -18,6 +27,72 @@ logger = logging.getLogger("scenario")
 
 
 class JudgeAgent(AgentAdapter):
+    """
+    Agent that evaluates conversations against success criteria.
+
+    The JudgeAgent watches conversations in real-time and makes decisions about
+    whether the agent under test is meeting the specified criteria. It can either
+    allow the conversation to continue or end it with a success/failure verdict.
+
+    The judge uses function calling to make structured decisions and provides
+    detailed reasoning for its verdicts. It evaluates each criterion independently
+    and provides comprehensive feedback about what worked and what didn't.
+
+    Attributes:
+        role: Always AgentRole.JUDGE for judge agents
+        model: LLM model identifier to use for evaluation
+        api_key: Optional API key for the model provider
+        temperature: Sampling temperature for evaluation consistency
+        max_tokens: Maximum tokens for judge reasoning
+        criteria: List of success criteria to evaluate against
+        system_prompt: Custom system prompt to override default judge behavior
+
+    Example:
+        ```python
+        import scenario
+
+        # Basic judge agent with criteria
+        judge = scenario.JudgeAgent(
+            criteria=[
+                "Agent provides helpful responses",
+                "Agent asks relevant follow-up questions",
+                "Agent does not provide harmful information"
+            ]
+        )
+
+        # Customized judge with specific model and behavior
+        strict_judge = scenario.JudgeAgent(
+            model="openai/gpt-4.1-mini",
+            criteria=[
+                "Code examples are syntactically correct",
+                "Explanations are technically accurate",
+                "Security best practices are mentioned"
+            ],
+            temperature=0.0,  # More deterministic evaluation
+            system_prompt="You are a strict technical reviewer evaluating code quality."
+        )
+
+        # Use in scenario
+        result = await scenario.run(
+            name="coding assistant test",
+            description="User asks for help with Python functions",
+            agents=[
+                coding_agent,
+                scenario.UserSimulatorAgent(),
+                judge
+            ]
+        )
+
+        print(f"Passed criteria: {result.passed_criteria}")
+        print(f"Failed criteria: {result.failed_criteria}")
+        ```
+
+    Note:
+        - Judge agents evaluate conversations continuously, not just at the end
+        - They can end scenarios early if clear success/failure conditions are met
+        - Provide detailed reasoning for their decisions
+        - Support both positive criteria (things that should happen) and negative criteria (things that shouldn't)
+    """
     role = AgentRole.JUDGE
 
     model: str
@@ -35,9 +110,53 @@ class JudgeAgent(AgentAdapter):
         api_key: Optional[str] = None,
         temperature: float = 0.0,
         max_tokens: Optional[int] = None,
-        # Override the default system prompt for the judge agent
         system_prompt: Optional[str] = None,
     ):
+        """
+        Initialize a judge agent with evaluation criteria.
+
+        Args:
+            criteria: List of success criteria to evaluate the conversation against.
+                     Can include both positive requirements ("Agent provides helpful responses")
+                     and negative constraints ("Agent should not provide personal information").
+            model: LLM model identifier (e.g., "openai/gpt-4.1-mini").
+                   If not provided, uses the default model from global configuration.
+            api_key: API key for the model provider. If not provided,
+                     uses the key from global configuration or environment.
+            temperature: Sampling temperature for evaluation (0.0-1.0).
+                        Lower values (0.0-0.2) recommended for consistent evaluation.
+            max_tokens: Maximum number of tokens for judge reasoning and explanations.
+            system_prompt: Custom system prompt to override default judge behavior.
+                          Use this to create specialized evaluation perspectives.
+
+        Raises:
+            Exception: If no model is configured either in parameters or global config
+
+        Example:
+            ```python
+            # Customer service judge
+            cs_judge = JudgeAgent(
+                criteria=[
+                    "Agent is polite and professional",
+                    "Agent addresses the customer's specific concern",
+                    "Agent offers appropriate solutions or next steps",
+                    "Agent does not make promises the company cannot keep"
+                ],
+                temperature=0.1
+            )
+
+            # Technical accuracy judge
+            tech_judge = JudgeAgent(
+                criteria=[
+                    "Code examples compile without errors",
+                    "Security vulnerabilities are not introduced",
+                    "Best practices are recommended"
+                ],
+                system_prompt="You are a senior software engineer reviewing code for production use."
+            )
+            ```
+        """
+        # Override the default system prompt for the judge agent
         self.criteria = criteria or []
         self.api_key = api_key
         self.temperature = temperature
@@ -74,12 +193,47 @@ class JudgeAgent(AgentAdapter):
         input: AgentInput,
     ) -> AgentReturnTypes:
         """
-        Generate the next message in the conversation based on history OR
-        return a ScenarioResult if the test should conclude.
+        Evaluate the current conversation state against the configured criteria.
 
-        Returns either:
-          - An empty list of messages (if the test should continue)
-          - A ScenarioResult (if the test should conclude)
+        This method analyzes the conversation history and determines whether the
+        scenario should continue or end with a verdict. It uses function calling
+        to make structured decisions and provides detailed reasoning.
+
+        Args:
+            input: AgentInput containing conversation history and scenario context
+
+        Returns:
+            AgentReturnTypes: Either an empty list (continue scenario) or a
+                            ScenarioResult (end scenario with verdict)
+
+        Raises:
+            Exception: If the judge cannot make a valid decision or if there's an
+                      error in the evaluation process
+
+        Example:
+            The judge evaluates conversations like this:
+
+            ```
+            Conversation so far:
+            User: "I need help with authentication"
+            Agent: "I can help! What authentication method are you using?"
+            User: "JWT tokens"
+            Agent: "Here's how to implement JWT securely: [detailed code example]"
+
+            Judge evaluation:
+            - ✓ Agent provides helpful responses
+            - ✓ Agent asks relevant follow-up questions
+            - ✓ Security best practices are mentioned
+
+            Decision: CONTINUE (all criteria being met so far)
+            ```
+
+        Note:
+            - Returns empty list [] to continue the scenario
+            - Returns ScenarioResult to end with success/failure
+            - Provides detailed reasoning for all decisions
+            - Evaluates each criterion independently
+            - Can end scenarios early if clear violation or success is detected
         """
 
         scenario = input.scenario_state
