@@ -26,7 +26,7 @@ Scenario is an Agent Testing Framework based on simulations, it can:
 ```python
 @pytest.mark.agent_test
 @pytest.mark.asyncio
-async def test_weather_agent():
+async def test_weather_agent_calls_tool():
     # Integrate with your agent
     class WeatherAgent(scenario.AgentAdapter):
         async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
@@ -155,13 +155,13 @@ This is how it will look like:
 
 You can find the same code example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
 
-## Script-free Simulation
+## Simulation on Autopilot
 
-By providing a User Simulator Agent and a description of the Scenario, the simulated user will automatically generate messages to the agent until the scenario is successful or the maximum number of turns is reached.
+By providing a User Simulator Agent and a description of the Scenario without a script, the simulated user will automatically generate messages to the agent until the scenario is successful or the maximum number of turns is reached.
 
 You can then use a Judge Agent to evaluate the scenario in real-time given certain criteria, at every turn, the Judge Agent will decide if it should let the simulation proceed or end it with a verdict.
 
-You can combine it with a script, to control for example the beginning of the conversation, or simply let it run scriptless, this is very useful to test an open case like a vibe coding assistant:
+For example, here is a scenario that tests a vibe coding assistant:
 
 ```python
 result = await scenario.run(
@@ -191,6 +191,8 @@ result = await scenario.run(
 
 Check out the fully working Lovable Clone example in [examples/test_lovable_clone.py](examples/test_lovable_clone.py).
 
+You can also combine it with a partial script too! By for example controlling only the beginning of the conversation, and let the rest proceed on autopilot, see the next section.
+
 ## Full Control of the Conversation
 
 You can specify a script for guiding the scenario by passing a list of steps to the `script` field, those steps are simply arbitrary functions that take the current state of the scenario as an argument, so you can do things like:
@@ -208,35 +210,35 @@ Everything is possible, using the same simple structure:
 ```python
 @pytest.mark.agent_test
 @pytest.mark.asyncio
-async def test_ai_assistant_agent():
-    scenario = Scenario(
-        name="false assumptions",
+async def test_early_assumption_bias():
+    result = await scenario.run(
+        name="early assumption bias",
         description="""
             The agent makes false assumption that the user is talking about an ATM bank, and user corrects it that they actually mean river banks
         """,
-        agent=AiAssistantAgentAdapter,
-        criteria=[
-            "user should get good recommendations on river crossing",
-            "agent should NOT follow up about ATM recommendation after user has corrected them they are just hiking",
+        agents=[
+            Agent(),
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
+                criteria=[
+                    "user should get good recommendations on river crossing",
+                    "agent should NOT keep following up about ATM recommendation after user has corrected them that they are actually just hiking",
+                ],
+            ),
         ],
-        max_turns=5,
-    )
-
-    def check_if_tool_was_called(state: ScenarioExecutor) -> None:
-        assert state.has_tool_call("web_search")
-
-    result = await scenario.script(
-        [
-            # Define existing history of messages
+        max_turns=10,
+        script=[
+            # Define hardcoded messages
+            scenario.agent("Hello, how can I help you today?"),
             scenario.user("how do I safely approach a bank?"),
 
-            # Or let it be generate automatically
+            # Or let it be generated automatically
             scenario.agent(),
 
             # Add custom assertions, for example making sure a tool was called
             check_if_tool_was_called,
 
-            # Another user message
+            # Generate a user follow-up message
             scenario.user(),
 
             # Let the simulation proceed for 2 more turns, print at every turn
@@ -247,8 +249,8 @@ async def test_ai_assistant_agent():
 
             # Time to make a judgment call
             scenario.judge(),
-        ]
-    ).run()
+        ],
+    )
 
     assert result.success
 ```
@@ -260,7 +262,7 @@ You can enable debug mode by setting the `debug` field to `True` in the `Scenari
 Debug mode allows you to see the messages in slow motion step by step, and intervene with your own inputs to debug your agent from the middle of the conversation.
 
 ```python
-Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), debug=True)
+scenario.configure(default_model="openai/gpt-4.1-mini", debug=True)
 ```
 
 or
@@ -274,16 +276,17 @@ pytest -s tests/test_vegetarian_recipe_agent.py --debug
 Each time the scenario runs, the testing agent might chose a different input to start, this is good to make sure it covers the variance of real users as well, however we understand that the non-deterministic nature of it might make it less repeatable, costly and harder to debug. To solve for it, you can use the `cache_key` field in the `Scenario.configure` method or in the specific scenario you are running, this will make the testing agent give the same input for given the same scenario:
 
 ```python
-Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"), cache_key="42")
+scenario.configure(default_model="openai/gpt-4.1-mini", cache_key="42")
 ```
 
 To bust the cache, you can simply pass a different `cache_key`, disable it, or delete the cache files located at `~/.scenario/cache`.
 
-To go a step further and fully cache the test end-to-end, you can also wrap the LLM calls or any other non-deterministic functions in your application side with the `@scenario_cache` decorator:
+To go a step further and fully cache the test end-to-end, you can also wrap the LLM calls or any other non-deterministic functions in your application side with the `@scenario.cache` decorator:
 
 ```python
+# Inside your actual agent implementation
 class MyAgent:
-    @scenario_cache(ignore=["self"])
+    @scenario.cache()
     def invoke(self, message, context):
         return client.chat.completions.create(
             # ...

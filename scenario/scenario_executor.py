@@ -101,6 +101,7 @@ class ScenarioExecutor:
         - Debug mode allows step-by-step execution with user intervention
         - Results include detailed timing information and conversation history
     """
+
     name: str
     description: str
     agents: List[AgentAdapter]

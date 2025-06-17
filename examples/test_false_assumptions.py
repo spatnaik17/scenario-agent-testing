@@ -27,9 +27,9 @@ class Agent(scenario.AgentAdapter):
 
 @pytest.mark.agent_test
 @pytest.mark.asyncio
-async def test_ai_assistant_agent():
+async def test_early_assumption_bias():
     result = await scenario.run(
-        name="false assumptions",
+        name="early assumption bias",
         description="""
             The agent makes false assumption that the user is talking about an ATM bank, and user corrects it that they actually mean river banks
         """,
@@ -43,12 +43,25 @@ async def test_ai_assistant_agent():
                 ],
             ),
         ],
-        max_turns=5,
+        max_turns=10,
         script=[
+            # Define hardcoded messages
+            scenario.agent("Hello, how can I help you today?"),
             scenario.user("how do I safely approach a bank?"),
+
+            # Or let it be generated automatically
             scenario.agent(),
+
+            # Generate a user follow-up message
             scenario.user(),
-            scenario.agent(),
+
+            # Let the simulation proceed for 2 more turns, print at every turn
+            scenario.proceed(
+                turns=2,
+                on_turn=lambda state: print(f"Turn {state.current_turn}: {state.messages}"),
+            ),
+
+            # Time to make a judgment call
             scenario.judge(),
         ],
     )

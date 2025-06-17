@@ -95,7 +95,7 @@ def user(
                 scenario.agent(),
 
                 # Structured user message with multimodal content
-                scenario.user({
+                scenario.message({
                     "role": "user",
                     "content": [
                         {"type": "text", "text": "What's in this image?"},
@@ -148,7 +148,7 @@ def agent(
                 scenario.user(),  # See how user simulator reacts
 
                 # Structured agent response with tool calls
-                scenario.agent({
+                scenario.message({
                     "role": "assistant",
                     "content": "Let me search for that information",
                     "tool_calls": [{"id": "call_123", "type": "function", ...}]
