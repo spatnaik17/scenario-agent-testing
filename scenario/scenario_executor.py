@@ -34,6 +34,7 @@ from scenario.utils import (
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
 )
 
 from .types import AgentInput, AgentRole, ScenarioResult, ScriptStep
@@ -743,7 +744,13 @@ class ScenarioExecutor:
 
         if content:
             if isinstance(content, str):
-                message = ChatCompletionUserMessageParam(role="user", content=content)
+                message = (
+                    ChatCompletionUserMessageParam(role="user", content=content)
+                    if role == AgentRole.USER
+                    else ChatCompletionAssistantMessageParam(
+                        role="assistant", content=content
+                    )
+                )
             else:
                 message = content
 
