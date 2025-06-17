@@ -5,52 +5,52 @@ from .types import ScriptStep
 from openai.types.chat import ChatCompletionMessageParam
 
 if TYPE_CHECKING:
-    from scenario.scenario_executor import ScenarioExecutor
+    from scenario.scenario_state import ScenarioState
 
 
 def message(message: ChatCompletionMessageParam) -> ScriptStep:
-    return lambda state: state.message(message)
+    return lambda state: state._executor.message(message)
 
 
 def user(
     content: Optional[Union[str, ChatCompletionMessageParam]] = None,
 ) -> ScriptStep:
-    return lambda state: state.user(content)
+    return lambda state: state._executor.user(content)
 
 
 def agent(
     content: Optional[Union[str, ChatCompletionMessageParam]] = None,
 ) -> ScriptStep:
-    return lambda state: state.agent(content)
+    return lambda state: state._executor.agent(content)
 
 
 def judge(
     content: Optional[Union[str, ChatCompletionMessageParam]] = None,
 ) -> ScriptStep:
-    return lambda state: state.judge(content)
+    return lambda state: state._executor.judge(content)
 
 
 def proceed(
     turns: Optional[int] = None,
     on_turn: Optional[
         Union[
-            Callable[["ScenarioExecutor"], None],
-            Callable[["ScenarioExecutor"], Awaitable[None]],
+            Callable[["ScenarioState"], None],
+            Callable[["ScenarioState"], Awaitable[None]],
         ]
     ] = None,
     on_step: Optional[
         Union[
-            Callable[["ScenarioExecutor"], None],
-            Callable[["ScenarioExecutor"], Awaitable[None]],
+            Callable[["ScenarioState"], None],
+            Callable[["ScenarioState"], Awaitable[None]],
         ]
     ] = None,
 ) -> ScriptStep:
-    return lambda state: state.proceed(turns, on_turn, on_step)
+    return lambda state: state._executor.proceed(turns, on_turn, on_step)
 
 
 def succeed(reasoning: Optional[str] = None) -> ScriptStep:
-    return lambda state: state.succeed(reasoning)
+    return lambda state: state._executor.succeed(reasoning)
 
 
 def fail(reasoning: Optional[str] = None) -> ScriptStep:
-    return lambda state: state.fail(reasoning)
+    return lambda state: state._executor.fail(reasoning)

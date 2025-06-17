@@ -15,11 +15,11 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMess
 
 # Prevent circular imports + Pydantic breaking
 if TYPE_CHECKING:
-    from scenario.scenario_executor import ScenarioExecutor
+    from scenario.scenario_executor import ScenarioState
 
-    ScenarioExecutorType = ScenarioExecutor
+    ScenarioStateType = ScenarioState
 else:
-    ScenarioExecutorType = Any
+    ScenarioStateType = Any
 
 
 class AgentRole(Enum):
@@ -34,7 +34,7 @@ class AgentInput(BaseModel):
     messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
     new_messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
     judgment_request: bool = False
-    scenario_state: ScenarioExecutorType = Field(exclude=True)
+    scenario_state: ScenarioStateType
 
     def last_new_user_message(self) -> ChatCompletionUserMessageParam:
         user_messages = [m for m in self.new_messages if m["role"] == "user"]
@@ -85,9 +85,9 @@ AgentReturnTypes = Union[
 
 # TODO: remove the optional ScenarioResult return type from here, use events instead
 ScriptStep = Union[
-    Callable[["ScenarioExecutor"], None],
-    Callable[["ScenarioExecutor"], Optional[ScenarioResult]],
+    Callable[["ScenarioState"], None],
+    Callable[["ScenarioState"], Optional[ScenarioResult]],
     # Async as well
-    Callable[["ScenarioExecutor"], Awaitable[None]],
-    Callable[["ScenarioExecutor"], Awaitable[Optional[ScenarioResult]]],
+    Callable[["ScenarioState"], Awaitable[None]],
+    Callable[["ScenarioState"], Awaitable[Optional[ScenarioResult]]],
 ]

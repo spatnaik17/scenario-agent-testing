@@ -47,14 +47,7 @@ async def test_lovable_clone():
                 ],
             ),
         ],
-        script=[
-            scenario.user("create a landing page for my dog walking startup"),
-            scenario.agent(),
-            scenario.user(),
-            scenario.agent(),
-            scenario.judge(),
-        ],
-        max_turns=5,
+        max_turns=5, # optional
     )
 
     assert result.success

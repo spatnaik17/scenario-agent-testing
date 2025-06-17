@@ -4,11 +4,17 @@
 <!-- Discord, PyPI, Docs, etc links -->
 </div>
 
-# Scenario: Use an Agent to test your Agent
+# Scenario
 
 Scenario is an Agent Testing Framework for testing AI agents through Simulation Testing.
 
-You define the scenarios, and the testing agent will simulate a real user as it follows them, it will keep chatting back and forth with _your_ agent to play out the simulation, until it reaches the desired goal or detects an unexpected behavior based on the criteria you defined.
+You define the conversation scenario and let it play out, it will keep chatting back and forth with _your_ agent until it reaches the desired goal or detects an unexpected behavior based on the criteria you defined.
+
+- Test your agents end-to-end conversations with specified scenarios to capture both happy paths and edge cases
+- Full flexibility of how much you want to guide the conversation, from fully scripted scenarios to completely automated simulations
+- Run evaluations at any point of the conversation, designed for multi-turn
+- Works in combination with any testing and LLM evaluation frameworks, completely agnostic
+- Works with any LLM and Agent Framework, easy integration
 
 [📺 Video Tutorial](https://www.youtube.com/watch?v=f8NLpkY0Av4)
 
@@ -16,6 +22,49 @@ You define the scenarios, and the testing agent will simulate a real user as it 
 
 - [Scenario TypeScript](https://github.com/langwatch/scenario-ts/)
 - [Scenario Go](https://github.com/langwatch/scenario-go/)
+
+## Example
+
+```python
+@pytest.mark.agent_test
+@pytest.mark.asyncio
+async def test_weather_agent():
+    # Integrate with your agent
+    class WeatherAgent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+            return weather_agent(input.messages)
+
+    # Define any custom assertions
+    def check_for_weather_tool_call(state: scenario.ScenarioState):
+        assert state.has_tool_call("get_current_weather")
+
+    # Run the scenario
+    result = await scenario.run(
+        name="checking the weather",
+        description="""
+            The user is planning a boat trip from Barcelona to Rome,
+            and is wondering what the weather will be like.
+        """,
+        agents=[
+            WeatherAgent(),
+            scenario.UserSimulatorAgent(model="openai/gpt-4.1-mini"),
+        ],
+        script=[
+            scenario.user(),
+            scenario.agent(),
+            check_for_weather_tool_call, # check for tool call after the first agent response
+            scenario.succeed(),
+        ],
+    )
+
+    # Assert the simulation was successful
+    assert result.success
+```
+
+> [!NOTE]
+> This is a very basic example, keep reading to see how to run a simulation completely script-free, using a Judge Agent to evaluate in real-time.
+
+Check out more examples in the [examples folder](./examples/).
 
 ## Getting Started
 
@@ -25,50 +74,44 @@ Install pytest and scenario:
 pip install pytest langwatch-scenario
 ```
 
-Now create your first scenario and save it as `tests/test_vegetarian_recipe_agent.py`:
+Now create your first scenario and save it as `tests/test_vegetarian_recipe_agent.py`, copy the full working example below:
 
 ```python
 import pytest
+import scenario
+import litellm
 
-from scenario import Scenario, TestingAgent, ScenarioAgentAdapter, AgentInput, AgentReturnTypes, scenario_cache
-
-Scenario.configure(testing_agent=TestingAgent(model="openai/gpt-4o-mini"))
-
-
-# Create an adapter to call your agent
-class VegetarianRecipeAgentAdapter(ScenarioAgentAdapter):
-    def __init__(self, input: AgentInput):
-        self.agent = VegetarianRecipeAgent()
-
-    async def call(self, input: AgentInput) -> AgentReturnTypes:
-        return self.agent.run(input.last_new_user_message_str())
+scenario.configure(default_model="openai/gpt-4.1-mini")
 
 
 @pytest.mark.agent_test
 @pytest.mark.asyncio
 async def test_vegetarian_recipe_agent():
-    # Define the simulated scenario
-    scenario = Scenario(
+    class Agent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+            return vegetarian_recipe_agent(input.messages)
+
+    # Run a simulation scenario
+    result = await scenario.run(
         name="dinner idea",
         description="""
             It's saturday evening, the user is very hungry and tired,
             but have no money to order out, so they are looking for a recipe.
-
-            The user never mentions they want a vegetarian recipe.
         """,
-        agent=vegetarian_recipe_agent,
-        # List the evaluation criteria for the scenario to be considered successful
-        criteria=[
-            "Agent should not ask more than two follow-up questions",
-            "Agent should generate a recipe",
-            "Recipe should include a list of ingredients",
-            "Recipe should include step-by-step cooking instructions",
-            "Recipe should be vegetarian and not include any sort of meat",
+        agents=[
+            Agent(),
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(
+                criteria=[
+                    "Agent should not ask more than two follow-up questions",
+                    "Agent should generate a recipe",
+                    "Recipe should include a list of ingredients",
+                    "Recipe should include step-by-step cooking instructions",
+                    "Recipe should be vegetarian and not include any sort of meat",
+                ]
+            ),
         ],
     )
-
-    # Run the scenario and get results
-    result = await scenario.run()
 
     # Assert for pytest to know whether the test passed
     assert result.success
@@ -78,33 +121,24 @@ async def test_vegetarian_recipe_agent():
 import litellm
 
 
-class VegetarianRecipeAgent:
-    def __init__(self):
-        self.history = []
+@scenario.cache()
+def vegetarian_recipe_agent(messages) -> scenario.AgentReturnTypes:
+    response = litellm.completion(
+        model="openai/gpt-4.1-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+                    You are a vegetarian recipe agent.
+                    Given the user request, ask AT MOST ONE follow-up question,
+                    then provide a complete recipe. Keep your responses concise and focused.
+                """,
+            },
+            *messages,
+        ],
+    )
 
-    @scenario_cache()
-    def run(self, message: str):
-        self.history.append({"role": "user", "content": message})
-
-        response = litellm.completion(
-            model="openai/gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": """
-                        You are a vegetarian recipe agent.
-                        Given the user request, ask AT MOST ONE follow-up question,
-                        then provide a complete recipe. Keep your responses concise and focused.
-                    """,
-                },
-                *self.history,
-            ],
-        )
-        message = response.choices[0].message  # type: ignore
-        self.history.append(message)
-
-        return [message]
-
+    return response.choices[0].message  # type: ignore
 ```
 
 Create a `.env` file and put your OpenAI API key in it:
@@ -123,42 +157,57 @@ This is how it will look like:
 
 [![asciicast](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
 
-You can find a fully working example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
+You can find the same code example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
 
-## Customize strategy and max_turns
+## Script-free Simulation
 
-You can customize how should the testing agent go about testing by defining a `strategy` field. You can also limit the maximum number of turns the scenario will take by setting the `max_turns` field (defaults to 10).
+By providing a User Simulator Agent and a description of the Scenario, the simulated user will automatically generate messages to the agent until the scenario is successful or the maximum number of turns is reached.
 
-For example, in this Lovable Clone scenario test:
+You can then use a Judge Agent to evaluate the scenario in real-time given certain criteria, at every turn, the Judge Agent will decide if it should let the simulation proceed or end it with a verdict.
+
+You can combine it with a script, to control for example the beginning of the conversation, or simply let it run scriptless, this is very useful to test an open case like a vibe coding assistant:
 
 ```python
-scenario = Scenario(
+result = await scenario.run(
     name="dog walking startup landing page",
     description="""
         the user wants to create a new landing page for their dog walking startup
 
         send the first message to generate the landing page, then a single follow up request to extend it, then give your final verdict
     """,
-    agent=lovable_agent,
-    criteria=[
-        "agent reads the files before go and making changes",
-        "agent modified the index.css file, not only the Index.tsx file",
-        "agent created a comprehensive landing page",
-        "agent extended the landing page with a new section",
-        "agent should NOT say it can't read the file",
-        "agent should NOT produce incomplete code or be too lazy to finish",
+    agents=[
+        LovableAgentAdapter(template_path=template_path),
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(
+            criteria=[
+                "agent reads the files before go and making changes",
+                "agent modified the index.css file, not only the Index.tsx file",
+                "agent created a comprehensive landing page",
+                "agent extended the landing page with a new section",
+                "agent should NOT say it can't read the file",
+                "agent should NOT produce incomplete code or be too lazy to finish",
+            ],
+        ),
     ],
-    max_turns=5,
+    max_turns=5, # optional
 )
-
-result = await scenario.run()
 ```
 
-You can find a fully working Lovable Clone example in [examples/test_lovable_clone.py](examples/test_lovable_clone.py).
+Check out the fully working Lovable Clone example in [examples/test_lovable_clone.py](examples/test_lovable_clone.py).
 
-## Specify a script for guiding the scenario
+## Full Control of the Conversation
 
-You can specify a script for guiding the scenario by passing a list of steps to the `script` field.
+You can specify a script for guiding the scenario by passing a list of steps to the `script` field, those steps are simply arbitrary functions that take the current state of the scenario as an argument, so you can do things like:
+
+- Control what the user says, or let it be generated automatically
+- Control what the agent says, or let it be generated automatically
+- Add custom assertions, for example making sure a tool was called
+- Add a custom evaluation, from an external library
+- Let the simulation proceed for a certain number of turns, and evaluate at each new turn
+- Trigger the judge agent to decide on a verdict
+- Add arbitrary messages like mock tool calls in the middle of the conversation
+
+Everything is possible, using the same simple structure:
 
 ```python
 @pytest.mark.agent_test
@@ -167,7 +216,7 @@ async def test_ai_assistant_agent():
     scenario = Scenario(
         name="false assumptions",
         description="""
-            The agent makes false assumption about being an ATM bank, and user corrects it
+            The agent makes false assumption that the user is talking about an ATM bank, and user corrects it that they actually mean river banks
         """,
         agent=AiAssistantAgentAdapter,
         criteria=[
@@ -184,13 +233,22 @@ async def test_ai_assistant_agent():
         [
             # Define existing history of messages
             scenario.user("how do I safely approach a bank?"),
+
             # Or let it be generate automatically
             scenario.agent(),
+
             # Add custom assertions, for example making sure a tool was called
             check_if_tool_was_called,
+
+            # Another user message
             scenario.user(),
-            # Let the simulation proceed for 2 more turns
-            scenario.proceed(turns=2),
+
+            # Let the simulation proceed for 2 more turns, print at every turn
+            scenario.proceed(
+                turns=2,
+                on_turn=lambda state: print(f"Turn {state.current_turn}: {state.messages}"),
+            ),
+
             # Time to make a judgment call
             scenario.judge(),
         ]

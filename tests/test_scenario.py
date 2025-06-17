@@ -354,7 +354,7 @@ async def test_scenario_accepts_custom_callbacks():
 
     scenario.configure(default_model="none")
 
-    def check_for_tool_calls(state: scenario.ScenarioExecutor) -> None:
+    def check_for_tool_calls(state: scenario.ScenarioState) -> None:
         assert state.last_message()["role"] == "tool"
 
     result = await scenario.run(
@@ -391,11 +391,11 @@ async def test_scenario_accepts_on_turn_and_on_step_callbacks():
 
     step_calls = 0
 
-    def check_for_tool_calls(state: scenario.ScenarioExecutor) -> None:
+    def check_for_tool_calls(state: scenario.ScenarioState) -> None:
         if state.current_turn > 1:
             assert state.last_message()["role"] == "tool"
 
-    def increment_step_calls(state: scenario.ScenarioExecutor) -> None:
+    def increment_step_calls(state: scenario.ScenarioState) -> None:
         nonlocal step_calls
         step_calls += 1
 

@@ -30,7 +30,6 @@ from scenario.utils import (
 from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionUserMessageParam,
-    ChatCompletionMessageToolCallParam,
 )
 
 from .types import AgentInput, AgentRole, ScenarioResult, ScriptStep
@@ -39,6 +38,7 @@ from .cache import context_scenario
 from .agent_adapter import AgentAdapter
 from .script import proceed
 from pksuid import PKSUID
+from .scenario_state import ScenarioState
 
 
 class ScenarioExecutor:
@@ -49,11 +49,7 @@ class ScenarioExecutor:
 
     config: ScenarioConfig
 
-    messages: List[ChatCompletionMessageParam]
-    thread_id: str
-    current_turn: int
-
-    _context: Optional[Dict[str, Any]]
+    _state: ScenarioState
     _total_start_time: float
     _pending_messages: Dict[int, List[ChatCompletionMessageParam]]
 
@@ -84,13 +80,8 @@ class ScenarioExecutor:
             cache_key=cache_key,
             debug=debug,
         )
-        self.config = (
-            ScenarioConfig.default_config.merge(config)
-            if ScenarioConfig.default_config
-            else config
-        )
+        self.config = (ScenarioConfig.default_config or ScenarioConfig()).merge(config)
 
-        self.current_turn = 0
         self.reset()
 
     @classmethod
@@ -139,21 +130,30 @@ class ScenarioExecutor:
             return result
 
     def reset(self):
-        self.messages = []
+        self._state = ScenarioState(
+            description=self.description,
+            messages=[],
+            thread_id=str(PKSUID("thread")),
+            current_turn=0,
+            config=self.config,
+            _executor=self,
+        )
+        # Pydantic doesn't actually set the _executor field from the constructor, as it's private, so we need to do it manually
+        self._state._executor = self
+
         self._pending_messages = {}
-        self.thread_id = str(PKSUID("thread"))
         self._total_start_time = time.time()
         self._agent_times = {}
 
         self._new_turn()
-        self.current_turn = 0
+        self._state.current_turn = 0
 
         context_scenario.set(self)
 
     def add_message(
         self, message: ChatCompletionMessageParam, from_agent_idx: Optional[int] = None
     ):
-        self.messages.append(message)
+        self._state.messages.append(message)
 
         # Broadcast the message to other agents
         for idx, _ in enumerate(self.agents):
@@ -178,7 +178,7 @@ class ScenarioExecutor:
             AgentRole.AGENT,
             AgentRole.JUDGE,
         ]
-        self.current_turn += 1
+        self._state.current_turn += 1
 
     async def step(self) -> Union[List[ChatCompletionMessageParam], ScenarioResult]:
         result = await self._step()
@@ -191,8 +191,8 @@ class ScenarioExecutor:
         go_to_next_turn=True,
         on_turn: Optional[
             Union[
-                Callable[["ScenarioExecutor"], None],
-                Callable[["ScenarioExecutor"], Awaitable[None]],
+                Callable[["ScenarioState"], None],
+                Callable[["ScenarioState"], Awaitable[None]],
             ]
         ] = None,
     ) -> Union[List[ChatCompletionMessageParam], ScenarioResult, None]:
@@ -203,9 +203,9 @@ class ScenarioExecutor:
             self._new_turn()
 
             if on_turn:
-                await await_if_awaitable(on_turn(self))
+                await await_if_awaitable(on_turn(self._state))
 
-            if self.current_turn >= (self.config.max_turns or 10):
+            if self._state.current_turn >= (self.config.max_turns or 10):
                 return self._reached_max_turns()
 
         current_role = self._pending_roles_on_turn[0]
@@ -241,7 +241,7 @@ class ScenarioExecutor:
 
         return ScenarioResult(
             success=False,
-            messages=self.messages,
+            messages=self._state.messages,
             reasoning=error_message
             or f"Reached maximum turns ({self.config.max_turns or 10}) without conclusion",
             total_time=time.time() - self._total_start_time,
@@ -265,7 +265,7 @@ class ScenarioExecutor:
         self.reset()
 
         for script_step in self.script:
-            callable = script_step(self)
+            callable = script_step(self._state)
             if isinstance(callable, Awaitable):
                 result = await callable
             else:
@@ -325,11 +325,11 @@ class ScenarioExecutor:
             agent_response = agent.call(
                 AgentInput(
                     # TODO: test thread_id
-                    thread_id=self.thread_id,
-                    messages=self.messages,
+                    thread_id=self._state.thread_id,
+                    messages=self._state.messages,
                     new_messages=self._pending_messages.get(idx, []),
                     judgment_request=request_judgment,
-                    scenario_state=self,
+                    scenario_state=self._state,
                 )
             )
             if not isinstance(agent_response, Awaitable):
@@ -372,32 +372,6 @@ class ScenarioExecutor:
         else:
             return ""
 
-    # State access utils
-
-    def last_message(self) -> ChatCompletionMessageParam:
-        if len(self.messages) == 0:
-            raise ValueError("No messages found")
-        return self.messages[-1]
-
-    def last_user_message(self) -> ChatCompletionUserMessageParam:
-        user_messages = [m for m in self.messages if m["role"] == "user"]
-        if not user_messages:
-            raise ValueError("No user messages found")
-        return user_messages[-1]
-
-    def last_tool_call(
-        self, tool_name: str
-    ) -> Optional[ChatCompletionMessageToolCallParam]:
-        for message in reversed(self.messages):
-            if message["role"] == "assistant" and "tool_calls" in message:
-                for tool_call in message["tool_calls"]:
-                    if tool_call["function"]["name"] == tool_name:
-                        return tool_call
-        return None
-
-    def has_tool_call(self, tool_name: str) -> bool:
-        return self.last_tool_call(tool_name) is not None
-
     # Scripting utils
 
     async def message(self, message: ChatCompletionMessageParam) -> None:
@@ -430,14 +404,14 @@ class ScenarioExecutor:
         turns: Optional[int] = None,
         on_turn: Optional[
             Union[
-                Callable[["ScenarioExecutor"], None],
-                Callable[["ScenarioExecutor"], Awaitable[None]],
+                Callable[["ScenarioState"], None],
+                Callable[["ScenarioState"], Awaitable[None]],
             ]
         ] = None,
         on_step: Optional[
             Union[
-                Callable[["ScenarioExecutor"], None],
-                Callable[["ScenarioExecutor"], Awaitable[None]],
+                Callable[["ScenarioState"], None],
+                Callable[["ScenarioState"], Awaitable[None]],
             ]
         ] = None,
     ) -> Optional[ScenarioResult]:
@@ -448,18 +422,18 @@ class ScenarioExecutor:
                 go_to_next_turn=(
                     turns is None
                     or initial_turn is None
-                    or (self.current_turn + 1 < initial_turn + turns)
+                    or (self._state.current_turn + 1 < initial_turn + turns)
                 ),
             )
 
             if initial_turn is None:
-                initial_turn = self.current_turn
+                initial_turn = self._state.current_turn
 
             if next_message is None:
                 break
 
             if on_step:
-                await await_if_awaitable(on_step(self))
+                await await_if_awaitable(on_step(self._state))
 
             if isinstance(next_message, ScenarioResult):
                 return next_message
@@ -467,7 +441,7 @@ class ScenarioExecutor:
     async def succeed(self, reasoning: Optional[str] = None) -> ScenarioResult:
         return ScenarioResult(
             success=True,
-            messages=self.messages,
+            messages=self._state.messages,
             reasoning=reasoning
             or "Scenario marked as successful with scenario.succeed()",
         )
@@ -475,7 +449,7 @@ class ScenarioExecutor:
     async def fail(self, reasoning: Optional[str] = None) -> ScenarioResult:
         return ScenarioResult(
             success=False,
-            messages=self.messages,
+            messages=self._state.messages,
             reasoning=reasoning or "Scenario marked as failed with scenario.fail()",
         )
 

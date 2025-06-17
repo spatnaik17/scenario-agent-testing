@@ -8,6 +8,7 @@ from joblib import Memory
 import json
 
 import wrapt
+from scenario.types import AgentInput
 from scenario.utils import SerializableWithStringFallback
 
 if TYPE_CHECKING:
@@ -46,6 +47,12 @@ def scenario_cache(ignore=[]):
             if arg in all_args:
                 del all_args[arg]
 
+        for key, value in all_args.items():
+            if isinstance(value, AgentInput):
+                scenario_state = value.scenario_state.model_dump(exclude={"thread_id"})
+                all_args[key] = value.model_dump(exclude={"thread_id"})
+                all_args[key]["scenario_state"] = scenario_state
+
         cache_key = json.dumps(
             {
                 "cache_key": scenario.config.cache_key,
@@ -55,7 +62,11 @@ def scenario_cache(ignore=[]):
             cls=SerializableWithStringFallback,
         )
 
-        return _cached_call(wrapped, args, kwargs, cache_key=cache_key)
+        # if is an async function, we need to wrap it in a sync function
+        if inspect.iscoroutinefunction(wrapped):
+            return _async_cached_call(wrapped, args, kwargs, cache_key=cache_key)
+        else:
+            return _cached_call(wrapped, args, kwargs, cache_key=cache_key)
 
     return wrapper
 
@@ -63,3 +74,8 @@ def scenario_cache(ignore=[]):
 @memory.cache(ignore=["func", "args", "kwargs"])
 def _cached_call(func: Callable, args, kwargs, cache_key):
     return func(*args, **kwargs)
+
+
+@memory.cache(ignore=["func", "args", "kwargs"])
+async def _async_cached_call(func: Callable, args, kwargs, cache_key):
+    return await func(*args, **kwargs)

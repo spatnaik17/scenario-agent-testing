@@ -118,7 +118,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
                 messages=messages,
                 temperature=self.temperature,
                 max_tokens=self.max_tokens,
-                tools=[]
+                tools=[],
             ),
         )
 

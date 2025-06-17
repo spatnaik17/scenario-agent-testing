@@ -200,6 +200,7 @@ def convert_agent_return_types_to_openai_messages(
                     exclude_unset=True,
                     exclude_none=True,
                     exclude_defaults=True,
+                    warnings=False,
                 ),
             )
         else:

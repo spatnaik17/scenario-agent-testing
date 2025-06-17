@@ -52,41 +52,41 @@ async def test_advance_a_step():
         ],
     )
 
-    assert executor.messages == [], "starts with no messages"
+    assert executor._state.messages == [], "starts with no messages"
 
     # User
     await executor.step()
 
-    assert executor.messages == [
+    assert executor._state.messages == [
         {"role": "user", "content": "Hi, I'm a user"},
     ], "starts with the user message"
 
-    assert executor.current_turn == 0, "stays at turn 0 until agent replied"
+    assert executor._state.current_turn == 0, "stays at turn 0 until agent replied"
 
     # Assistent
     await executor.step()
 
-    assert executor.messages == [
+    assert executor._state.messages == [
         {"role": "user", "content": "Hi, I'm a user"},
         {"role": "assistant", "content": "Hey, how can I help you?"},
     ], "adds the assistant message"
 
-    assert executor.current_turn == 0, "stays at turn 0 until next step"
+    assert executor._state.current_turn == 0, "stays at turn 0 until next step"
 
     # Judge
     await executor.step()
 
-    assert executor.messages == [
+    assert executor._state.messages == [
         {"role": "user", "content": "Hi, I'm a user"},
         {"role": "assistant", "content": "Hey, how can I help you?"},
     ], "keeps the same messages because no judgment was made"
 
-    assert executor.current_turn == 0, "stays at turn 0 until next step"
+    assert executor._state.current_turn == 0, "stays at turn 0 until next step"
 
     # Next user step
     await executor.step()
 
-    assert executor.current_turn == 1, "increments turn"
+    assert executor._state.current_turn == 1, "increments turn"
 
 
 @pytest.mark.asyncio
@@ -159,7 +159,7 @@ async def test_sends_the_right_new_messages():
     await executor.step()
     await executor.step()
 
-    assert executor.current_turn == 0
+    assert executor._state.current_turn == 0
 
     # Run a second turn to trigger the new_messages assertion
     await executor.step()
@@ -191,12 +191,12 @@ async def test_for_tool_calls():
         }
     )
 
-    assert executor.last_tool_call("foo") == {
+    assert executor._state.last_tool_call("foo") == {
         "id": "123",
         "function": {"name": "foo", "arguments": "{}"},
         "type": "function",
     }
-    assert executor.last_tool_call("bar") is None
+    assert executor._state.last_tool_call("bar") is None
 
-    assert executor.has_tool_call("foo")
-    assert not executor.has_tool_call("bar")
+    assert executor._state.has_tool_call("foo")
+    assert not executor._state.has_tool_call("bar")

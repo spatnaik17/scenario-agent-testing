@@ -8,6 +8,7 @@ from .config import ScenarioConfig
 
 # Then import modules with dependencies
 from .scenario_executor import ScenarioExecutor
+from .scenario_state import ScenarioState
 from .agent_adapter import AgentAdapter
 from .judge_agent import JudgeAgent
 from .user_simulator_agent import UserSimulatorAgent
@@ -47,6 +48,7 @@ __all__ = [
 
     # Classes
     "ScenarioExecutor",
+    "ScenarioState",
     "AgentAdapter",
     "UserSimulatorAgent",
     "JudgeAgent",
