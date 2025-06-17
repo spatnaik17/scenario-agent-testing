@@ -478,7 +478,11 @@ class ScenarioExecutor:
         self, role: AgentRole
     ) -> Tuple[int, Optional[AgentAdapter]]:
         for idx, agent in enumerate(self.agents):
-            if role == agent.role and agent in self._pending_agents_on_turn:
+            if (
+                role == agent.role
+                and agent in self._pending_agents_on_turn
+                and agent.role in self._pending_roles_on_turn
+            ):
                 return idx, agent
         return -1, None
 
@@ -710,15 +714,24 @@ class ScenarioExecutor:
             reasoning=reasoning or "Scenario marked as failed with scenario.fail()",
         )
 
+    def _consume_until_role(self, role: AgentRole) -> None:
+        while len(self._pending_roles_on_turn) > 0:
+            next_role = self._pending_roles_on_turn[0]
+            if next_role == role:
+                break
+            self._pending_roles_on_turn.pop(0)
+
     async def _script_call_agent(
         self,
         role: AgentRole,
         content: Optional[Union[str, ChatCompletionMessageParam]] = None,
         request_judgment: bool = False,
     ) -> Optional[ScenarioResult]:
+        self._consume_until_role(role)
         idx, next_agent = self._next_agent_for_role(role)
         if not next_agent:
             self._new_turn()
+            self._consume_until_role(role)
             idx, next_agent = self._next_agent_for_role(role)
 
             if not next_agent:
@@ -740,7 +753,6 @@ class ScenarioExecutor:
                 )
 
         self._pending_agents_on_turn.remove(next_agent)
-        self._pending_roles_on_turn.remove(role)
 
         if content:
             if isinstance(content, str):

@@ -2,7 +2,7 @@ import pytest
 import scenario
 from scenario import JudgeAgent, UserSimulatorAgent
 from scenario.agent_adapter import AgentAdapter
-from scenario.types import AgentInput, AgentReturnTypes, ScenarioResult
+from scenario.types import AgentInput, AgentReturnTypes, AgentRole, ScenarioResult
 
 from scenario.scenario_executor import ScenarioExecutor
 
@@ -200,3 +200,30 @@ async def test_for_tool_calls():
 
     assert executor._state.has_tool_call("foo")
     assert not executor._state.has_tool_call("bar")
+
+
+@pytest.mark.asyncio
+async def test_eliminate_pending_roles_in_order_also_on_scripted_scenarios():
+    executor = ScenarioExecutor(
+        name="test name",
+        description="test description",
+        agents=[
+            MockAgent(),
+            MockUserSimulatorAgent(model="none"),
+            MockJudgeAgent(model="none", criteria=["test criteria"]),
+        ],
+    )
+    await executor.agent()
+    assert executor._state.current_turn == 0, "current turn should be 0"
+    assert executor._pending_roles_on_turn == [
+        AgentRole.AGENT,
+        AgentRole.JUDGE
+    ], "user should be removed from the first turn already"
+
+    await executor.user()
+    assert executor._state.current_turn == 1, "then turn should be incremented already"
+    assert executor._pending_roles_on_turn == [
+        AgentRole.USER,
+        AgentRole.AGENT,
+        AgentRole.JUDGE,
+    ], "new turn started with all roles back"
