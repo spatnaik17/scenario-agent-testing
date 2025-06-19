@@ -29,23 +29,23 @@ export default defineConfig({
       items: [
         {
           text: "Concepts",
-          link: "/scenario/concepts",
+          link: "/basics/concepts",
         },
         {
           text: "Writing Scenarios",
-          link: "/scenario/writing-scenarios",
+          link: "/basics/writing-scenarios",
         },
         {
           text: "Scripted Simulations",
-          link: "/scenario/scripted-simulations",
+          link: "/basics/scripted-simulations",
         },
         {
           text: "Cache",
-          link: "/scenario/cache",
+          link: "/basics/cache",
         },
         {
           text: "Debug Mode",
-          link: "/scenario/debug-mode",
+          link: "/basics/debug-mode",
         },
       ],
     },
