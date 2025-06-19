@@ -16,6 +16,7 @@ from typing import (
     Set,
     Tuple,
     Union,
+    TypedDict,
 )
 import time
 import termcolor
@@ -24,11 +25,13 @@ import concurrent.futures
 
 from scenario.config import ScenarioConfig
 from scenario._utils import (
-    await_if_awaitable,
     check_valid_return_type,
     convert_agent_return_types_to_openai_messages,
     print_openai_messages,
     show_spinner,
+    await_if_awaitable,
+    get_or_create_batch_run_id,
+    generate_scenario_run_id,
 )
 from openai.types.chat import (
     ChatCompletionMessageParam,
@@ -43,6 +46,17 @@ from .agent_adapter import AgentAdapter
 from .script import proceed
 from pksuid import PKSUID
 from .scenario_state import ScenarioState
+from .events import (
+    ScenarioEventBus, 
+    ScenarioRunStartedEvent, 
+    ScenarioMessageSnapshotEvent, 
+    ScenarioRunFinishedEvent, 
+    ScenarioRunStartedEventMetadata, 
+    ScenarioRunFinishedEventResults, 
+    ScenarioRunFinishedEventVerdict, 
+    ScenarioRunFinishedEventStatus, 
+    convert_messages_to_ag_ui_messages,
+)
 
 
 class ScenarioExecutor:
@@ -117,6 +131,10 @@ class ScenarioExecutor:
     _pending_agents_on_turn: Set[AgentAdapter] = set()
     _agent_times: Dict[int, float] = {}
 
+    event_bus: ScenarioEventBus
+
+    batch_run_id: str
+
     def __init__(
         self,
         name: str,
@@ -128,6 +146,7 @@ class ScenarioExecutor:
         verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,
         debug: Optional[bool] = None,
+        event_bus: Optional[ScenarioEventBus] = None,
     ):
         """
         Initialize a scenario executor.
@@ -148,6 +167,27 @@ class ScenarioExecutor:
                       Overrides global configuration for this scenario.
             debug: Whether to enable debug mode with step-by-step execution.
                   Overrides global configuration for this scenario.
+            event_reporter: Optional event reporter for the scenario
+
+        Example:
+            ```python
+            executor = ScenarioExecutor(
+                name="customer service test",
+                description="Customer has a billing question and needs help",
+                agents=[
+                    customer_service_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=[
+                        "Agent is polite and professional",
+                        "Agent addresses the billing question",
+                        "Agent provides clear next steps"
+                    ])
+                ],
+                max_turns=15,
+                verbose=True,
+                debug=False
+            )
+            ```
         """
         self.name = name
         self.description = description
@@ -163,6 +203,10 @@ class ScenarioExecutor:
         self.config = (ScenarioConfig.default_config or ScenarioConfig()).merge(config)
 
         self.reset()
+
+        self.event_bus = event_bus or ScenarioEventBus()
+
+        self.batch_run_id = get_or_create_batch_run_id()
 
     @classmethod
     async def run(
@@ -265,6 +309,7 @@ class ScenarioExecutor:
                 try:
                     return loop.run_until_complete(scenario._run())
                 finally:
+                    loop.run_until_complete(scenario.event_bus.drain())
                     loop.close()
 
             # Run the function in the thread pool and await its result
@@ -348,6 +393,8 @@ class ScenarioExecutor:
             if idx not in self._pending_messages:
                 self._pending_messages[idx] = []
             self._pending_messages[idx].append(message)
+
+        self._emit_message_snapshot_event()
 
     def add_messages(
         self,
@@ -486,30 +533,53 @@ class ScenarioExecutor:
         Returns:
             ScenarioResult containing the test outcome
         """
+        scenario_run_id = generate_scenario_run_id()
 
-        if self.config.verbose:
-            print("")  # new line
+        try:
+            await self.event_bus.listen()
+            self._emit_run_started_event(scenario_run_id)
 
-        self.reset()
+            if self.config.verbose:
+                print("")  # new line
 
-        for script_step in self.script:
-            callable = script_step(self._state)
-            if isinstance(callable, Awaitable):
-                result = await callable
-            else:
-                result = callable
+            self.reset()
 
-            if isinstance(result, ScenarioResult):
-                return result
+            for script_step in self.script:
+                callable = script_step(self._state)
+                if isinstance(callable, Awaitable):
+                    result = await callable
+                else:
+                    result = callable
 
-        return self._reached_max_turns(
-            """Reached end of script without conclusion, add one of the following to the end of the script:
+                if isinstance(result, ScenarioResult):
+                    status = ScenarioRunFinishedEventStatus.SUCCESS if result.success else ScenarioRunFinishedEventStatus.FAILED
+                    self._emit_run_finished_event(scenario_run_id, result, status)
+                    return result
+
+            result = self._reached_max_turns(
+                """Reached end of script without conclusion, add one of the following to the end of the script:
 
 - `scenario.proceed()` to let the simulation continue to play out
 - `scenario.judge()` to force criteria judgement
 - `scenario.succeed()` or `scenario.fail()` to end the test with an explicit result
-            """
-        )
+                """
+            )
+
+            status = ScenarioRunFinishedEventStatus.SUCCESS if result.success else ScenarioRunFinishedEventStatus.FAILED
+            self._emit_run_finished_event(scenario_run_id, result, status)
+            return result
+
+        except Exception as e:
+            # Publish failure event before propagating the error
+            error_result = ScenarioResult(
+                success=False,
+                messages=self._state.messages,
+                reasoning=f"Scenario failed with error: {str(e)}",
+                total_time=time.time() - self._total_start_time,
+                agent_time=0,
+            )
+            self._emit_run_finished_event(scenario_run_id, error_result, ScenarioRunFinishedEventStatus.ERROR)
+            raise  # Re-raise the exception after cleanup
 
     async def _call_agent(
         self, idx: int, role: AgentRole, request_judgment: bool = False
@@ -743,3 +813,130 @@ class ScenarioExecutor:
         )
         if isinstance(result, ScenarioResult):
             return result
+
+    # Event handling methods
+
+    class _CommonEventFields(TypedDict):
+        """
+        Common fields shared across all scenario events.
+        
+        These fields provide consistent identification and timing information
+        for all events emitted during scenario execution.
+        
+        Attributes:
+            batch_run_id: Unique identifier for the batch of scenario runs
+            scenario_run_id: Unique identifier for this specific scenario run
+            scenario_id: Human-readable name/identifier for the scenario
+            timestamp: Unix timestamp in milliseconds when the event occurred
+        """
+        batch_run_id: str
+        scenario_run_id: str
+        scenario_id: str
+        timestamp: int
+
+    def _create_common_event_fields(self, scenario_run_id: str) -> _CommonEventFields:
+        """
+        Create common fields used across all scenario events.
+        
+        This method generates the standard fields that every scenario event
+        must include for proper identification and timing.
+        
+        Args:
+            scenario_run_id: Unique identifier for the current scenario run
+            
+        Returns:
+            Dictionary containing common event fields with current timestamp
+        """
+        return {
+            "batch_run_id": self.batch_run_id,
+            "scenario_run_id": scenario_run_id,
+            "scenario_id": self.name,
+            "timestamp": int(time.time() * 1000),
+        }
+
+    def _emit_run_started_event(self, scenario_run_id: str) -> None:
+        """
+        Emit a scenario run started event.
+        
+        This event is published when a scenario begins execution. It includes
+        metadata about the scenario such as name and description, and is used
+        to track the start of scenario runs in monitoring systems.
+        
+        Args:
+            scenario_run_id: Unique identifier for the current scenario run
+            
+        Note:
+            This event is automatically published at the beginning of `_run()`
+            and signals the start of scenario execution to any event listeners.
+        """
+        common_fields = self._create_common_event_fields(scenario_run_id)
+        metadata = ScenarioRunStartedEventMetadata(
+            name=self.name,
+            description=self.description,
+        )
+        
+        event = ScenarioRunStartedEvent(
+            **common_fields,
+            metadata=metadata,
+        )
+        self.event_bus.publish(event)
+
+    def _emit_message_snapshot_event(self) -> None:
+        """
+        Emit a message snapshot event.
+        
+        This event captures the current state of the conversation during
+        scenario execution. It's published whenever messages are added to
+        the conversation, allowing real-time tracking of scenario progress.
+        
+        Note:
+            This event is automatically published by `add_message()` and
+            `add_messages()` to provide continuous visibility into scenario
+            execution state.
+        """
+        common_fields = self._create_common_event_fields(self.batch_run_id)
+        
+        event = ScenarioMessageSnapshotEvent(
+            **common_fields,
+            messages=convert_messages_to_ag_ui_messages(self._state.messages),
+        )
+        self.event_bus.publish(event)
+
+    def _emit_run_finished_event(
+        self, 
+        scenario_run_id: str, 
+        result: ScenarioResult, 
+        status: ScenarioRunFinishedEventStatus
+    ) -> None:
+        """
+        Emit a scenario run finished event.
+        
+        This event is published when a scenario completes execution, whether
+        successfully or with an error. It includes the final results, verdict,
+        and reasoning for the scenario outcome.
+        
+        Args:
+            scenario_run_id: Unique identifier for the current scenario run
+            result: The final scenario result containing success/failure status
+            status: The execution status (SUCCESS, FAILED, or ERROR)
+            
+        Note:
+            This event is automatically published at the end of `_run()` and
+            signals the completion of scenario execution to any event listeners.
+            It includes detailed results for monitoring and analysis purposes.
+        """
+        common_fields = self._create_common_event_fields(scenario_run_id)
+        
+        results = ScenarioRunFinishedEventResults(
+            verdict=ScenarioRunFinishedEventVerdict.SUCCESS if result.success else ScenarioRunFinishedEventVerdict.FAILURE,
+            reasoning=result.reasoning or "",
+            met_criteria=result.passed_criteria,
+            unmet_criteria=result.failed_criteria,
+        )
+        
+        event = ScenarioRunFinishedEvent(
+            **common_fields,
+            status=status,
+            results=results,
+        )
+        self.event_bus.publish(event)
