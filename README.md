@@ -26,24 +26,31 @@ Scenario is an Agent Testing Framework based on simulations, it can:
 This is how a simple simulation with tool check looks like with Scenario:
 
 ```python
+# Define any custom assertions
 def check_for_weather_tool_call(state: scenario.ScenarioState):
     assert state.has_tool_call("get_current_weather")
 
 result = await scenario.run(
     name="checking the weather",
+
+    # Define the prompt to guide the simulation
     description="""
         The user is planning a boat trip from Barcelona to Rome,
         and is wondering what the weather will be like.
     """,
+
+    # Define the agents that will play this simulation
     agents=[
         WeatherAgent(),
         scenario.UserSimulatorAgent(model="openai/gpt-4.1-mini"),
     ],
+
+    # (Optional) Control the simulation
     script=[
-        scenario.user(),
-        scenario.agent(),
-        check_for_weather_tool_call,
-        scenario.succeed(),
+        scenario.user(), # let the user simulator generate a user message
+        scenario.agent(), # agent responds
+        check_for_weather_tool_call, # check for tool call after the first agent response
+        scenario.succeed(), # simulation ends successfully
     ],
 )
 
