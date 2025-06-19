@@ -1,0 +1,150 @@
+# Debug Mode
+
+Debug mode allows you to step through scenarios interactively, inspecting agent responses and intervening with your own inputs. This is invaluable for understanding how your agent behaves and debugging issues in complex conversations.
+
+## What is Debug Mode?
+
+Debug mode pauses scenario execution before each user message, allowing you to:
+
+- **Step through conversations**: See exactly how the dialogue unfolds
+- **Intervene with custom messages**: Override the user simulator with your own inputs
+- **Inspect agent responses**: Examine how your agent responds to different inputs
+- **Test edge cases**: Try specific inputs that might cause issues
+- **Understand failure modes**: See where and why scenarios fail
+
+:::note
+Debug mode only pauses before user messages, not agent or judge responses. This allows you to control the user input while observing how agents react.
+:::
+
+:::info
+Debug mode is only available in the Python SDK for now, TypeScript support is coming soon.
+:::
+
+## Enabling Debug Mode
+
+### 1. Global Configuration
+
+Enable debug mode for all scenarios:
+
+```python
+import scenario
+
+# Enable debug mode globally
+scenario.configure(debug=True)
+
+# Run any scenario - it will now be interactive
+result = await scenario.run(
+    name="debug test",
+    description="User asks for help",
+    agents=[
+        MyAgent(),
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=["Agent is helpful"])
+    ]
+)
+```
+
+### 2. Per-Scenario Configuration
+
+Enable debug mode for specific scenarios:
+
+```python
+# Debug only this scenario
+result = await scenario.run(
+    name="debug specific test",
+    description="User has a complex request",
+    agents=[MyAgent(), scenario.UserSimulatorAgent(), scenario.JudgeAgent()],
+    debug=True  # Enable debug mode just for this test
+)
+```
+
+### 3. Command Line (with pytest)
+
+Enable debug mode from the command line:
+
+```bash
+# Enable debug mode for all tests
+pytest tests/ --debug -s
+
+# Run specific test with debug mode
+pytest tests/test_my_agent.py::test_specific_scenario --debug -s
+```
+
+:::tip
+Always use the `-s` flag with pytest in debug mode to see the interactive prompts properly.
+:::
+
+## Using Debug Mode
+
+### Interactive Prompts
+
+When debug mode is enabled, you'll see prompts like this:
+
+```
+[Scenario: weather query] [Debug Mode] Press enter to continue or type a message to send
+[Scenario: weather query] User:
+```
+
+You have two options:
+
+1. **Press Enter**: Let the user simulator generate the next message automatically
+2. **Type a message**: Override the user simulator with your custom input
+
+### Example Session
+
+Here's what a debug session looks like:
+
+```bash
+$ pytest tests/test_weather_agent.py --debug -s
+
+[Scenario: weather query] [Debug Mode] Press enter to continue or type a message to send
+[Scenario: weather query] User: What's the weather like today?
+
+[Scenario: weather query] Agent: I'd be happy to help you with the weather! However, I need to know your location first. Could you please tell me what city or area you're asking about?
+
+[Scenario: weather query] [Debug Mode] Press enter to continue or type a message to send
+[Scenario: weather query] User: I'm in New York
+
+[Scenario: weather query] Agent: Let me get the current weather information for New York.
+
+🔧 Tool Call: get_current_weather(city="New York")
+📋 Tool Response: {"temperature": "72°F", "condition": "partly cloudy", "humidity": "65%"}
+
+[Scenario: weather query] Agent: The current weather in New York is partly cloudy with a temperature of 72°F and humidity at 65%. It's quite pleasant today! Is there anything specific about the weather you'd like to know more about?
+
+[Scenario: weather query] [Debug Mode] Press enter to continue or type a message to send
+[Scenario: weather query] User:
+
+✓ Scenario completed successfully
+```
+
+## Combining Debug Mode with Scripts
+
+Debug mode works also with scripted scenarios:
+
+```python
+def check_tool_call(state):
+    assert state.has_tool_call("get_weather"), "Agent should call weather tool"
+
+result = await scenario.run(
+    name="scripted debug test",
+    description="User asks about weather",
+    agents=[WeatherAgent(), scenario.UserSimulatorAgent(), scenario.JudgeAgent()],
+    debug=True,
+    script=[
+        scenario.user(),  # Debug prompt appears here
+        scenario.agent(),
+        check_tool_call,  # Validation runs automatically
+        scenario.user(),  # Another debug prompt
+        scenario.succeed()
+    ]
+)
+```
+
+## Next Steps
+
+Now that you understand debug mode, you're ready to explore agent integration:
+
+- [Agent Integration](/agent-integration) - Learn how to connect different types of agents
+- [Getting Started](/getting-started) - Review the basics if needed
+- Check out more [examples](https://github.com/langwatch/scenario/tree/main/examples) on GitHub

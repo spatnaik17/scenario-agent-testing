@@ -1,0 +1,22 @@
+{
+  "name": "scenario-docs",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vocs dev",
+    "build": "vocs build",
+    "preview": "vocs preview",
+    "build:preview": "vocs build --preview && vocs preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.518.0",
+    "react": "latest",
+    "react-dom": "latest",
+    "vocs": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "typescript": "latest"
+  }
+}

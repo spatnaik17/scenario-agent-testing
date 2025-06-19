@@ -1,0 +1,128 @@
+import { EmbeddedScript } from "../../components/EmbeddedScript";
+import { RefLink } from "../../components/RefLink";
+
+# Getting Started - Your First Scenario [A scenario is a test for a situation that your agent must be able to handle]
+
+## Installation
+
+Install Scenario, along with a test runner (e.g. pytest or vitest):
+
+:::code-group
+
+```bash [python]
+uv add langwatch-scenario pytest
+```
+
+```bash [typescript]
+npm install @langwatch/scenario vitest
+```
+
+:::
+
+## Quick Start
+
+Let's create your first scenario test. This example shows how to test a simple vegetarian recipe agent:
+
+### 1. Create your first test
+
+Create a file called `test_my_agent.py`:
+
+```python
+import pytest
+import scenario
+import litellm
+
+# Configure the default model for simulations
+scenario.configure(default_model="openai/gpt-4.1-mini")
+
+@pytest.mark.agent_test
+@pytest.mark.asyncio
+async def test_vegetarian_recipe_agent():
+    # 1. Create your agent adapter
+    class RecipeAgent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+            return vegetarian_recipe_agent(input.messages)
+
+    # 2. Run the scenario
+    result = await scenario.run(
+        name="dinner recipe request",
+        description="""
+            It's saturday evening, the user is very hungry and tired,
+            but have no money to order out, so they are looking for a recipe.
+        """,
+        agents=[
+            RecipeAgent(),
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(criteria=[
+                "Agent should not ask more than two follow-up questions",
+                "Agent should generate a recipe",
+                "Recipe should include a list of ingredients",
+                "Recipe should include step-by-step cooking instructions",
+                "Recipe should be vegetarian and not include any sort of meat",
+            ])
+        ],
+    )
+
+    # 3. Assert the result
+    assert result.success
+
+# Example agent implementation using litellm
+@scenario.cache()
+def vegetarian_recipe_agent(messages) -> scenario.AgentReturnTypes:
+    response = litellm.completion(
+        model="openai/gpt-4.1-mini",
+        messages=[
+            {
+                "role": "system",
+                "content": """
+                    You are a vegetarian recipe agent.
+                    Given the user request, ask AT MOST ONE follow-up question,
+                    then provide a complete recipe. Keep your responses concise and focused.
+                """,
+            },
+            *messages,
+        ],
+    )
+    return response.choices[0].message
+```
+
+### 2. Set up your environment
+
+Create a `.env` file with your OpenAI API key:
+
+```bash
+OPENAI_API_KEY=<your-api-key>
+```
+
+### 3. Run your test
+
+```bash
+uv run pytest -s test_my_agent.py
+```
+
+You should see output showing the conversation between the simulated user and your agent, followed by the judge's evaluation:
+
+<EmbeddedScript id="asciicast-nvO5GWGzqKTTCd8gtNSezQw11" src="https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11.js" />
+
+## What happened?
+
+In this example:
+
+1. **Agent Integration**: You created an <RefLink link="agent_adapter.html#scenario.agent_adapter.AgentAdapter">`AgentAdapter`</RefLink> that wraps your agent function
+2. **Simulation**: The <RefLink link="user_simulator_agent.html">`UserSimulatorAgent`</RefLink> automatically generated realistic user messages based on the scenario description
+3. **Evaluation**: The <RefLink link="judge_agent.html">`JudgeAgent`</RefLink> evaluated the conversation against your criteria
+4. **Caching**: The <RefLink link="index.html#scenario.cache">`@scenario.cache()`</RefLink> decorator made your agent calls deterministic for testing
+
+## Key Concepts
+
+- **Scenarios**: Test cases that describe the situation and expected behavior
+- **Agent Under Test**: Your agent being tested on the scenario
+- **User Simulator Agent**: Agent that simulates user messages to interact with the agent under test
+- **Judge Agent**: Agent that decides if the conversation should proceed or not, while evaluating it against your criteria
+- **Script**: Optional way to control the exact flow of conversation
+
+## Next Steps
+
+- Learn about [Scenario Basics](/scenario/concepts) to understand the framework deeply
+- Explore [Agent Integration](/agent-integration) to connect your existing agents
+- Check out more [examples](https://github.com/langwatch/scenario/tree/main/examples) on GitHub

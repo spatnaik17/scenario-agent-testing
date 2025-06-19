@@ -1,0 +1,51 @@
+# Simulation-Based Testing [Multi-agent applications require a new approach to testing]
+
+Traditional evaluation methods, designed for static, single-turn LLMs, are not enough. Agents are stateful, dynamic systems. They make decisions over time, recover from errors, and adapt to new information. To build robust, autonomous agents, we need to evaluate them with the same rigor we use to design their architecture.
+
+The goal with Scenario simulations isn't just to test agents, but to build a feedback loop that drives continuous improvement.
+
+## The Limitations of Traditional Evaluation
+
+Most evaluations are based on dataset, with a static set of cases, those hard to get specially when you are just getting started, they often require a great amount of examples to be valuable, and an expected answer to be provided, but more than anything, they are static, like input to output, or query to expected_contexts.
+
+Agents, however, aren't simple input-output functions. They are processes. An agent behaves like a program, executing a sequence of operations, using tools, and maintaining state.
+
+### Evaluation dataset (single input-output pairs):
+| query | expected_answer |
+|-------|------------------|
+| What is your refund policy? | We offer a 30-day money-back guarantee on all purchases. |
+| How do I cancel my subscription? | You can cancel your subscription by logging into your account and clicking the "Cancel Subscription" button. |
+
+❌ Doesn't consider the conversational flow\
+❌ Can't specify how middle steps should be evaluated\
+❌ Hard to interpret and debug\
+❌ Ignores user experience aspects\
+❌ Hard to come up with a good dataset
+
+### Agent simulation (full multi-turn descriptions):
+```python
+script=[
+  scenario.user("hey I have a problem with my order"),
+  scenario.agent(),
+  expect_ticket_created()
+  expect_ticket_label("ecommerce")
+  scenario.user("i want a refund!"),
+  scenario.agent()
+  expect_tool_call("search_policy")
+  scenario.user("this is ridiculous! let me talk to a human being")
+  scenario.agent()
+  expect_tool_call("escalate_to_human")
+]
+```
+
+✅ Describes the entire conversation\
+✅ Explicitly evaluates in-between steps\
+✅ Easy to interpret and debug\
+✅ Easy to replicate and reproduce an issue found in production\
+✅ Can run in autopilot for simulating a variety of inputs
+
+**This doesn't mean you should stop doing evaluations**, in fact, having evaluations and simulations together is what composes your full agent test suite:
+
+- Use evaluations for testing the smaller parts that compose the agent, where a more "machine learning" approach is required, for optimizing a specific LLM call or retrieval for example.
+
+- Use simulation-based testing for proving the agent's behavior is correct end-to-end, replicate specific edge cases, and guide your agent's development without regressions.

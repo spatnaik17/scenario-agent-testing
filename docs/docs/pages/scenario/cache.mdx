@@ -1,0 +1,198 @@
+import { RefLink } from "../../components/RefLink";
+
+# Cache [Make your scenario tests deterministic and faster by caching LLM calls and other non-deterministic operations]
+
+Scenario's caching system ensures consistent results across test runs while dramatically improving execution speed.
+
+## Why Cache?
+
+### The Non-Deterministic Problem
+
+AI agents and LLM calls are inherently non-deterministic:
+
+```python
+# Same input, different outputs each time
+response1 = llm.complete("What's 2+2?")  # "The answer is 4."
+response2 = llm.complete("What's 2+2?")  # "2 plus 2 equals 4."
+response3 = llm.complete("What's 2+2?")  # "That would be 4!"
+```
+
+This creates challenges for testing:
+- **Flaky tests**: Tests might pass or fail randomly
+- **Slow execution**: Every test run makes expensive API calls
+- **Hard to debug**: Different outputs make issues difficult to reproduce
+
+### The Scenario Solution
+
+Scenario's cache system solves these problems:
+
+```python
+# Configure caching
+scenario.configure(cache_key="my-test-suite-v1")
+
+# First run: makes real API calls, caches results
+result = await scenario.run(...)  # Takes 30 seconds
+
+# Subsequent runs: uses cached results
+result = await scenario.run(...)  # Takes 2 seconds, identical results
+```
+
+:::info
+Scenario caching is only available in the Python SDK for now, TypeScript support is coming soon.
+:::
+
+## Basic Caching Setup
+
+### 1. Configure Cache Key
+
+Set a cache key to enable caching:
+
+```python
+import scenario
+
+# Global configuration
+scenario.configure(
+    default_model="openai/gpt-4o-mini",
+    cache_key="test-suite-v1"  # Enable caching
+)
+```
+
+### 2. Cache Agent Functions
+
+Use the <RefLink link="index.html#scenario.cache">`@scenario.cache()`</RefLink> decorator on your agent functions:
+
+```python
+@scenario.cache()
+def my_agent_function(messages) -> scenario.AgentReturnTypes:
+    response = litellm.completion(
+        model="openai/gpt-4o-mini",
+        messages=messages
+    )
+    return response.choices[0].message
+```
+
+### 3. Run Tests
+
+The first run caches results, subsequent runs are fast and deterministic:
+
+```python
+@pytest.mark.agent_test
+@pytest.mark.asyncio
+async def test_my_agent():
+    class MyAgent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+            return my_agent_function(input.messages)  # Cached!
+
+    # This test will be deterministic and fast on subsequent runs
+    result = await scenario.run(
+        name="test scenario",
+        description="User asks for help",
+        agents=[
+            MyAgent(),
+            scenario.UserSimulatorAgent(),  # Also cached automatically
+            scenario.JudgeAgent(criteria=["Agent responds helpfully"])
+        ]
+    )
+
+    assert result.success
+```
+
+## Advanced Caching
+
+### Ignoring Arguments
+
+Some arguments shouldn't affect caching (like `self` or timestamps, with `self` being ignored by default):
+
+```python
+class WeatherAgent:
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.client = WeatherClient(api_key)
+
+    @scenario.cache(ignore=["timestamp"])
+    def get_weather(self, location: str, timestamp: datetime) -> str:
+        # 'self' and 'timestamp' are ignored for caching
+        # Only 'location' affects the cache key
+        return self.client.get_current_weather(location)
+```
+
+### Per-Test Cache Keys
+
+Use different cache keys for different test scenarios:
+
+```python
+# Different cache keys for different test suites
+@pytest.mark.asyncio
+async def test_happy_path():
+    scenario.run(cache_key="happy-path-v1", ...)
+    # ... test code
+
+@pytest.mark.asyncio
+async def test_edge_cases():
+    scenario.run(cache_key="edge-cases-v1", ...)
+    # ... test code
+
+@pytest.mark.asyncio
+async def test_error_handling():
+    scenario.run(cache_key="error-handling-v1", ...)
+    # ... test code
+```
+
+### Test-Specific Cache Control
+
+Control caching per individual test:
+
+```python
+@pytest.mark.asyncio
+async def test_deterministic_behavior():
+    # Use caching for consistency
+    result = await scenario.run(
+        name="deterministic test",
+        description="Test with consistent behavior",
+        agents=[MyAgent()],
+        cache_key="deterministic-v1"  # Override global cache key
+    )
+
+@pytest.mark.asyncio
+async def test_random_behavior():
+    # Disable caching to test randomness
+    result = await scenario.run(
+        name="random test",
+        description="Test with random behavior",
+        agents=[MyAgent()],
+        cache_key=None  # Disable caching for this test
+    )
+```
+
+## Cache Management
+
+### Cache Location
+
+By default, caches are stored in `~/.scenario/cache`. You can customize this:
+
+```python
+import os
+
+# Custom cache directory
+os.environ["SCENARIO_CACHE_DIR"] = "/tmp/my_scenario_cache"
+
+# Or disable caching entirely
+os.environ["SCENARIO_CACHE_DIR"] = ""
+```
+
+### Clearing Cache
+
+Clear the cache when needed:
+
+```bash
+# Clear all caches
+rm -rf ~/.scenario/cache
+```
+
+## Next Steps
+
+Now that you understand caching, explore other development tools:
+
+- [Debug Mode](/scenario/debug-mode) - Debug scenarios interactively
+- [Agent Integration](/agent-integration) - Connect different types of agents
+- Check the [Cache API Reference](/reference/python/scenario/cache.html) for detailed documentation

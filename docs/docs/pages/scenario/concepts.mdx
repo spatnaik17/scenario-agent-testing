@@ -1,0 +1,109 @@
+# Scenario Basics [Learn the core concepts and capabilities of the Scenario agent testing framework]
+
+## Overview
+
+Scenario is designed to test AI agents through **simulation testing** - a methodology to test agents end-to-end, by simulating different situations and user interactions, and evaluating responses against a defined criteria or custom assertions.
+
+## Core Components
+
+### 1. Scenarios
+A **scenario** defines the test case - the situation, context, and expected behavior you want to validate:
+
+```python
+result = await scenario.run(
+    name="customer support inquiry",
+    description="""
+        User has a billing issue with their subscription. They are frustrated
+        but not angry. The agent should help resolve the issue professionally
+        and escalate if needed.
+    """,
+    # ... agents and other configuration
+)
+```
+
+### 2. Agents
+Three types of agents can participate in a scenario:
+
+- **Agent Under Test**: Your AI agent that you want to test
+- **User Simulator Agent**: Generates simulated user messages based on the scenario
+- **Judge Agent**: Evaluates the conversation against success criteria
+
+```python
+agents=[
+    MyAgent(),                    # Your agent
+    scenario.UserSimulatorAgent(), # Simulates user behavior
+    scenario.JudgeAgent(criteria=[ # Evaluates success
+        "Agent responds professionally",
+        "Agent addresses the billing issue",
+        "Agent offers appropriate solutions"
+    ])
+]
+```
+
+### 3. Evaluation Criteria
+The judge agent evaluates conversations based on criteria you define:
+
+```python
+scenario.JudgeAgent(criteria=[
+    "Agent uses appropriate tone",
+    "Agent gathers necessary information",
+    "Agent provides helpful solutions",
+    "Agent asks clarifying questions when needed"
+])
+```
+
+## Testing Approaches
+
+Scenario supports two main testing approaches:
+
+### Automatic Simulation
+Let the agents interact naturally until the judge decides the outcome:
+
+```python
+result = await scenario.run(
+    name="automatic conversation",
+    description="User wants help with a technical issue",
+    agents=[
+        TechSupportAgent(),
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=["Agent resolves the technical issue"])
+    ],
+    max_turns=10  # Optional limit
+)
+```
+
+### Scripted Control
+Control the exact flow of conversation with custom scripts:
+
+```python
+
+result = await scenario.run(
+    name="scripted interaction",
+    description="Test specific conversation flow",
+    agents=[
+        MyAgent(),
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=["Agent handles edge case properly"])
+    ],
+    script=[
+        scenario.user("I have a complex request"),
+        scenario.agent(),
+        lambda state: (
+            raise Exception("Complex handler was not used")
+            if not state.has_tool_call("complex_handler")
+            else None
+        ),
+        scenario.proceed(turns=2),
+        scenario.succeed("Edge case handled correctly")
+    ]
+)
+```
+
+## Next Steps
+
+Dive deeper into specific aspects of Scenario:
+
+- [Writing Scenarios](/scenario/writing-scenarios) - Master the art of creating effective tests
+- [Scripted Simulations](/scenario/scripted-simulations) - Take full control of conversation flow
+- [Cache](/scenario/cache) - Make your tests deterministic and faster
+- [Debug Mode](/scenario/debug-mode) - Debug your agents interactively

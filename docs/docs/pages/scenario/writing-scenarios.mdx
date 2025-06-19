@@ -1,0 +1,479 @@
+import { RefLink } from "../../components/RefLink";
+
+# Writing Scenarios [Learn how to create effective scenario tests]
+
+## Basic Scenario Structure
+
+Every scenario test follows this basic pattern:
+
+```python
+result = await scenario.run(
+    name="descriptive test name",
+    description="detailed scenario context",
+    agents=[
+        YourAgent(),
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=["success criteria"])
+    ],
+    script=[] # Optional
+)
+```
+
+### Name and Description
+
+The **name** should be concise and descriptive:
+
+```python
+# Good names
+name="weather query with location clarification"
+name="booking cancellation with refund request"
+name="technical support escalation"
+
+# Avoid generic names
+name="test 1"
+name="agent test"
+name="basic scenario"
+```
+
+The **description** provides context that guides the user simulator:
+
+```python
+description="""
+    User is planning a weekend trip and needs weather information.
+    They initially ask about general weather but then want specific
+    details about outdoor activities. They might be concerned about rain.
+"""
+```
+
+:::tip
+Write descriptions from the user's perspective. Include:
+- **Context**: What situation is the user in?
+- **Intent**: What do they want to accomplish?
+- **Constraints**: What limitations or concerns do they have?
+- **Personality**: How might they communicate?
+:::
+
+## The Simulation Loop
+
+Understanding how the simulation works helps you write better scenarios:
+
+::::steps
+
+### Step 1: User Simulator Generates Message
+
+Based on the scenario description, the user simulator creates a realistic opening message:
+
+```python
+# Scenario description guides the user simulator
+description="User is frustrated with slow internet and needs technical help"
+
+# User simulator might generate:
+# "my internet is slow"
+```
+
+### Step 2: Agent Under Test Responds
+
+Your agent receives the conversation history and generates a response:
+
+```python
+class TechSupportAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        # Agent sees: [{"role": "user", "content": "my internet is slow"}]
+        return await my_tech_support_agent.process(input.messages)
+```
+
+### Step 3: Judge Evaluates
+
+The judge agent reviews the conversation and decides whether to:
+- **Continue**: The conversation should proceed
+- **Succeed**: All criteria are met, end with success
+- **Fail**: Criteria are not met, end with failure
+
+```python
+# Judge considers criteria like:
+# - "Agent asks if user has tried to turn it off and on again"
+# - "Agent provides specific troubleshooting steps"
+```
+
+### Step 4: Repeat or End
+
+If the judge decides to continue, the loop repeats from Step 1. The user simulator generates a follow-up message based on the agent's response and the ongoing conversation context.
+
+::::
+
+
+## Connect Your Agent
+
+To start testing your agent, you need to connect it to the scenario, this is done through the <RefLink link="agent_adapter.html#scenario.agent_adapter.AgentAdapter">`AgentAdapter`</RefLink> interface:
+
+```python
+import scenario
+
+class MyAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        # Get the user's message
+        user_message = input.last_new_user_message_str()
+
+        # Call your existing agent
+        response = await my_existing_agent.process(user_message)
+
+        # Return the response (can be string, OpenAI message, or list of messages)
+        return response
+
+# Use in scenarios
+result = await scenario.run(
+    name="my agent test",
+    description="User asks a question",
+    agents=[
+        MyAgent(),  # Your agent
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=["Agent responds helpfully"])
+    ]
+)
+```
+
+The adapter pattern lets you connect any existing agent - whether it's a simple function or custom framework - without modifying your agent's code.
+
+For detailed integration patterns including simple string, OpenAI-messages, or framework-specific integrations, see [Agent Integration](/agent-integration).
+
+## Turns vs Steps
+
+Understanding the difference between **turns** and **steps** is crucial:
+
+### Turns
+A **turn** represents one complete cycle of user → agent → judge evaluation:
+
+```python
+# Turn 1: User asks question → Agent responds → Judge evaluates
+# Turn 2: User follows up → Agent clarifies → Judge evaluates
+# Turn 3: User confirms → Agent concludes → Judge decides success
+```
+
+### Steps
+A **step** is any individual action within a turn:
+
+```python
+# Within one turn, there might be multiple steps:
+# Step 1: User message
+# Step 2: Agent makes tool call
+# Step 3: Judge decides to continue the conversation
+# Step 4: User follows up
+# Step 5: Agent responds to user
+# Step 6: Judge evaluates
+```
+
+You can control both in your scenarios:
+
+```python
+result = await scenario.run(
+    name="controlled conversation",
+    description="User needs help with account settings",
+    agents=[...],
+    max_turns=5,  # Limit conversation length
+    script=[
+        scenario.proceed(
+            turns=2,
+            on_turn=lambda state: print(f"Completed turn {state.current_turn}")
+            on_step=lambda state: print(f"Completed step {state.current_step}")
+        )
+    ]
+)
+```
+
+## The User Simulator Agent
+
+The user simulator is an AI agent that role-plays as a user based on your scenario description.
+
+### Default Behavior
+
+By default, the user simulator:
+- Writes like a user would
+- Responds to agent messages
+- Follow the scenario description
+
+```python
+# Default user simulator
+scenario.UserSimulatorAgent()
+```
+
+### Customizing the User Simulator
+
+You can customize the user simulator's behavior:
+
+```python
+scenario.UserSimulatorAgent(
+    model="openai/o3",  # Use different model
+    system_prompt="""
+        <role>
+        You are pretending to be a user, you are testing an AI Agent (shown as the user role) based on a scenario.
+        Approach this naturally, as a human user would, with very short inputs, few words, all lowercase, imperative, not periods, like when they google or talk to chatgpt.
+        </role>
+
+        <goal>
+        Your goal (assistant) is to interact with the Agent Under Test (user) as if you were a human user.
+        </goal>
+
+        <scenario>
+        You are trying to get a refund for a purchase you made.
+        You are a busy executive who speaks concisely and directly.
+        You get impatient with long explanations and prefer bullet points.
+        You often interrupt to ask specific questions.
+        </scenario>
+
+        <rules>
+        - DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, you are the user
+        </rules>
+    """
+)
+```
+
+### User Simulator Strategies
+
+The user simulator automatically adapts its strategy based on your scenario description:
+
+```python
+# Scenario: "User is confused about their bill"
+# → User simulator will ask unclear questions, express confusion
+
+# Scenario: "User is an expert developer reporting a bug"
+# → User simulator will use technical language, provide detailed info
+
+# Scenario: "User is elderly and not tech-savvy"
+# → User simulator will ask basic questions, need more guidance
+```
+
+## The Judge Agent
+
+The judge agent evaluates conversations against your success criteria.
+
+### Writing Effective Criteria
+
+Good criteria are:
+- **Specific**: Clearly describe what success looks like
+- **Measurable**: Can be objectively evaluated
+- **Relevant**: Related to your agent's purpose
+- **Achievable**: Realistic given the agent's capabilities
+
+```python
+# Good criteria
+scenario.JudgeAgent(criteria=[
+    "Agent asks for the user's account number or email",
+    "Agent explains the billing issue in simple terms",
+    "Agent offers at least two resolution options",
+    "Agent provides a timeline for issue resolution"
+])
+
+# Avoid vague criteria
+scenario.JudgeAgent(criteria=[
+    "Agent is helpful",  # Too vague
+    "Agent solves everything",  # Too broad
+    "Agent is perfect"  # Unrealistic
+])
+```
+
+### Multiple Evaluation Points
+
+The judge evaluates after each agent response, allowing it to:
+- End the conversation early if criteria are met
+- Fail immediately if something goes wrong
+- Continue if more interaction is needed
+
+```python
+# Judge evaluation happens after each agent response:
+# Turn 1: Agent asks clarifying question → Judge: "Continue, need more info"
+# Turn 2: Agent provides solution → Judge: "Success, all criteria met"
+```
+
+### Customizing the Judge
+
+You can customize judge behavior:
+
+```python
+scenario.JudgeAgent(
+    criteria=["Agent provides accurate information"],
+    model="openai/o3",  # Use different model
+    system_prompt="""
+        <role>
+        You are an LLM as a judge watching a simulated conversation as it plays out live to determine if the agent under test meets the criteria or not.
+        </role>
+
+        <goal>
+        Your goal is to determine if you already have enough information to make a verdict of the scenario below, or if the conversation should continue for longer.
+        If you do have enough information, use the finish_test tool to determine if all the criteria have been met, if not, use the continue_test tool to let the next step play out.
+        </goal>
+
+        <scenario>
+        {description}
+        </scenario>
+
+        <criteria>
+        {"\n".join(criteria)}
+        </criteria>
+
+        <rules>
+        - Be strict, do not let the conversation continue if the agent already broke one of the "do not" or "should not" criterias.
+        - DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
+        </rules>
+    """
+)
+```
+
+## Example: Complete Scenario
+
+Here's a complete example showing all concepts together:
+
+```python
+@pytest.mark.agent_test
+@pytest.mark.asyncio
+async def test_customer_service_billing():
+    class CustomerServiceAgent(scenario.AgentAdapter):
+        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+            return await customer_service_bot.process(
+                messages=input.messages,
+                context={"department": "billing"}
+            )
+
+    result = await scenario.run(
+        name="billing dispute resolution",
+        description="""
+            Customer received a bill that seems higher than expected.
+            They're not angry but are confused and want an explanation.
+            They have their account information ready and are generally
+            cooperative but need clear explanations.
+        """,
+        agents=[
+            CustomerServiceAgent(),
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(criteria=[
+                "Agent asks for account information to look up the bill",
+                "Agent reviews the bill details with the customer",
+                "Agent explains any charges that seem unusual or high",
+                "Agent offers options if there was an error",
+                "Agent maintains a professional and helpful tone",
+                "Agent ensures customer understands before ending"
+            ])
+        ],
+        max_turns=8  # Reasonable limit for this type of interaction
+    )
+
+    assert result.success
+
+    # Additional assertions
+    assert len(result.messages) >= 4  # Should have substantial conversation
+    assert "account" in str(result.messages).lower()  # Should discuss account
+```
+
+## Writing Tips
+
+### 1. Start with User Intent
+Begin with what the user wants to accomplish:
+
+```python
+# Good: Clear user intent
+description="User wants to change their password but forgot their current one"
+
+# Better: Add context and constraints
+description="""
+    User is locked out of their account after multiple failed login attempts.
+    They need to change their password but don't remember the current one.
+    They have access to their email but not their phone for 2FA.
+"""
+```
+
+### 2. Include Personality and Context
+Make scenarios realistic by adding human elements:
+
+```python
+description="""
+    User is a small business owner who is stressed about tax deadline.
+    They need help categorizing expenses but aren't familiar with
+    accounting terms. They appreciate patient explanations and examples.
+"""
+```
+
+### 3. Test Edge Cases
+Use scenarios to explore edge cases:
+
+```python
+description="""
+    User initially asks about product A but then changes their mind
+    and asks about product B, then asks to compare both products.
+    They're indecisive and might change requirements multiple times.
+"""
+```
+
+### 4. Layer Complexity Gradually
+Start simple, then add complexity:
+
+```python
+# Basic scenario
+description="User wants to book a flight to Paris"
+
+# More complex
+description="""
+    User wants to book a flight to Paris but has specific requirements:
+    direct flight, departure after 2 PM, willing to be flexible on dates
+    for better prices. They're traveling for business and need receipts.
+"""
+```
+
+## Common Patterns
+
+### Information Gathering
+Test how well your agent collects necessary information:
+
+```python
+description="""
+    User needs technical support but doesn't know technical details.
+"""
+agents=[
+    CustomerServiceAgent(),
+    scenario.UserSimulatorAgent(),
+    scenario.JudgeAgent(criteria=[
+        "Agent should ask for the user's account number or email",
+        "Agent should ask what model is their router",
+    ])
+]
+```
+
+### Clarification and Confirmation
+Test how agents handle ambiguous requests:
+
+```python
+description="""
+    User asks to "cancel my thing" without specifying what they want to cancel.
+"""
+agents=[
+    CustomerServiceAgent(),
+    scenario.UserSimulatorAgent(),
+    scenario.JudgeAgent(criteria=[
+        "Agent should ask clarifying questions to identify the correct item and confirm before taking action.",
+    ])
+]
+```
+
+### Error Recovery
+Test how agents handle mistakes, you can enforce it to have made a mistake by using a <RefLink link="script.html">`script`</RefLink>,
+and let the rest play out by itself.
+
+```python
+description="""
+    Agent initially misunderstands user's request and offers wrong
+    solution. User corrects them. Agent should acknowledge the
+    mistake and provide the right help.
+"""
+script=[
+    scenario.user("change my subscription"),
+    scenario.agent("Sure, I'm going to upgrade you to the Pro plan... done!"),
+    scenario.user("what!? no I don't want to upgrade, I want to cancel"),
+    scenario.proceed()
+]
+```
+
+## Next Steps
+
+Now that you understand how to write scenarios, learn about more advanced techniques:
+
+- [Scripted Simulations](/scenario/scripted-simulations) - Take control of conversation flow
+- [Cache](/scenario/cache) - Make tests deterministic and faster
+- [Debug Mode](/scenario/debug-mode) - Debug scenarios interactively

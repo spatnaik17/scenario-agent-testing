@@ -1,0 +1,25 @@
+---
+layout: landing
+---
+
+import { HomePage } from 'vocs/components'
+
+<HomePage.Root>
+  <img src="/images/logo.webp" alt="Scenario" width="300" height="85" />
+  <HomePage.Tagline>Agent Testing Framework</HomePage.Tagline>
+  :::code-group
+
+  ```bash [python]
+  uv add langwatch-scenario
+  ```
+
+  ```bash [typescript]
+  npm install @langwatch/scenario
+  ```
+
+  :::
+  <HomePage.Buttons>
+    <HomePage.Button href="/getting-started" variant="accent">Get started</HomePage.Button>
+    <HomePage.Button href="https://github.com/langwatch/scenario">GitHub</HomePage.Button>
+  </HomePage.Buttons>
+</HomePage.Root>

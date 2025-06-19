@@ -1,0 +1,167 @@
+import { RefLink } from "../components/RefLink";
+
+# Agent Integration [Learn how to connect your existing AI agents to the Scenario testing framework]
+
+Scenario is designed to be framework-agnostic, supporting any agent architecture through simple adapter patterns.
+
+## Overview
+
+Scenario works with any agent implementation through the
+<RefLink link="agent_adapter.html#scenario.agent_adapter.AgentAdapter">`AgentAdapter`</RefLink>
+interface. This adapter pattern allows you to:
+
+- **Integrate existing agents** without modifying their code
+- **Support multiple response formats** (strings, OpenAI messages, etc.)
+- **Handle both stateless and stateful agents**
+- **Work with any LLM or agent framework**
+
+## The AgentAdapter Interface
+
+All agents in Scenario implement the
+<RefLink link="agent_adapter.html#scenario.agent_adapter.AgentAdapter">`AgentAdapter`</RefLink>
+interface with an async
+<RefLink link="agent_adapter.html#scenario.agent_adapter.AgentAdapter.call">`call`</RefLink>
+method, which receives an
+<RefLink link="types.html#scenario.types.AgentInput">`AgentInput`</RefLink>
+and returns
+<RefLink link="types.html#scenario.types.AgentReturnTypes">`AgentReturnTypes`</RefLink>:
+
+```python
+import scenario
+
+class MyAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        # Your integration logic here
+        pass
+```
+
+### AgentInput
+
+The <RefLink link="types.html#scenario.types.AgentInput">`AgentInput`</RefLink> provides everything your agent needs for responding on the current turn:
+
+```python
+class AgentInput:
+    thread_id: str                          # Unique conversation ID
+    messages: List[ChatCompletionMessageParam]  # Full conversation history
+    new_messages: List[ChatCompletionMessageParam]  # New messages since last call
+    judgment_request: bool                  # Whether this is a judge request
+    scenario_state: ScenarioState          # Current scenario state
+
+    # Convenience methods
+    def last_new_user_message(self) -> ChatCompletionUserMessageParam
+    def last_new_user_message_str(self) -> str
+```
+
+### AgentReturnTypes
+
+Your agent can return any of these types:
+
+```python
+AgentReturnTypes = Union[
+    str,                                   # Simple text response
+    ChatCompletionMessageParam,            # Single OpenAI message
+    List[ChatCompletionMessageParam],      # Multiple messages
+    ScenarioResult                         # Direct test result (for judges)
+]
+```
+
+## Integration Patterns
+
+### 1. Simple String Agents
+
+For agents that take a string and return a string:
+
+```python
+def my_simple_agent(question: str) -> str:
+    """Your existing agent function"""
+    return f"Here's my response to: {question}"
+
+class SimpleAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> str:
+        user_message = input.last_new_user_message_str()
+        return my_simple_agent(user_message)
+```
+
+### 2. OpenAI Message Agents
+
+For agents that work with OpenAI-compatible messages:
+
+```python
+import litellm
+
+class LiteLLMAgent(scenario.AgentAdapter):
+    def __init__(self, model: str = "openai/gpt-4o-mini"):
+        self.model = model
+
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        response = await litellm.acompletion(
+            model=self.model,
+            messages=input.messages
+        )
+        return response.choices[0].message
+```
+
+### 3. Stateful Agents
+
+For agents that maintain state across calls:
+
+```python
+class StatefulAgent(scenario.AgentAdapter):
+    def __init__(self):
+        self.agent = MyAgent()
+
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        # We only send new_messages here because this agent keeps the history across calls
+        response = await self.agent.call(messages=input.new_messages, thread_id=input.thread_id)
+
+        return response
+```
+
+### 4. Multi-Step Responses
+
+Return multiple messages for complex interactions:
+
+```python
+class MultiStepAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        user_request = input.last_new_user_message_str()
+
+        if "complex task" in user_request.lower():
+            return [
+                {"role": "assistant", "content": "I'll help you with that complex task."},
+                {"role": "assistant", "content": "Let me break this down into steps..."},
+                {"role": "assistant", "content": "Here's your complete solution:"}
+            ]
+
+        return await self.simple_response(user_request)
+```
+
+## Caching Integration
+
+Use Scenario's caching with your agent:
+
+```python
+class CachedAgent(scenario.AgentAdapter):
+    @scenario.cache()
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        # This call will be cached for deterministic testing
+        return await self.expensive_llm_call(input.messages)
+```
+
+You can also use the
+<RefLink link="index.html#scenario.cache">`@scenario.cache`</RefLink>
+decorator deeper down the stack, in your own codebase, for memoizing any relevant functions.
+
+## Next Steps
+
+Now that you understand agent integration, explore specific integration guides:
+
+- [String Agents](/agent-integration/string-agents) - Simple text-based agents
+- [OpenAI Compatible Agents](/agent-integration/openai-agents) - Agents using OpenAI message format
+- [Tool-Using Agents](/agent-integration/tool-agents) - Agents that call external tools
+- [Framework Integrations](/agent-integration/frameworks) - LangChain, AutoGen, and other frameworks
+
+Or dive deeper into advanced topics:
+
+- [Scenario Basics](/scenario) - Master scenario creation and control
+- Check the [AgentAdapter API Reference](/reference/python/scenario/agent_adapter.html) for detailed documentation

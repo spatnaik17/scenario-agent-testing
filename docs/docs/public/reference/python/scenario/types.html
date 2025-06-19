@@ -1,0 +1,1020 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.11.6" />
+<title>Scenario API documentation</title>
+<meta name="description" content="" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+<link rel="icon" href="/favicon.ico" type="image/x-icon" />
+</head>
+<body>
+<style>
+.navbar.navbar--fixed-top{
+background-color: #fff;
+box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.1);
+display: flex;
+height: 3.75rem;
+padding: 0.5rem 1rem;
+}
+.navbar__inner {
+display: flex;
+flex-wrap: wrap;
+justify-content: space-between;
+width: 100%;
+}
+.navbar__items {
+align-items: center;
+display: flex;
+flex: 1;
+min-width: 0;
+}
+.navbar__items--right {
+flex: 0 0 auto;
+justify-content: flex-end;
+}
+.navbar__link {
+color: #1c1e21;
+font-weight: 500;
+}
+.navbar__link:hover, .navbar__link--active {
+color: #2e8555;
+text-decoration: none;
+}
+.navbar__item {
+display: inline-block;
+padding: 0.25em 0.75em;
+}
+.navbar a {
+text-decoration: none;
+transition: color 200ms cubic-bezier(0.08, 0.52, 0.52, 1);
+}
+.navbar__brand {
+align-items: center;
+color: #1c1e21;
+display: flex;
+margin-right: 1rem;
+min-width: 0;
+}
+.iconExternalLink_node_modules-\@docusaurus-theme-classic-lib-theme-Icon-ExternalLink-styles-module {
+margin-left: 0.3rem;
+}
+</style>
+<nav aria-label="Main" class="navbar navbar--fixed-top">
+<div class="navbar__inner" style="display: flex;
+flex-wrap: wrap;
+justify-content: space-between;
+width: 100%;">
+<div class="navbar__items">
+<a class="navbar__brand" href="/scenario/"
+><b class="navbar__title text--truncate">Scenario</b></a
+><a
+aria-current="page"
+class="navbar__item navbar__link"
+href="/scenario/docs/intro"
+>Docs</a
+>
+<a
+aria-current="page"
+class="navbar__item navbar__link navbar__link--active"
+href="/scenario/reference/scenario/index.html"
+>Reference</a
+>
+</div>
+<div class="navbar__items navbar__items--right">
+<a
+href="https://github.com/langwatch/scenario"
+target="_blank"
+rel="noopener noreferrer"
+class="navbar__item navbar__link"
+style="display: flex; align-items: center"
+>GitHub<svg
+width="13.5"
+height="13.5"
+aria-hidden="true"
+viewBox="0 0 24 24"
+class="iconExternalLink_node_modules-@docusaurus-theme-classic-lib-theme-Icon-ExternalLink-styles-module"
+>
+<path
+fill="currentColor"
+d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"
+></path></svg
+></a>
+</div>
+</div>
+<div role="presentation" class="navbar-sidebar__backdrop"></div>
+</nav>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>scenario.types</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">from enum import Enum
+from pydantic import BaseModel, Field, SkipValidation
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Awaitable,
+    Callable,
+    List,
+    Optional,
+    Union,
+)
+
+from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
+
+# Prevent circular imports + Pydantic breaking
+if TYPE_CHECKING:
+    from scenario.scenario_executor import ScenarioState
+
+    ScenarioStateType = ScenarioState
+else:
+    ScenarioStateType = Any
+
+
+class AgentRole(Enum):
+    &#34;&#34;&#34;
+    Defines the different roles that agents can play in a scenario.
+
+    This enum is used to identify the role of each agent during scenario execution,
+    enabling the framework to determine the order and interaction patterns between
+    different types of agents.
+
+    Attributes:
+        USER: Represents a user simulator agent that generates user inputs
+        AGENT: Represents the agent under test that responds to user inputs
+        JUDGE: Represents a judge agent that evaluates the conversation and determines success/failure
+    &#34;&#34;&#34;
+    USER = &#34;User&#34;
+    AGENT = &#34;Agent&#34;
+    JUDGE = &#34;Judge&#34;
+
+
+class AgentInput(BaseModel):
+    &#34;&#34;&#34;
+    Input data structure passed to agent adapters during scenario execution.
+
+    This class encapsulates all the information an agent needs to generate its next response,
+    including conversation history, thread context, and scenario state. It provides convenient
+    methods to access the most recent user messages.
+
+    Attributes:
+        thread_id: Unique identifier for the conversation thread
+        messages: Complete conversation history as OpenAI-compatible messages
+        new_messages: Only the new messages since the agent&#39;s last call
+        judgment_request: Whether this call is requesting a judgment from a judge agent
+        scenario_state: Current state of the scenario execution
+
+    Example:
+        ```
+        class MyAgent(AgentAdapter):
+            async def call(self, input: AgentInput) -&gt; str:
+                # Get the latest user message
+                user_msg = input.last_new_user_message_str()
+
+                # Process with your LLM/agent
+                response = await my_llm.complete(
+                    messages=input.messages,
+                    prompt=user_msg
+                )
+
+                return response
+        ```
+    &#34;&#34;&#34;
+    thread_id: str
+    # Prevent pydantic from validating/parsing the messages and causing issues: https://github.com/pydantic/pydantic/issues/9541
+    messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
+    new_messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
+    judgment_request: bool = False
+    scenario_state: ScenarioStateType
+
+    def last_new_user_message(self) -&gt; ChatCompletionUserMessageParam:
+        &#34;&#34;&#34;
+        Get the most recent user message from the new messages.
+
+        Returns:
+            The last user message in OpenAI message format
+
+        Raises:
+            ValueError: If no new user messages are found
+
+        Example:
+            ```
+            user_message = input.last_new_user_message()
+            content = user_message[&#34;content&#34;]
+            ```
+        &#34;&#34;&#34;
+        user_messages = [m for m in self.new_messages if m[&#34;role&#34;] == &#34;user&#34;]
+        if not user_messages:
+            raise ValueError(
+                &#34;No new user messages found, did you mean to call the assistant twice? Perhaps change your adapter to use the full messages list instead.&#34;
+            )
+        return user_messages[-1]
+
+    def last_new_user_message_str(self) -&gt; str:
+        &#34;&#34;&#34;
+        Get the content of the most recent user message as a string.
+
+        This is a convenience method for getting simple text content from user messages.
+        For multimodal messages or complex content, use last_new_user_message() instead.
+
+        Returns:
+            The text content of the last user message
+
+        Raises:
+            ValueError: If no new user messages found or if the message content is not a string
+
+        Example:
+            ```
+            user_text = input.last_new_user_message_str()
+            response = f&#34;You said: {user_text}&#34;
+            ```
+        &#34;&#34;&#34;
+        content = self.last_new_user_message()[&#34;content&#34;]
+        if type(content) != str:
+            raise ValueError(
+                f&#34;Last user message is not a string: {content.__repr__()}. Please use the full messages list instead.&#34;
+            )
+        return content
+
+
+class ScenarioResult(BaseModel):
+    &#34;&#34;&#34;
+    Represents the final result of a scenario test execution.
+
+    This class contains all the information about how a scenario performed,
+    including whether it succeeded, the conversation that took place, and
+    detailed reasoning about which criteria were met or failed.
+
+    Attributes:
+        success: Whether the scenario passed all criteria and completed successfully
+        messages: Complete conversation history that occurred during the scenario
+        reasoning: Detailed explanation of why the scenario succeeded or failed
+        passed_criteria: List of success criteria that were satisfied
+        failed_criteria: List of success criteria that were not satisfied
+        total_time: Total execution time in seconds (if measured)
+        agent_time: Time spent in agent calls in seconds (if measured)
+
+    Example:
+        ```
+        result = await scenario.run(
+            name=&#34;weather query&#34;,
+            description=&#34;User asks about weather&#34;,
+            agents=[
+                weather_agent,
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=[&#34;Agent provides helpful weather information&#34;])
+            ]
+        )
+
+        print(f&#34;Test {&#39;PASSED&#39; if result.success else &#39;FAILED&#39;}&#34;)
+        print(f&#34;Reasoning: {result.reasoning}&#34;)
+
+        if not result.success:
+            print(&#34;Failed criteria:&#34;)
+            for criteria in result.failed_criteria:
+                print(f&#34;  - {criteria}&#34;)
+        ```
+    &#34;&#34;&#34;
+
+    success: bool
+    messages: List[ChatCompletionMessageParam]
+    reasoning: Optional[str] = None
+    passed_criteria: List[str] = []
+    failed_criteria: List[str] = []
+    total_time: Optional[float] = None
+    agent_time: Optional[float] = None
+
+    def __repr__(self) -&gt; str:
+        &#34;&#34;&#34;
+        Provide a concise representation for debugging and logging.
+
+        Returns:
+            A string representation showing success status and reasoning
+        &#34;&#34;&#34;
+        status = &#34;PASSED&#34; if self.success else &#34;FAILED&#34;
+        return f&#34;ScenarioResult(success={self.success}, status={status}, reasoning=&#39;{self.reasoning or &#39;None&#39;}&#39;)&#34;
+
+
+AgentReturnTypes = Union[
+    str, ChatCompletionMessageParam, List[ChatCompletionMessageParam], ScenarioResult
+]
+&#34;&#34;&#34;
+Union type representing all valid return types for agent adapter call methods.
+
+Agent adapters can return any of these types:
+
+- str: Simple text response
+
+- ChatCompletionMessageParam: Single OpenAI-compatible message
+
+- List[ChatCompletionMessageParam]: Multiple OpenAI-compatible messages (for multi-step responses)
+
+- ScenarioResult: Direct test result (typically used by judge agents to end scenarios)
+
+Example:
+    ```
+    class MyAgent(AgentAdapter):
+        async def call(self, input: AgentInput) -&gt; AgentReturnTypes:
+            # Can return a simple string
+            return &#34;Hello, how can I help you?&#34;
+
+            # Or a structured message
+            return {&#34;role&#34;: &#34;assistant&#34;, &#34;content&#34;: &#34;Hello!&#34;}
+
+            # Or multiple messages for complex interactions
+            return [
+                {&#34;role&#34;: &#34;assistant&#34;, &#34;content&#34;: &#34;Let me search for that...&#34;},
+                {&#34;role&#34;: &#34;assistant&#34;, &#34;content&#34;: &#34;Here&#39;s what I found: ...&#34;}
+            ]
+    ```
+&#34;&#34;&#34;
+
+# TODO: remove the optional ScenarioResult return type from here, use events instead
+ScriptStep = Union[
+    Callable[[&#34;ScenarioState&#34;], None],
+    Callable[[&#34;ScenarioState&#34;], Optional[ScenarioResult]],
+    # Async as well
+    Callable[[&#34;ScenarioState&#34;], Awaitable[None]],
+    Callable[[&#34;ScenarioState&#34;], Awaitable[Optional[ScenarioResult]]],
+]
+&#34;&#34;&#34;
+Union type for script step functions used in scenario scripts.
+
+Script steps are functions that can be called during scenario execution to control
+the flow, add custom assertions, or perform evaluations. They receive the current
+scenario state and can optionally return a result to end the scenario.
+
+The functions can be either synchronous or asynchronous.
+
+Example:
+    ```
+    def check_tool_call(state: ScenarioState) -&gt; None:
+        assert state.has_tool_call(&#34;get_weather&#34;)
+
+    async def custom_evaluation(state: ScenarioState) -&gt; Optional[ScenarioResult]:
+        eval_result = await some_external_evaluator(state.messages)
+        if not eval_result.passed:
+            return ScenarioResult(
+                success=False,
+                messages=state.messages,
+                reasoning=&#34;Custom evaluation failed&#34;
+            )
+        return None  # Continue scenario
+
+    # Use in script
+    result = await scenario.run(
+        name=&#34;test&#34;,
+        description=&#34;Test scenario&#34;,
+        agents=[
+            MyAgent(),
+            scenario.UserSimulatorAgent(),
+            scenario.JudgeAgent(criteria=[&#34;Agent provides helpful response&#34;])
+        ],
+        script=[
+            scenario.user(&#34;What&#39;s the weather?&#34;),
+            scenario.agent(),
+            check_tool_call,
+            custom_evaluation,
+            scenario.succeed()
+        ]
+    )
+    ```
+&#34;&#34;&#34;</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-variables">Global variables</h2>
+<dl>
+<dt id="scenario.types.AgentReturnTypes"><code class="name">var <span class="ident">AgentReturnTypes</span></code></dt>
+<dd>
+<div class="desc"><p>Union type representing all valid return types for agent adapter call methods.</p>
+<p>Agent adapters can return any of these types:</p>
+<ul>
+<li>
+<p>str: Simple text response</p>
+</li>
+<li>
+<p>ChatCompletionMessageParam: Single OpenAI-compatible message</p>
+</li>
+<li>
+<p>List[ChatCompletionMessageParam]: Multiple OpenAI-compatible messages (for multi-step responses)</p>
+</li>
+<li>
+<p>ScenarioResult: Direct test result (typically used by judge agents to end scenarios)</p>
+</li>
+</ul>
+<h2 id="example">Example</h2>
+<pre><code>class MyAgent(AgentAdapter):
+    async def call(self, input: AgentInput) -&gt; AgentReturnTypes:
+        # Can return a simple string
+        return &quot;Hello, how can I help you?&quot;
+
+        # Or a structured message
+        return {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;Hello!&quot;}
+
+        # Or multiple messages for complex interactions
+        return [
+            {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;Let me search for that...&quot;},
+            {&quot;role&quot;: &quot;assistant&quot;, &quot;content&quot;: &quot;Here's what I found: ...&quot;}
+        ]
+</code></pre></div>
+</dd>
+<dt id="scenario.types.ScriptStep"><code class="name">var <span class="ident">ScriptStep</span></code></dt>
+<dd>
+<div class="desc"><p>Union type for script step functions used in scenario scripts.</p>
+<p>Script steps are functions that can be called during scenario execution to control
+the flow, add custom assertions, or perform evaluations. They receive the current
+scenario state and can optionally return a result to end the scenario.</p>
+<p>The functions can be either synchronous or asynchronous.</p>
+<h2 id="example">Example</h2>
+<pre><code>def check_tool_call(state: ScenarioState) -&gt; None:
+    assert state.has_tool_call(&quot;get_weather&quot;)
+
+async def custom_evaluation(state: ScenarioState) -&gt; Optional[ScenarioResult]:
+    eval_result = await some_external_evaluator(state.messages)
+    if not eval_result.passed:
+        return ScenarioResult(
+            success=False,
+            messages=state.messages,
+            reasoning=&quot;Custom evaluation failed&quot;
+        )
+    return None  # Continue scenario
+
+# Use in script
+result = await scenario.run(
+    name=&quot;test&quot;,
+    description=&quot;Test scenario&quot;,
+    agents=[
+        MyAgent(),
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=[&quot;Agent provides helpful response&quot;])
+    ],
+    script=[
+        scenario.user(&quot;What's the weather?&quot;),
+        scenario.agent(),
+        check_tool_call,
+        custom_evaluation,
+        scenario.succeed()
+    ]
+)
+</code></pre></div>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="scenario.types.AgentInput"><code class="flex name class">
+<span>class <span class="ident">AgentInput</span></span>
+<span>(</span><span>**data: Any)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Input data structure passed to agent adapters during scenario execution.</p>
+<p>This class encapsulates all the information an agent needs to generate its next response,
+including conversation history, thread context, and scenario state. It provides convenient
+methods to access the most recent user messages.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>thread_id</code></strong></dt>
+<dd>Unique identifier for the conversation thread</dd>
+<dt><strong><code>messages</code></strong></dt>
+<dd>Complete conversation history as OpenAI-compatible messages</dd>
+<dt><strong><code>new_messages</code></strong></dt>
+<dd>Only the new messages since the agent's last call</dd>
+<dt><strong><code>judgment_request</code></strong></dt>
+<dd>Whether this call is requesting a judgment from a judge agent</dd>
+<dt><strong><code>scenario_state</code></strong></dt>
+<dd>Current state of the scenario execution</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code>class MyAgent(AgentAdapter):
+    async def call(self, input: AgentInput) -&gt; str:
+        # Get the latest user message
+        user_msg = input.last_new_user_message_str()
+
+        # Process with your LLM/agent
+        response = await my_llm.complete(
+            messages=input.messages,
+            prompt=user_msg
+        )
+
+        return response
+</code></pre>
+<p>Create a new model by parsing and validating input data from keyword arguments.</p>
+<p>Raises [<code>ValidationError</code>][pydantic_core.ValidationError] if the input data cannot be
+validated to form a valid model.</p>
+<p><code>self</code> is explicitly positional-only to allow <code>self</code> as a field name.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AgentInput(BaseModel):
+    &#34;&#34;&#34;
+    Input data structure passed to agent adapters during scenario execution.
+
+    This class encapsulates all the information an agent needs to generate its next response,
+    including conversation history, thread context, and scenario state. It provides convenient
+    methods to access the most recent user messages.
+
+    Attributes:
+        thread_id: Unique identifier for the conversation thread
+        messages: Complete conversation history as OpenAI-compatible messages
+        new_messages: Only the new messages since the agent&#39;s last call
+        judgment_request: Whether this call is requesting a judgment from a judge agent
+        scenario_state: Current state of the scenario execution
+
+    Example:
+        ```
+        class MyAgent(AgentAdapter):
+            async def call(self, input: AgentInput) -&gt; str:
+                # Get the latest user message
+                user_msg = input.last_new_user_message_str()
+
+                # Process with your LLM/agent
+                response = await my_llm.complete(
+                    messages=input.messages,
+                    prompt=user_msg
+                )
+
+                return response
+        ```
+    &#34;&#34;&#34;
+    thread_id: str
+    # Prevent pydantic from validating/parsing the messages and causing issues: https://github.com/pydantic/pydantic/issues/9541
+    messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
+    new_messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
+    judgment_request: bool = False
+    scenario_state: ScenarioStateType
+
+    def last_new_user_message(self) -&gt; ChatCompletionUserMessageParam:
+        &#34;&#34;&#34;
+        Get the most recent user message from the new messages.
+
+        Returns:
+            The last user message in OpenAI message format
+
+        Raises:
+            ValueError: If no new user messages are found
+
+        Example:
+            ```
+            user_message = input.last_new_user_message()
+            content = user_message[&#34;content&#34;]
+            ```
+        &#34;&#34;&#34;
+        user_messages = [m for m in self.new_messages if m[&#34;role&#34;] == &#34;user&#34;]
+        if not user_messages:
+            raise ValueError(
+                &#34;No new user messages found, did you mean to call the assistant twice? Perhaps change your adapter to use the full messages list instead.&#34;
+            )
+        return user_messages[-1]
+
+    def last_new_user_message_str(self) -&gt; str:
+        &#34;&#34;&#34;
+        Get the content of the most recent user message as a string.
+
+        This is a convenience method for getting simple text content from user messages.
+        For multimodal messages or complex content, use last_new_user_message() instead.
+
+        Returns:
+            The text content of the last user message
+
+        Raises:
+            ValueError: If no new user messages found or if the message content is not a string
+
+        Example:
+            ```
+            user_text = input.last_new_user_message_str()
+            response = f&#34;You said: {user_text}&#34;
+            ```
+        &#34;&#34;&#34;
+        content = self.last_new_user_message()[&#34;content&#34;]
+        if type(content) != str:
+            raise ValueError(
+                f&#34;Last user message is not a string: {content.__repr__()}. Please use the full messages list instead.&#34;
+            )
+        return content</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pydantic.main.BaseModel</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="scenario.types.AgentInput.judgment_request"><code class="name">var <span class="ident">judgment_request</span> : bool</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentInput.messages"><code class="name">var <span class="ident">messages</span> : List[openai.types.chat.chat_completion_developer_message_param.ChatCompletionDeveloperMessageParam | openai.types.chat.chat_completion_system_message_param.ChatCompletionSystemMessageParam | openai.types.chat.chat_completion_user_message_param.ChatCompletionUserMessageParam | openai.types.chat.chat_completion_assistant_message_param.ChatCompletionAssistantMessageParam | openai.types.chat.chat_completion_tool_message_param.ChatCompletionToolMessageParam | openai.types.chat.chat_completion_function_message_param.ChatCompletionFunctionMessageParam]</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentInput.model_config"><code class="name">var <span class="ident">model_config</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentInput.new_messages"><code class="name">var <span class="ident">new_messages</span> : List[openai.types.chat.chat_completion_developer_message_param.ChatCompletionDeveloperMessageParam | openai.types.chat.chat_completion_system_message_param.ChatCompletionSystemMessageParam | openai.types.chat.chat_completion_user_message_param.ChatCompletionUserMessageParam | openai.types.chat.chat_completion_assistant_message_param.ChatCompletionAssistantMessageParam | openai.types.chat.chat_completion_tool_message_param.ChatCompletionToolMessageParam | openai.types.chat.chat_completion_function_message_param.ChatCompletionFunctionMessageParam]</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentInput.scenario_state"><code class="name">var <span class="ident">scenario_state</span> : Any</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentInput.thread_id"><code class="name">var <span class="ident">thread_id</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+</dl>
+<h3>Methods</h3>
+<dl>
+<dt id="scenario.types.AgentInput.last_new_user_message"><code class="name flex">
+<span>def <span class="ident">last_new_user_message</span></span>(<span>self) ‑> openai.types.chat.chat_completion_user_message_param.ChatCompletionUserMessageParam</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the most recent user message from the new messages.</p>
+<h2 id="returns">Returns</h2>
+<p>The last user message in OpenAI message format</p>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If no new user messages are found</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code>user_message = input.last_new_user_message()
+content = user_message[&quot;content&quot;]
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def last_new_user_message(self) -&gt; ChatCompletionUserMessageParam:
+    &#34;&#34;&#34;
+    Get the most recent user message from the new messages.
+
+    Returns:
+        The last user message in OpenAI message format
+
+    Raises:
+        ValueError: If no new user messages are found
+
+    Example:
+        ```
+        user_message = input.last_new_user_message()
+        content = user_message[&#34;content&#34;]
+        ```
+    &#34;&#34;&#34;
+    user_messages = [m for m in self.new_messages if m[&#34;role&#34;] == &#34;user&#34;]
+    if not user_messages:
+        raise ValueError(
+            &#34;No new user messages found, did you mean to call the assistant twice? Perhaps change your adapter to use the full messages list instead.&#34;
+        )
+    return user_messages[-1]</code></pre>
+</details>
+</dd>
+<dt id="scenario.types.AgentInput.last_new_user_message_str"><code class="name flex">
+<span>def <span class="ident">last_new_user_message_str</span></span>(<span>self) ‑> str</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Get the content of the most recent user message as a string.</p>
+<p>This is a convenience method for getting simple text content from user messages.
+For multimodal messages or complex content, use last_new_user_message() instead.</p>
+<h2 id="returns">Returns</h2>
+<p>The text content of the last user message</p>
+<h2 id="raises">Raises</h2>
+<dl>
+<dt><code>ValueError</code></dt>
+<dd>If no new user messages found or if the message content is not a string</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code>user_text = input.last_new_user_message_str()
+response = f&quot;You said: {user_text}&quot;
+</code></pre></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def last_new_user_message_str(self) -&gt; str:
+    &#34;&#34;&#34;
+    Get the content of the most recent user message as a string.
+
+    This is a convenience method for getting simple text content from user messages.
+    For multimodal messages or complex content, use last_new_user_message() instead.
+
+    Returns:
+        The text content of the last user message
+
+    Raises:
+        ValueError: If no new user messages found or if the message content is not a string
+
+    Example:
+        ```
+        user_text = input.last_new_user_message_str()
+        response = f&#34;You said: {user_text}&#34;
+        ```
+    &#34;&#34;&#34;
+    content = self.last_new_user_message()[&#34;content&#34;]
+    if type(content) != str:
+        raise ValueError(
+            f&#34;Last user message is not a string: {content.__repr__()}. Please use the full messages list instead.&#34;
+        )
+    return content</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+<dt id="scenario.types.AgentRole"><code class="flex name class">
+<span>class <span class="ident">AgentRole</span></span>
+<span>(</span><span>*args, **kwds)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Defines the different roles that agents can play in a scenario.</p>
+<p>This enum is used to identify the role of each agent during scenario execution,
+enabling the framework to determine the order and interaction patterns between
+different types of agents.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>USER</code></strong></dt>
+<dd>Represents a user simulator agent that generates user inputs</dd>
+<dt><strong><code>AGENT</code></strong></dt>
+<dd>Represents the agent under test that responds to user inputs</dd>
+<dt><strong><code>JUDGE</code></strong></dt>
+<dd>Represents a judge agent that evaluates the conversation and determines success/failure</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class AgentRole(Enum):
+    &#34;&#34;&#34;
+    Defines the different roles that agents can play in a scenario.
+
+    This enum is used to identify the role of each agent during scenario execution,
+    enabling the framework to determine the order and interaction patterns between
+    different types of agents.
+
+    Attributes:
+        USER: Represents a user simulator agent that generates user inputs
+        AGENT: Represents the agent under test that responds to user inputs
+        JUDGE: Represents a judge agent that evaluates the conversation and determines success/failure
+    &#34;&#34;&#34;
+    USER = &#34;User&#34;
+    AGENT = &#34;Agent&#34;
+    JUDGE = &#34;Judge&#34;</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>enum.Enum</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="scenario.types.AgentRole.AGENT"><code class="name">var <span class="ident">AGENT</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentRole.JUDGE"><code class="name">var <span class="ident">JUDGE</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.AgentRole.USER"><code class="name">var <span class="ident">USER</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+</dl>
+</dd>
+<dt id="scenario.types.ScenarioResult"><code class="flex name class">
+<span>class <span class="ident">ScenarioResult</span></span>
+<span>(</span><span>**data: Any)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Represents the final result of a scenario test execution.</p>
+<p>This class contains all the information about how a scenario performed,
+including whether it succeeded, the conversation that took place, and
+detailed reasoning about which criteria were met or failed.</p>
+<h2 id="attributes">Attributes</h2>
+<dl>
+<dt><strong><code>success</code></strong></dt>
+<dd>Whether the scenario passed all criteria and completed successfully</dd>
+<dt><strong><code>messages</code></strong></dt>
+<dd>Complete conversation history that occurred during the scenario</dd>
+<dt><strong><code>reasoning</code></strong></dt>
+<dd>Detailed explanation of why the scenario succeeded or failed</dd>
+<dt><strong><code>passed_criteria</code></strong></dt>
+<dd>List of success criteria that were satisfied</dd>
+<dt><strong><code>failed_criteria</code></strong></dt>
+<dd>List of success criteria that were not satisfied</dd>
+<dt><strong><code>total_time</code></strong></dt>
+<dd>Total execution time in seconds (if measured)</dd>
+<dt><strong><code>agent_time</code></strong></dt>
+<dd>Time spent in agent calls in seconds (if measured)</dd>
+</dl>
+<h2 id="example">Example</h2>
+<pre><code>result = await scenario.run(
+    name=&quot;weather query&quot;,
+    description=&quot;User asks about weather&quot;,
+    agents=[
+        weather_agent,
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=[&quot;Agent provides helpful weather information&quot;])
+    ]
+)
+
+print(f&quot;Test {'PASSED' if result.success else 'FAILED'}&quot;)
+print(f&quot;Reasoning: {result.reasoning}&quot;)
+
+if not result.success:
+    print(&quot;Failed criteria:&quot;)
+    for criteria in result.failed_criteria:
+        print(f&quot;  - {criteria}&quot;)
+</code></pre>
+<p>Create a new model by parsing and validating input data from keyword arguments.</p>
+<p>Raises [<code>ValidationError</code>][pydantic_core.ValidationError] if the input data cannot be
+validated to form a valid model.</p>
+<p><code>self</code> is explicitly positional-only to allow <code>self</code> as a field name.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ScenarioResult(BaseModel):
+    &#34;&#34;&#34;
+    Represents the final result of a scenario test execution.
+
+    This class contains all the information about how a scenario performed,
+    including whether it succeeded, the conversation that took place, and
+    detailed reasoning about which criteria were met or failed.
+
+    Attributes:
+        success: Whether the scenario passed all criteria and completed successfully
+        messages: Complete conversation history that occurred during the scenario
+        reasoning: Detailed explanation of why the scenario succeeded or failed
+        passed_criteria: List of success criteria that were satisfied
+        failed_criteria: List of success criteria that were not satisfied
+        total_time: Total execution time in seconds (if measured)
+        agent_time: Time spent in agent calls in seconds (if measured)
+
+    Example:
+        ```
+        result = await scenario.run(
+            name=&#34;weather query&#34;,
+            description=&#34;User asks about weather&#34;,
+            agents=[
+                weather_agent,
+                scenario.UserSimulatorAgent(),
+                scenario.JudgeAgent(criteria=[&#34;Agent provides helpful weather information&#34;])
+            ]
+        )
+
+        print(f&#34;Test {&#39;PASSED&#39; if result.success else &#39;FAILED&#39;}&#34;)
+        print(f&#34;Reasoning: {result.reasoning}&#34;)
+
+        if not result.success:
+            print(&#34;Failed criteria:&#34;)
+            for criteria in result.failed_criteria:
+                print(f&#34;  - {criteria}&#34;)
+        ```
+    &#34;&#34;&#34;
+
+    success: bool
+    messages: List[ChatCompletionMessageParam]
+    reasoning: Optional[str] = None
+    passed_criteria: List[str] = []
+    failed_criteria: List[str] = []
+    total_time: Optional[float] = None
+    agent_time: Optional[float] = None
+
+    def __repr__(self) -&gt; str:
+        &#34;&#34;&#34;
+        Provide a concise representation for debugging and logging.
+
+        Returns:
+            A string representation showing success status and reasoning
+        &#34;&#34;&#34;
+        status = &#34;PASSED&#34; if self.success else &#34;FAILED&#34;
+        return f&#34;ScenarioResult(success={self.success}, status={status}, reasoning=&#39;{self.reasoning or &#39;None&#39;}&#39;)&#34;</code></pre>
+</details>
+<h3>Ancestors</h3>
+<ul class="hlist">
+<li>pydantic.main.BaseModel</li>
+</ul>
+<h3>Class variables</h3>
+<dl>
+<dt id="scenario.types.ScenarioResult.agent_time"><code class="name">var <span class="ident">agent_time</span> : float | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.failed_criteria"><code class="name">var <span class="ident">failed_criteria</span> : List[str]</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.messages"><code class="name">var <span class="ident">messages</span> : List[openai.types.chat.chat_completion_developer_message_param.ChatCompletionDeveloperMessageParam | openai.types.chat.chat_completion_system_message_param.ChatCompletionSystemMessageParam | openai.types.chat.chat_completion_user_message_param.ChatCompletionUserMessageParam | openai.types.chat.chat_completion_assistant_message_param.ChatCompletionAssistantMessageParam | openai.types.chat.chat_completion_tool_message_param.ChatCompletionToolMessageParam | openai.types.chat.chat_completion_function_message_param.ChatCompletionFunctionMessageParam]</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.model_config"><code class="name">var <span class="ident">model_config</span></code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.passed_criteria"><code class="name">var <span class="ident">passed_criteria</span> : List[str]</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.reasoning"><code class="name">var <span class="ident">reasoning</span> : str | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.success"><code class="name">var <span class="ident">success</span> : bool</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.types.ScenarioResult.total_time"><code class="name">var <span class="ident">total_time</span> : float | None</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<a href="/" style="color: #000">← Back to Docs</a>
+<h1>Scenario API Reference</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="scenario" href="index.html">scenario</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-variables">Global variables</a></h3>
+<ul class="">
+<li><code><a title="scenario.types.AgentReturnTypes" href="#scenario.types.AgentReturnTypes">AgentReturnTypes</a></code></li>
+<li><code><a title="scenario.types.ScriptStep" href="#scenario.types.ScriptStep">ScriptStep</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="scenario.types.AgentInput" href="#scenario.types.AgentInput">AgentInput</a></code></h4>
+<ul class="">
+<li><code><a title="scenario.types.AgentInput.judgment_request" href="#scenario.types.AgentInput.judgment_request">judgment_request</a></code></li>
+<li><code><a title="scenario.types.AgentInput.last_new_user_message" href="#scenario.types.AgentInput.last_new_user_message">last_new_user_message</a></code></li>
+<li><code><a title="scenario.types.AgentInput.last_new_user_message_str" href="#scenario.types.AgentInput.last_new_user_message_str">last_new_user_message_str</a></code></li>
+<li><code><a title="scenario.types.AgentInput.messages" href="#scenario.types.AgentInput.messages">messages</a></code></li>
+<li><code><a title="scenario.types.AgentInput.model_config" href="#scenario.types.AgentInput.model_config">model_config</a></code></li>
+<li><code><a title="scenario.types.AgentInput.new_messages" href="#scenario.types.AgentInput.new_messages">new_messages</a></code></li>
+<li><code><a title="scenario.types.AgentInput.scenario_state" href="#scenario.types.AgentInput.scenario_state">scenario_state</a></code></li>
+<li><code><a title="scenario.types.AgentInput.thread_id" href="#scenario.types.AgentInput.thread_id">thread_id</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="scenario.types.AgentRole" href="#scenario.types.AgentRole">AgentRole</a></code></h4>
+<ul class="">
+<li><code><a title="scenario.types.AgentRole.AGENT" href="#scenario.types.AgentRole.AGENT">AGENT</a></code></li>
+<li><code><a title="scenario.types.AgentRole.JUDGE" href="#scenario.types.AgentRole.JUDGE">JUDGE</a></code></li>
+<li><code><a title="scenario.types.AgentRole.USER" href="#scenario.types.AgentRole.USER">USER</a></code></li>
+</ul>
+</li>
+<li>
+<h4><code><a title="scenario.types.ScenarioResult" href="#scenario.types.ScenarioResult">ScenarioResult</a></code></h4>
+<ul class="two-column">
+<li><code><a title="scenario.types.ScenarioResult.agent_time" href="#scenario.types.ScenarioResult.agent_time">agent_time</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.failed_criteria" href="#scenario.types.ScenarioResult.failed_criteria">failed_criteria</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.messages" href="#scenario.types.ScenarioResult.messages">messages</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.model_config" href="#scenario.types.ScenarioResult.model_config">model_config</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.passed_criteria" href="#scenario.types.ScenarioResult.passed_criteria">passed_criteria</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.reasoning" href="#scenario.types.ScenarioResult.reasoning">reasoning</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.success" href="#scenario.types.ScenarioResult.success">success</a></code></li>
+<li><code><a title="scenario.types.ScenarioResult.total_time" href="#scenario.types.ScenarioResult.total_time">total_time</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc" title="pdoc: Python API documentation generator"><cite>pdoc</cite> 0.11.6</a>.</p>
+</footer>
+</body>
+</html>
