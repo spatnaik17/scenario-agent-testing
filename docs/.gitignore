@@ -40,6 +40,3 @@ coverage/
 # Cache
 .cache/
 .temp/
-
-docs/pages/scenario
-docs/pages/components

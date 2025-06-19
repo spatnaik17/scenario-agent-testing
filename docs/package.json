@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vocs dev",
-    "build": "rm -rf docs/pages/scenario; cp -R docs/pages docs/pages/scenario && rm -rf docs/pages/components; cp -R docs/components docs/pages/components && BASE_PATH=/scenario vocs build && cp -R docs/dist/scenario/* docs/dist/ && rm -rf docs/dist/scenario",
+    "build": "vocs build",
     "preview": "vocs preview",
     "build:preview": "vocs build --preview && vocs preview"
   },
