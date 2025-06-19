@@ -26,6 +26,9 @@ Scenario is an Agent Testing Framework based on simulations, it can:
 This is how a simple simulation with tool check looks like with Scenario:
 
 ```python
+def check_for_weather_tool_call(state: scenario.ScenarioState):
+    assert state.has_tool_call("get_current_weather")
+
 result = await scenario.run(
     name="checking the weather",
     description="""
