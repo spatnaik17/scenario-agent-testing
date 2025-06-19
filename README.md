@@ -23,44 +23,32 @@ Scenario is an Agent Testing Framework based on simulations, it can:
 
 ## Example
 
+This is how a simple simulation with tool check looks like with Scenario:
+
 ```python
-@pytest.mark.agent_test
-@pytest.mark.asyncio
-async def test_weather_agent_calls_tool():
-    # Integrate with your agent
-    class WeatherAgent(scenario.AgentAdapter):
-        async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
-            return weather_agent(input.messages)
+result = await scenario.run(
+    name="checking the weather",
+    description="""
+        The user is planning a boat trip from Barcelona to Rome,
+        and is wondering what the weather will be like.
+    """,
+    agents=[
+        WeatherAgent(),
+        scenario.UserSimulatorAgent(model="openai/gpt-4.1-mini"),
+    ],
+    script=[
+        scenario.user(),
+        scenario.agent(),
+        check_for_weather_tool_call,
+        scenario.succeed(),
+    ],
+)
 
-    # Define any custom assertions
-    def check_for_weather_tool_call(state: scenario.ScenarioState):
-        assert state.has_tool_call("get_current_weather")
-
-    # Run the scenario
-    result = await scenario.run(
-        name="checking the weather",
-        description="""
-            The user is planning a boat trip from Barcelona to Rome,
-            and is wondering what the weather will be like.
-        """,
-        agents=[
-            WeatherAgent(),
-            scenario.UserSimulatorAgent(model="openai/gpt-4.1-mini"),
-        ],
-        script=[
-            scenario.user(),
-            scenario.agent(),
-            check_for_weather_tool_call, # check for tool call after the first agent response
-            scenario.succeed(),
-        ],
-    )
-
-    # Assert the simulation was successful
-    assert result.success
+assert result.success
 ```
 
 > [!NOTE]
-> Check out more examples in the [examples folder](./examples/).
+> Check out full examples in the [examples folder](./examples/).
 
 ## Getting Started
 
