@@ -193,9 +193,13 @@ AgentReturnTypes = Union[
 Union type representing all valid return types for agent adapter call methods.
 
 Agent adapters can return any of these types:
+
 - str: Simple text response
+
 - ChatCompletionMessageParam: Single OpenAI-compatible message
+
 - List[ChatCompletionMessageParam]: Multiple OpenAI-compatible messages (for multi-step responses)
+
 - ScenarioResult: Direct test result (typically used by judge agents to end scenarios)
 
 Example:
