@@ -5,6 +5,7 @@ export default defineConfig({
   title: "Scenario",
   description: "Agent Testing Framework",
   logoUrl: "/images/logo.webp",
+  iconUrl: "/favicon.ico",
   sidebar: [
     {
       text: "Introduction",

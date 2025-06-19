@@ -11,7 +11,14 @@ export const Image = ({
   height?: number;
   style?: React.CSSProperties;
 }) => {
-  const basePath = typeof process !== "undefined" ? process.env.BASE_PATH : "";
+  const basePath =
+    typeof process !== "undefined"
+      ? process.env.BASE_PATH
+      : typeof window !== "undefined"
+      ? window.location.pathname.startsWith("/scenario")
+        ? "/scenario"
+        : ""
+      : "";
 
   return (
     <img
