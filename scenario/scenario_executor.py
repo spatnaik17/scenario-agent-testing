@@ -12,7 +12,6 @@ from typing import (
     Callable,
     Dict,
     List,
-    Any,
     Optional,
     Set,
     Tuple,
@@ -24,7 +23,7 @@ import asyncio
 import concurrent.futures
 
 from scenario.config import ScenarioConfig
-from scenario.utils import (
+from scenario._utils import (
     await_if_awaitable,
     check_valid_return_type,
     convert_agent_return_types_to_openai_messages,
@@ -38,7 +37,7 @@ from openai.types.chat import (
 )
 
 from .types import AgentInput, AgentRole, ScenarioResult, ScriptStep
-from .error_messages import agent_response_not_awaitable
+from ._error_messages import agent_response_not_awaitable
 from .cache import context_scenario
 from .agent_adapter import AgentAdapter
 from .script import proceed
@@ -69,30 +68,30 @@ class ScenarioExecutor:
         config: Configuration settings for execution behavior
 
     Example:
-        ```python
+        ```
         # Direct instantiation (less common)
         executor = ScenarioExecutor(
-            name="weather query test",
-            description="User asks about weather, agent should provide helpful response",
-            agents=[
-                weather_agent,
-                scenario.UserSimulatorAgent(),
-                scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
-            ],
-            max_turns=10,
-            verbose=True
+           name="weather query test",
+           description="User asks about weather, agent should provide helpful response",
+           agents=[
+               weather_agent,
+               scenario.UserSimulatorAgent(),
+               scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
+           ],
+           max_turns=10,
+           verbose=True
         )
         result = await executor._run()
 
         # Preferred high-level API
         result = await scenario.run(
-            name="weather query test",
-            description="User asks about weather, agent should provide helpful response",
-            agents=[
-                weather_agent,
-                scenario.UserSimulatorAgent(),
-                scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
-            ]
+           name="weather query test",
+           description="User asks about weather, agent should provide helpful response",
+           agents=[
+               weather_agent,
+               scenario.UserSimulatorAgent(),
+               scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
+           ]
         )
         ```
 
@@ -149,26 +148,6 @@ class ScenarioExecutor:
                       Overrides global configuration for this scenario.
             debug: Whether to enable debug mode with step-by-step execution.
                   Overrides global configuration for this scenario.
-
-        Example:
-            ```python
-            executor = ScenarioExecutor(
-                name="customer service test",
-                description="Customer has a billing question and needs help",
-                agents=[
-                    customer_service_agent,
-                    scenario.UserSimulatorAgent(),
-                    scenario.JudgeAgent(criteria=[
-                        "Agent is polite and professional",
-                        "Agent addresses the billing question",
-                        "Agent provides clear next steps"
-                    ])
-                ],
-                max_turns=15,
-                verbose=True,
-                debug=False
-            )
-            ```
         """
         self.name = name
         self.description = description
@@ -219,35 +198,35 @@ class ScenarioExecutor:
             success/failure status, and detailed reasoning
 
         Example:
-            ```python
+            ```
             import scenario
 
             # Simple scenario with automatic flow
             result = await scenario.run(
-                name="help request",
-                description="User asks for help with a technical problem",
-                agents=[
-                    my_agent,
-                    scenario.UserSimulatorAgent(),
-                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
-                ]
+               name="help request",
+               description="User asks for help with a technical problem",
+               agents=[
+                   my_agent,
+                   scenario.UserSimulatorAgent(),
+                   scenario.JudgeAgent(criteria=["Agent provides helpful response"])
+               ]
             )
 
             # Scripted scenario with custom evaluations
             result = await scenario.run(
-                name="custom interaction",
-                description="Test specific conversation flow",
-                agents=[
-                    my_agent,
-                    scenario.UserSimulatorAgent(),
-                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
-                ],
-                script=[
-                    scenario.user("Hello"),
-                    scenario.agent(),
-                    custom_eval,
-                    scenario.succeed()
-                ]
+               name="custom interaction",
+               description="Test specific conversation flow",
+               agents=[
+                   my_agent,
+                   scenario.UserSimulatorAgent(),
+                   scenario.JudgeAgent(criteria=["Agent provides helpful response"])
+               ],
+               script=[
+                   scenario.user("Hello"),
+                   scenario.agent(),
+                   custom_eval,
+                   scenario.succeed()
+               ]
             )
 
             # Results analysis
@@ -302,18 +281,6 @@ class ScenarioExecutor:
         This method reinitializes all internal state for a fresh scenario run,
         including conversation history, turn counters, and agent timing information.
         Called automatically during initialization and can be used to rerun scenarios.
-
-        Example:
-            ```python
-            executor = ScenarioExecutor(...)
-
-            # Run first test
-            result1 = await executor._run()
-
-            # Reset and run again
-            executor.reset()
-            result2 = await executor._run()
-            ```
         """
         self._state = ScenarioState(
             description=self.description,
@@ -351,24 +318,24 @@ class ScenarioExecutor:
                            Used to avoid broadcasting the message back to its creator.
 
         Example:
-            ```python
+            ```
             def inject_system_message(state: ScenarioState) -> None:
-                state._executor.add_message({
+                state.add_message({
                     "role": "system",
                     "content": "The user is now in a hurry"
                 })
 
             # Use in script
             result = await scenario.run(
-                name="system message test",
-                agents=[agent, user_sim, judge],
-                script=[
-                    scenario.user("Hello"),
-                    scenario.agent(),
-                    inject_system_message,
-                    scenario.user(),  # Will see the system message
-                    scenario.succeed()
-                ]
+               name="system message test",
+               agents=[agent, user_sim, judge],
+               script=[
+                   scenario.user("Hello"),
+                   scenario.agent(),
+                   inject_system_message,
+                   scenario.user(),  # Will see the system message
+                   scenario.succeed()
+               ]
             )
             ```
         """
@@ -398,7 +365,7 @@ class ScenarioExecutor:
             from_agent_idx: Index of the agent that generated these messages
 
         Example:
-            ```python
+            ```
             # Agent returns multiple messages for a complex interaction
             messages = [
                 {"role": "assistant", "content": "Let me search for that..."},

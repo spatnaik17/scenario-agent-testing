@@ -18,7 +18,7 @@ import json
 
 import wrapt
 from scenario.types import AgentInput
-from scenario.utils import SerializableWithStringFallback
+from scenario._utils import SerializableWithStringFallback
 
 if TYPE_CHECKING:
     from scenario.scenario_executor import ScenarioExecutor
@@ -39,7 +39,7 @@ def get_cache() -> Memory:
         Memory instance configured with the appropriate cache directory
 
     Example:
-        ```python
+        ```
         # Default cache location: ~/.scenario/cache
         cache = get_cache()
 
@@ -75,7 +75,7 @@ def scenario_cache(ignore=[]):
         Decorator function that can be applied to any function or method
 
     Example:
-        ```python
+        ```
         import scenario
 
         class MyAgent:
@@ -105,6 +105,7 @@ def scenario_cache(ignore=[]):
         - AgentInput objects are specially handled to exclude thread_id from caching
         - Both sync and async functions are supported
     """
+
     @wrapt.decorator
     def wrapper(wrapped: Callable, instance=None, args=[], kwargs={}):
         scenario: "ScenarioExecutor" = context_scenario.get()

@@ -56,7 +56,7 @@ class AgentInput(BaseModel):
         scenario_state: Current state of the scenario execution
 
     Example:
-        ```python
+        ```
         class MyAgent(AgentAdapter):
             async def call(self, input: AgentInput) -> str:
                 # Get the latest user message
@@ -89,7 +89,7 @@ class AgentInput(BaseModel):
             ValueError: If no new user messages are found
 
         Example:
-            ```python
+            ```
             user_message = input.last_new_user_message()
             content = user_message["content"]
             ```
@@ -115,7 +115,7 @@ class AgentInput(BaseModel):
             ValueError: If no new user messages found or if the message content is not a string
 
         Example:
-            ```python
+            ```
             user_text = input.last_new_user_message_str()
             response = f"You said: {user_text}"
             ```
@@ -146,7 +146,7 @@ class ScenarioResult(BaseModel):
         agent_time: Time spent in agent calls in seconds (if measured)
 
     Example:
-        ```python
+        ```
         result = await scenario.run(
             name="weather query",
             description="User asks about weather",
@@ -199,7 +199,7 @@ Agent adapters can return any of these types:
 - ScenarioResult: Direct test result (typically used by judge agents to end scenarios)
 
 Example:
-    ```python
+    ```
     class MyAgent(AgentAdapter):
         async def call(self, input: AgentInput) -> AgentReturnTypes:
             # Can return a simple string
@@ -234,7 +234,7 @@ scenario state and can optionally return a result to end the scenario.
 The functions can be either synchronous or asynchronous.
 
 Example:
-    ```python
+    ```
     def check_tool_call(state: ScenarioState) -> None:
         assert state.has_tool_call("get_weather")
 

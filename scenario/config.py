@@ -9,6 +9,7 @@ and debugging options.
 from typing import Optional, Union, ClassVar
 from pydantic import BaseModel
 
+
 class ModelConfig(BaseModel):
     """
     Configuration for LLM model settings.
@@ -23,7 +24,7 @@ class ModelConfig(BaseModel):
         max_tokens: Maximum number of tokens to generate in responses
 
     Example:
-        ```python
+        ```
         model_config = ModelConfig(
             model="openai/gpt-4.1-mini",
             api_key="your-api-key",
@@ -32,6 +33,7 @@ class ModelConfig(BaseModel):
         )
         ```
     """
+
     model: str
     api_key: Optional[str] = None
     temperature: float = 0.0
@@ -54,7 +56,7 @@ class ScenarioConfig(BaseModel):
         debug: Whether to enable debug mode with step-by-step interaction
 
     Example:
-        ```python
+        ```
         # Configure globally for all scenarios
         scenario.configure(
             default_model="openai/gpt-4.1-mini",
@@ -106,7 +108,7 @@ class ScenarioConfig(BaseModel):
             debug: Enable debug mode for step-by-step execution with user intervention
 
         Example:
-            ```python
+            ```
             import scenario
 
             # Set up default configuration
@@ -151,7 +153,7 @@ class ScenarioConfig(BaseModel):
             A new ScenarioConfig instance with merged values
 
         Example:
-            ```python
+            ```
             base_config = ScenarioConfig(max_turns=10, verbose=True)
             override_config = ScenarioConfig(max_turns=20)
 
@@ -174,7 +176,7 @@ class ScenarioConfig(BaseModel):
             Dictionary of configuration key-value pairs, excluding None values
 
         Example:
-            ```python
+            ```
             config = ScenarioConfig(max_turns=15, verbose=True)
             items = config.items()
             # Result: {"max_turns": 15, "verbose": True}

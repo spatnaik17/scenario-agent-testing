@@ -8,7 +8,7 @@ pytest-based testing workflows.
 """
 
 import pytest
-from typing import TypedDict, List, Tuple
+from typing import TypedDict
 import functools
 from termcolor import colored
 
@@ -16,7 +16,6 @@ from scenario.config import ScenarioConfig
 from scenario.types import ScenarioResult
 
 from .scenario_executor import ScenarioExecutor
-import scenario
 
 
 class ScenarioReporterResults(TypedDict):
@@ -46,23 +45,6 @@ class ScenarioReporter:
 
     Attributes:
         results: List of all scenario test results collected during the session
-
-    Example:
-        The reporter is used automatically, but you can access it in tests:
-
-        ```python
-        def test_my_scenarios(scenario_reporter):
-            # Run your scenarios
-            result1 = await scenario.run(...)
-            result2 = await scenario.run(...)
-
-            # Check collected results
-            assert len(scenario_reporter.results) == 2
-
-            # Get summary statistics
-            summary = scenario_reporter.get_summary()
-            print(f"Success rate: {summary['success_rate']}%")
-        ```
     """
 
     def __init__(self):
@@ -80,21 +62,6 @@ class ScenarioReporter:
         Args:
             scenario: The ScenarioExecutor instance that ran the test
             result: The ScenarioResult containing test outcome and details
-
-        Example:
-            ```python
-            # This happens automatically when you run scenarios
-            result = await scenario.run(
-                name="my test",
-                description="Test description",
-                agents=[
-                    my_agent,
-                    scenario.UserSimulatorAgent(),
-                    scenario.JudgeAgent(criteria=["Agent provides helpful response"])
-                ]
-            )
-            # Result is automatically added to the global reporter
-            ```
         """
         self.results.append({"scenario": scenario, "result": result})
 
@@ -111,18 +78,6 @@ class ScenarioReporter:
             - passed: Number of scenarios that passed
             - failed: Number of scenarios that failed
             - success_rate: Percentage of scenarios that passed (0-100)
-
-        Example:
-            ```python
-            def test_summary_check(scenario_reporter):
-                # Run some scenarios...
-                await scenario.run(...)
-                await scenario.run(...)
-
-                summary = scenario_reporter.get_summary()
-                assert summary['total'] == 2
-                assert summary['success_rate'] >= 80  # Require 80% success rate
-            ```
         """
         total = len(self.results)
         passed = sum(1 for r in self.results if r["result"].success)
@@ -347,7 +302,7 @@ def scenario_reporter(request):
         ScenarioReporter: The global reporter instance collecting all scenario results
 
     Example:
-        ```python
+        ```
         @pytest.mark.agent_test
         def test_with_custom_reporting(scenario_reporter):
             # Run your scenarios

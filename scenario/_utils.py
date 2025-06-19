@@ -33,7 +33,7 @@ from rich.console import Console
 from rich.text import Text
 from rich.errors import LiveError
 
-from scenario.error_messages import message_return_error_message
+from scenario._error_messages import message_return_error_message
 from scenario.types import AgentReturnTypes, ScenarioResult
 
 T = TypeVar("T")
@@ -48,7 +48,7 @@ class SerializableAndPydanticEncoder(json.JSONEncoder):
     Used for caching and logging scenarios that contain complex objects.
 
     Example:
-        ```python
+        ```
         data = {
             "model": SomeBaseModel(field="value"),
             "iterator": iter([1, 2, 3])
@@ -73,7 +73,7 @@ class SerializableWithStringFallback(SerializableAndPydanticEncoder):
     that logging and caching operations never fail due to serialization issues.
 
     Example:
-        ```python
+        ```
         # This will work even with complex non-serializable objects
         data = {"function": lambda x: x, "complex_object": SomeComplexClass()}
         json.dumps(data, cls=SerializableWithStringFallback)
@@ -100,7 +100,7 @@ def safe_list_at(list, index, default=None):
         The item at the index, or the default value if index is invalid
 
     Example:
-        ```python
+        ```
         items = ["a", "b", "c"]
         print(safe_list_at(items, 1))    # "b"
         print(safe_list_at(items, 10))   # None
@@ -129,7 +129,7 @@ def safe_attr_or_key(obj, attr_or_key, default=None):
         The attribute/key value, or the default if not found
 
     Example:
-        ```python
+        ```
         class MyClass:
             attr = "value"
 
@@ -155,7 +155,7 @@ def title_case(string):
         String converted to Title Case
 
     Example:
-        ```python
+        ```
         print(title_case("user_simulator_agent"))  # "User Simulator Agent"
         print(title_case("api_key"))               # "Api Key"
         ```
@@ -178,7 +178,7 @@ def print_openai_messages(
         messages: List of OpenAI-compatible messages to print
 
     Example:
-        ```python
+        ```
         messages = [
             {"role": "user", "content": "Hello"},
             {"role": "assistant", "content": "Hi there!"},
@@ -299,7 +299,7 @@ def show_spinner(
         enabled: Whether to show the spinner (respects verbose settings)
 
     Example:
-        ```python
+        ```
         with show_spinner("Calling agent...", color="blue", enabled=True):
             response = await agent.call(input_data)
 
@@ -345,7 +345,7 @@ def check_valid_return_type(return_value: Any, class_name: str) -> None:
         ValueError: If the return value is not in a supported format
 
     Example:
-        ```python
+        ```
         # Valid return values
         check_valid_return_type("Hello world", "MyAgent")  # OK
         check_valid_return_type({"role": "assistant", "content": "Hi"}, "MyAgent")  # OK
@@ -404,7 +404,7 @@ def convert_agent_return_types_to_openai_messages(
         ValueError: If agent_response is a ScenarioResult (which should be handled separately)
 
     Example:
-        ```python
+        ```
         # String response
         messages = convert_agent_return_types_to_openai_messages("Hello", "assistant")
         # Result: [{"role": "assistant", "content": "Hello"}]

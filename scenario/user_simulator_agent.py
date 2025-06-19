@@ -15,10 +15,10 @@ from litellm.files.main import ModelResponse
 
 from scenario.cache import scenario_cache
 from scenario.agent_adapter import AgentAdapter
-from scenario.utils import reverse_roles
+from scenario._utils import reverse_roles
 from scenario.config import ModelConfig, ScenarioConfig
 
-from .error_messages import agent_not_configured_error_message
+from ._error_messages import agent_not_configured_error_message
 from .types import AgentInput, AgentReturnTypes, AgentRole
 
 
@@ -43,7 +43,7 @@ class UserSimulatorAgent(AgentAdapter):
         system_prompt: Custom system prompt to override default user simulation behavior
 
     Example:
-        ```python
+        ```
         import scenario
 
         # Basic user simulator with default behavior
@@ -112,7 +112,7 @@ class UserSimulatorAgent(AgentAdapter):
             Exception: If no model is configured either in parameters or global config
 
         Example:
-            ```python
+            ```
             # Basic user simulator
             user_sim = UserSimulatorAgent(model="openai/gpt-4.1-mini")
 
@@ -174,13 +174,6 @@ class UserSimulatorAgent(AgentAdapter):
 
         Returns:
             AgentReturnTypes: A user message in OpenAI format that continues the conversation
-
-        Example:
-            Given a scenario about seeking coding help and previous messages:
-            - Agent: "Hello! How can I help you today?"
-
-            The user simulator might generate:
-            - User: "hi, need help with python error"
 
         Note:
             - Messages are generated in a casual, human-like style

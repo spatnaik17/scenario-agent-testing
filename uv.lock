@@ -1024,6 +1024,7 @@ source = { editable = "." }
 dependencies = [
     { name = "joblib" },
     { name = "litellm" },
+    { name = "pdoc3" },
     { name = "pksuid" },
     { name = "pydantic" },
     { name = "pytest" },
@@ -1064,6 +1065,7 @@ requires-dist = [
     { name = "isort", marker = "extra == 'dev'" },
     { name = "joblib", specifier = ">=1.4.2" },
     { name = "litellm", specifier = ">=1.49.0" },
+    { name = "pdoc3", specifier = ">=0.11.6" },
     { name = "pksuid", specifier = ">=1.1.2" },
     { name = "pre-commit", marker = "extra == 'dev'" },
     { name = "pydantic", specifier = ">=2.7.0" },
@@ -1117,6 +1119,30 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cd/31/b0e0cb016bb32989932cebd38e2e26800764cdea0f03fcb4fcda72680e58/logfire_api-3.14.0.tar.gz", hash = "sha256:70d5bcf075a50e89ecf8cdabe6220e3b00978fa5c0bb56cb9c75d8619107df49", size = 47978 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/3e/6dbe2d1051d7463eb3a8e492e42f464c1eef501b355a5bb25876ca68da28/logfire_api-3.14.0-py3-none-any.whl", hash = "sha256:e01f9049bca809cc102eb7550c4263fe560fa26abd68688e6dc2b8666e506a57", size = 79475 },
+]
+
+[[package]]
+name = "mako"
+version = "1.3.10"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markupsafe" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509 },
+]
+
+[[package]]
+name = "markdown"
+version = "3.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-metadata", marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/7c/0738e5ff0adccd0b4e02c66d0446c03a3c557e02bb49b7c263d7ab56c57d/markdown-3.8.1.tar.gz", hash = "sha256:a2e2f01cead4828ee74ecca9623045f62216aef2212a7685d6eb9163f590b8c1", size = 361280 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/50/34/3d1ff0cb4843a33817d06800e9383a2b2a2df4d508e37f53a40e829905d9/markdown-3.8.1-py3-none-any.whl", hash = "sha256:46cc0c0f1e5211ab2e9d453582f0b28a1bfaf058a9f7d5c50386b99b588d8811", size = 106642 },
 ]
 
 [[package]]
@@ -1423,6 +1449,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ca/bc/f35b8446f4531a7cb215605d100cd88b7ac6f44ab3fc94870c120ab3adbf/pathspec-0.12.1.tar.gz", hash = "sha256:a482d51503a1ab33b1c67a6c3813a26953dbdc71c31dacaef9a838c4e29f5712", size = 51043 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/20/ff623b09d963f88bfde16306a54e12ee5ea43e9b597108672ff3a408aad6/pathspec-0.12.1-py3-none-any.whl", hash = "sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08", size = 31191 },
+]
+
+[[package]]
+name = "pdoc3"
+version = "0.11.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mako" },
+    { name = "markdown" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ed/f0/07d8b771b99c16a06741cd7b2639494a15357df819ecf899c33b87db6257/pdoc3-0.11.6.tar.gz", hash = "sha256:1ea5e84b87a754d191fb64bf5e517ca6c50d0d84a614c1efecf6b46d290ae387", size = 177107 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/98/629f269c2bd91bdcac147aad5cf51ceb645c0196e23a41ee3c051125190f/pdoc3-0.11.6-py3-none-any.whl", hash = "sha256:8b72723767bd48d899812d2aec8375fc1c3476e179455db0b4575e6dccb44b93", size = 255188 },
 ]
 
 [[package]]

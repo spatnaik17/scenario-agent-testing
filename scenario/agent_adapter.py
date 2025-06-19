@@ -26,9 +26,9 @@ class AgentAdapter(ABC):
         role: The role this agent plays in scenarios (USER, AGENT, or JUDGE)
 
     Example:
-        ```python
+        ```
         import scenario
-        from my_agent_library import MyCustomAgent
+        from my_agent import MyCustomAgent
 
         class MyAgentAdapter(scenario.AgentAdapter):
             def __init__(self):
@@ -66,6 +66,7 @@ class AgentAdapter(ABC):
         - For stateful agents, use input.thread_id to maintain conversation context
         - For stateless agents, use input.messages for the full conversation history
     """
+
     role: ClassVar[AgentRole] = AgentRole.AGENT
 
     @abstractmethod
@@ -82,13 +83,17 @@ class AgentAdapter(ABC):
 
         Returns:
             AgentReturnTypes: The agent's response, which can be:
+
                 - str: Simple text response
+
                 - ChatCompletionMessageParam: Single OpenAI-format message
+
                 - List[ChatCompletionMessageParam]: Multiple messages for complex responses
+
                 - ScenarioResult: Direct test result (typically only used by judge agents)
 
         Example:
-            ```python
+            ```
             async def call(self, input: AgentInput) -> AgentReturnTypes:
                 # Simple string response
                 user_msg = input.last_new_user_message_str()
@@ -98,7 +103,6 @@ class AgentAdapter(ABC):
                 return {
                     "role": "assistant",
                     "content": "Let me help you with that...",
-                    "tool_calls": [...]  # If your agent uses tools
                 }
 
                 # Or multiple messages for complex interactions

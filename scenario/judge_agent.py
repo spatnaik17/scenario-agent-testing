@@ -19,7 +19,7 @@ from scenario.cache import scenario_cache
 from scenario.agent_adapter import AgentAdapter
 from scenario.config import ModelConfig, ScenarioConfig
 
-from .error_messages import agent_not_configured_error_message
+from ._error_messages import agent_not_configured_error_message
 from .types import AgentInput, AgentReturnTypes, AgentRole, ScenarioResult
 
 
@@ -48,7 +48,7 @@ class JudgeAgent(AgentAdapter):
         system_prompt: Custom system prompt to override default judge behavior
 
     Example:
-        ```python
+        ```
         import scenario
 
         # Basic judge agent with criteria
@@ -133,14 +133,12 @@ class JudgeAgent(AgentAdapter):
             Exception: If no model is configured either in parameters or global config
 
         Example:
-            ```python
+            ```
             # Customer service judge
             cs_judge = JudgeAgent(
                 criteria=[
-                    "Agent is polite and professional",
-                    "Agent addresses the customer's specific concern",
-                    "Agent offers appropriate solutions or next steps",
-                    "Agent does not make promises the company cannot keep"
+                    "Agent replies with the refund policy",
+                    "Agent offers next steps for the customer",
                 ],
                 temperature=0.1
             )
@@ -148,9 +146,8 @@ class JudgeAgent(AgentAdapter):
             # Technical accuracy judge
             tech_judge = JudgeAgent(
                 criteria=[
-                    "Code examples compile without errors",
-                    "Security vulnerabilities are not introduced",
-                    "Best practices are recommended"
+                    "Agent adds a code review pointing out the code compilation errors",
+                    "Agent adds a code review about the missing security headers"
                 ],
                 system_prompt="You are a senior software engineer reviewing code for production use."
             )
@@ -209,24 +206,6 @@ class JudgeAgent(AgentAdapter):
         Raises:
             Exception: If the judge cannot make a valid decision or if there's an
                       error in the evaluation process
-
-        Example:
-            The judge evaluates conversations like this:
-
-            ```
-            Conversation so far:
-            User: "I need help with authentication"
-            Agent: "I can help! What authentication method are you using?"
-            User: "JWT tokens"
-            Agent: "Here's how to implement JWT securely: [detailed code example]"
-
-            Judge evaluation:
-            - ✓ Agent provides helpful responses
-            - ✓ Agent asks relevant follow-up questions
-            - ✓ Security best practices are mentioned
-
-            Decision: CONTINUE (all criteria being met so far)
-            ```
 
         Note:
             - Returns empty list [] to continue the scenario

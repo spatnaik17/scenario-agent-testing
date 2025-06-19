@@ -32,7 +32,7 @@ def message(message: ChatCompletionMessageParam) -> ScriptStep:
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         result = await scenario.run(
             name="tool response test",
             description="Testing tool call responses",
@@ -76,7 +76,7 @@ def user(
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         result = await scenario.run(
             name="user interaction test",
             description="Testing specific user inputs",
@@ -128,7 +128,7 @@ def agent(
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         result = await scenario.run(
             name="agent response test",
             description="Testing agent responses",
@@ -179,7 +179,7 @@ def judge(
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         result = await scenario.run(
             name="judge evaluation test",
             description="Testing judge at specific points",
@@ -238,7 +238,7 @@ def proceed(
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         def log_progress(state: ScenarioState) -> None:
             print(f"Turn {state.current_turn}: {len(state.messages)} messages")
 
@@ -288,7 +288,7 @@ def succeed(reasoning: Optional[str] = None) -> ScriptStep:
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         def custom_success_check(state: ScenarioState) -> None:
             last_msg = state.last_message()
             if "solution" in last_msg.get("content", "").lower():
@@ -331,7 +331,7 @@ def fail(reasoning: Optional[str] = None) -> ScriptStep:
         ScriptStep function that can be used in scenario scripts
 
     Example:
-        ```python
+        ```
         def safety_check(state: ScenarioState) -> None:
             last_msg = state.last_message()
             content = last_msg.get("content", "")

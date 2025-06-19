@@ -36,7 +36,7 @@ class ScenarioState(BaseModel):
         config: Configuration settings for this scenario execution
 
     Example:
-        ```python
+        ```
         def check_agent_behavior(state: ScenarioState) -> None:
             # Check if the agent called a specific tool
             if state.has_tool_call("get_weather"):
@@ -87,7 +87,7 @@ class ScenarioState(BaseModel):
             message: OpenAI-compatible message to add to the conversation
 
         Example:
-            ```python
+            ```
             def inject_system_message(state: ScenarioState) -> None:
                 state.add_message({
                     "role": "system",
@@ -108,7 +108,7 @@ class ScenarioState(BaseModel):
             ValueError: If no messages exist in the conversation
 
         Example:
-            ```python
+            ```
             def check_last_response(state: ScenarioState) -> None:
                 last = state.last_message()
                 if last["role"] == "assistant":
@@ -131,7 +131,7 @@ class ScenarioState(BaseModel):
             ValueError: If no user messages exist in the conversation
 
         Example:
-            ```python
+            ```
             def analyze_user_intent(state: ScenarioState) -> None:
                 user_msg = state.last_user_message()
                 content = user_msg["content"]
@@ -162,7 +162,7 @@ class ScenarioState(BaseModel):
             The tool call object if found, None otherwise
 
         Example:
-            ```python
+            ```
             def verify_weather_call(state: ScenarioState) -> None:
                 weather_call = state.last_tool_call("get_current_weather")
                 if weather_call:
@@ -192,7 +192,7 @@ class ScenarioState(BaseModel):
             True if the tool has been called, False otherwise
 
         Example:
-            ```python
+            ```
             def ensure_tool_usage(state: ScenarioState) -> None:
                 # Verify the agent used required tools
                 assert state.has_tool_call("search_database")

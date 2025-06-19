@@ -28,5 +28,8 @@ bump-version:
 typecheck:
 	uv run pyright .
 
+pdocs:
+	uv run pdoc --html -o ./docs/docs/public/reference/python --template-dir ./docs/pdoc_template scenario --force
+
 %:
 	@:
