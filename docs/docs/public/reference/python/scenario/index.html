@@ -14,7 +14,7 @@
 <style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
 <script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
-<link rel="icon" href="/favicon.ico" type="image/x-icon" />
+<link rel="icon" href="https://langwatch.github.io/scenario/favicon.ico" type="image/x-icon" />
 </head>
 <body>
 <style>
@@ -376,6 +376,14 @@ __version__ = &#34;0.1.0&#34;</code></pre>
 <dd>
 <div class="desc"><p>Configuration module for Scenario …</p></div>
 </dd>
+<dt><code class="name"><a title="scenario.events" href="events/index.html">scenario.events</a></code></dt>
+<dd>
+<div class="desc"><p>Scenario events module for handling event publishing, processing, and reporting …</p></div>
+</dd>
+<dt><code class="name"><a title="scenario.generated" href="generated/index.html">scenario.generated</a></code></dt>
+<dd>
+<div class="desc"></div>
+</dd>
 <dt><code class="name"><a title="scenario.judge_agent" href="judge_agent.html">scenario.judge_agent</a></code></dt>
 <dd>
 <div class="desc"><p>Judge agent module for evaluating scenario conversations …</p></div>
@@ -403,6 +411,10 @@ __version__ = &#34;0.1.0&#34;</code></pre>
 <dt><code class="name"><a title="scenario.user_simulator_agent" href="user_simulator_agent.html">scenario.user_simulator_agent</a></code></dt>
 <dd>
 <div class="desc"><p>User simulator agent module for generating realistic user interactions …</p></div>
+</dd>
+<dt><code class="name"><a title="scenario.utils" href="utils/index.html">scenario.utils</a></code></dt>
+<dd>
+<div class="desc"></div>
 </dd>
 </dl>
 </section>
@@ -3126,7 +3138,7 @@ merged = base_config.merge(override_config)
 </dd>
 <dt id="scenario.ScenarioExecutor"><code class="flex name class">
 <span>class <span class="ident">ScenarioExecutor</span></span>
-<span>(</span><span>name: str, description: str, agents: List[<a title="scenario.agent_adapter.AgentAdapter" href="agent_adapter.html#scenario.agent_adapter.AgentAdapter">AgentAdapter</a>] = [], script: List[Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], None] | Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], <a title="scenario.types.ScenarioResult" href="types.html#scenario.types.ScenarioResult">ScenarioResult</a> | None] | Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], Awaitable[None]] | Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], Awaitable[<a title="scenario.types.ScenarioResult" href="types.html#scenario.types.ScenarioResult">ScenarioResult</a> | None]]] | None = None, max_turns: int | None = None, verbose: bool | int | None = None, cache_key: str | None = None, debug: bool | None = None)</span>
+<span>(</span><span>name: str, description: str, agents: List[<a title="scenario.agent_adapter.AgentAdapter" href="agent_adapter.html#scenario.agent_adapter.AgentAdapter">AgentAdapter</a>] = [], script: List[Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], None] | Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], <a title="scenario.types.ScenarioResult" href="types.html#scenario.types.ScenarioResult">ScenarioResult</a> | None] | Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], Awaitable[None]] | Callable[[ForwardRef('<a title="scenario.ScenarioState" href="#scenario.ScenarioState">ScenarioState</a>')], Awaitable[<a title="scenario.types.ScenarioResult" href="types.html#scenario.types.ScenarioResult">ScenarioResult</a> | None]]] | None = None, max_turns: int | None = None, verbose: bool | int | None = None, cache_key: str | None = None, debug: bool | None = None, event_bus: <a title="scenario.events.event_bus.ScenarioEventBus" href="events/event_bus.html#scenario.events.event_bus.ScenarioEventBus">ScenarioEventBus</a> | None = None)</span>
 </code></dt>
 <dd>
 <div class="desc"><p>Core orchestrator for scenario-based agent testing.</p>
@@ -3211,7 +3223,27 @@ Overrides global configuration for this scenario.</dd>
 <dt><strong><code>debug</code></strong></dt>
 <dd>Whether to enable debug mode with step-by-step execution.
 Overrides global configuration for this scenario.</dd>
-</dl></div>
+<dt><strong><code>event_reporter</code></strong></dt>
+<dd>Optional event reporter for the scenario</dd>
+</dl>
+<h2 id="example_1">Example</h2>
+<pre><code class="language-python">executor = ScenarioExecutor(
+    name=&quot;customer service test&quot;,
+    description=&quot;Customer has a billing question and needs help&quot;,
+    agents=[
+        customer_service_agent,
+        scenario.UserSimulatorAgent(),
+        scenario.JudgeAgent(criteria=[
+            &quot;Agent is polite and professional&quot;,
+            &quot;Agent addresses the billing question&quot;,
+            &quot;Agent provides clear next steps&quot;
+        ])
+    ],
+    max_turns=15,
+    verbose=True,
+    debug=False
+)
+</code></pre></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -3288,6 +3320,10 @@ Overrides global configuration for this scenario.</dd>
     _pending_agents_on_turn: Set[AgentAdapter] = set()
     _agent_times: Dict[int, float] = {}
 
+    event_bus: ScenarioEventBus
+
+    batch_run_id: str
+
     def __init__(
         self,
         name: str,
@@ -3299,6 +3335,7 @@ Overrides global configuration for this scenario.</dd>
         verbose: Optional[Union[bool, int]] = None,
         cache_key: Optional[str] = None,
         debug: Optional[bool] = None,
+        event_bus: Optional[ScenarioEventBus] = None,
     ):
         &#34;&#34;&#34;
         Initialize a scenario executor.
@@ -3319,6 +3356,27 @@ Overrides global configuration for this scenario.</dd>
                       Overrides global configuration for this scenario.
             debug: Whether to enable debug mode with step-by-step execution.
                   Overrides global configuration for this scenario.
+            event_reporter: Optional event reporter for the scenario
+
+        Example:
+            ```python
+            executor = ScenarioExecutor(
+                name=&#34;customer service test&#34;,
+                description=&#34;Customer has a billing question and needs help&#34;,
+                agents=[
+                    customer_service_agent,
+                    scenario.UserSimulatorAgent(),
+                    scenario.JudgeAgent(criteria=[
+                        &#34;Agent is polite and professional&#34;,
+                        &#34;Agent addresses the billing question&#34;,
+                        &#34;Agent provides clear next steps&#34;
+                    ])
+                ],
+                max_turns=15,
+                verbose=True,
+                debug=False
+            )
+            ```
         &#34;&#34;&#34;
         self.name = name
         self.description = description
@@ -3334,6 +3392,10 @@ Overrides global configuration for this scenario.</dd>
         self.config = (ScenarioConfig.default_config or ScenarioConfig()).merge(config)
 
         self.reset()
+
+        self.event_bus = event_bus or ScenarioEventBus()
+
+        self.batch_run_id = get_or_create_batch_run_id()
 
     @classmethod
     async def run(
@@ -3436,6 +3498,7 @@ Overrides global configuration for this scenario.</dd>
                 try:
                     return loop.run_until_complete(scenario._run())
                 finally:
+                    loop.run_until_complete(scenario.event_bus.drain())
                     loop.close()
 
             # Run the function in the thread pool and await its result
@@ -3519,6 +3582,8 @@ Overrides global configuration for this scenario.</dd>
             if idx not in self._pending_messages:
                 self._pending_messages[idx] = []
             self._pending_messages[idx].append(message)
+
+        self._emit_message_snapshot_event()
 
     def add_messages(
         self,
@@ -3657,30 +3722,53 @@ Overrides global configuration for this scenario.</dd>
         Returns:
             ScenarioResult containing the test outcome
         &#34;&#34;&#34;
+        scenario_run_id = generate_scenario_run_id()
 
-        if self.config.verbose:
-            print(&#34;&#34;)  # new line
+        try:
+            await self.event_bus.listen()
+            self._emit_run_started_event(scenario_run_id)
 
-        self.reset()
+            if self.config.verbose:
+                print(&#34;&#34;)  # new line
 
-        for script_step in self.script:
-            callable = script_step(self._state)
-            if isinstance(callable, Awaitable):
-                result = await callable
-            else:
-                result = callable
+            self.reset()
 
-            if isinstance(result, ScenarioResult):
-                return result
+            for script_step in self.script:
+                callable = script_step(self._state)
+                if isinstance(callable, Awaitable):
+                    result = await callable
+                else:
+                    result = callable
 
-        return self._reached_max_turns(
-            &#34;&#34;&#34;Reached end of script without conclusion, add one of the following to the end of the script:
+                if isinstance(result, ScenarioResult):
+                    status = ScenarioRunFinishedEventStatus.SUCCESS if result.success else ScenarioRunFinishedEventStatus.FAILED
+                    self._emit_run_finished_event(scenario_run_id, result, status)
+                    return result
+
+            result = self._reached_max_turns(
+                &#34;&#34;&#34;Reached end of script without conclusion, add one of the following to the end of the script:
 
 - `scenario.proceed()` to let the simulation continue to play out
 - `scenario.judge()` to force criteria judgement
 - `scenario.succeed()` or `scenario.fail()` to end the test with an explicit result
-            &#34;&#34;&#34;
-        )
+                &#34;&#34;&#34;
+            )
+
+            status = ScenarioRunFinishedEventStatus.SUCCESS if result.success else ScenarioRunFinishedEventStatus.FAILED
+            self._emit_run_finished_event(scenario_run_id, result, status)
+            return result
+
+        except Exception as e:
+            # Publish failure event before propagating the error
+            error_result = ScenarioResult(
+                success=False,
+                messages=self._state.messages,
+                reasoning=f&#34;Scenario failed with error: {str(e)}&#34;,
+                total_time=time.time() - self._total_start_time,
+                agent_time=0,
+            )
+            self._emit_run_finished_event(scenario_run_id, error_result, ScenarioRunFinishedEventStatus.ERROR)
+            raise  # Re-raise the exception after cleanup
 
     async def _call_agent(
         self, idx: int, role: AgentRole, request_judgment: bool = False
@@ -3913,11 +4001,142 @@ Overrides global configuration for this scenario.</dd>
             idx, role=role, request_judgment=request_judgment
         )
         if isinstance(result, ScenarioResult):
-            return result</code></pre>
+            return result
+
+    # Event handling methods
+
+    class _CommonEventFields(TypedDict):
+        &#34;&#34;&#34;
+        Common fields shared across all scenario events.
+        
+        These fields provide consistent identification and timing information
+        for all events emitted during scenario execution.
+        
+        Attributes:
+            batch_run_id: Unique identifier for the batch of scenario runs
+            scenario_run_id: Unique identifier for this specific scenario run
+            scenario_id: Human-readable name/identifier for the scenario
+            timestamp: Unix timestamp in milliseconds when the event occurred
+        &#34;&#34;&#34;
+        batch_run_id: str
+        scenario_run_id: str
+        scenario_id: str
+        timestamp: int
+
+    def _create_common_event_fields(self, scenario_run_id: str) -&gt; _CommonEventFields:
+        &#34;&#34;&#34;
+        Create common fields used across all scenario events.
+        
+        This method generates the standard fields that every scenario event
+        must include for proper identification and timing.
+        
+        Args:
+            scenario_run_id: Unique identifier for the current scenario run
+            
+        Returns:
+            Dictionary containing common event fields with current timestamp
+        &#34;&#34;&#34;
+        return {
+            &#34;batch_run_id&#34;: self.batch_run_id,
+            &#34;scenario_run_id&#34;: scenario_run_id,
+            &#34;scenario_id&#34;: self.name,
+            &#34;timestamp&#34;: int(time.time() * 1000),
+        }
+
+    def _emit_run_started_event(self, scenario_run_id: str) -&gt; None:
+        &#34;&#34;&#34;
+        Emit a scenario run started event.
+        
+        This event is published when a scenario begins execution. It includes
+        metadata about the scenario such as name and description, and is used
+        to track the start of scenario runs in monitoring systems.
+        
+        Args:
+            scenario_run_id: Unique identifier for the current scenario run
+            
+        Note:
+            This event is automatically published at the beginning of `_run()`
+            and signals the start of scenario execution to any event listeners.
+        &#34;&#34;&#34;
+        common_fields = self._create_common_event_fields(scenario_run_id)
+        metadata = ScenarioRunStartedEventMetadata(
+            name=self.name,
+            description=self.description,
+        )
+        
+        event = ScenarioRunStartedEvent(
+            **common_fields,
+            metadata=metadata,
+        )
+        self.event_bus.publish(event)
+
+    def _emit_message_snapshot_event(self) -&gt; None:
+        &#34;&#34;&#34;
+        Emit a message snapshot event.
+        
+        This event captures the current state of the conversation during
+        scenario execution. It&#39;s published whenever messages are added to
+        the conversation, allowing real-time tracking of scenario progress.
+        
+        Note:
+            This event is automatically published by `add_message()` and
+            `add_messages()` to provide continuous visibility into scenario
+            execution state.
+        &#34;&#34;&#34;
+        common_fields = self._create_common_event_fields(self.batch_run_id)
+        
+        event = ScenarioMessageSnapshotEvent(
+            **common_fields,
+            messages=convert_messages_to_ag_ui_messages(self._state.messages),
+        )
+        self.event_bus.publish(event)
+
+    def _emit_run_finished_event(
+        self, 
+        scenario_run_id: str, 
+        result: ScenarioResult, 
+        status: ScenarioRunFinishedEventStatus
+    ) -&gt; None:
+        &#34;&#34;&#34;
+        Emit a scenario run finished event.
+        
+        This event is published when a scenario completes execution, whether
+        successfully or with an error. It includes the final results, verdict,
+        and reasoning for the scenario outcome.
+        
+        Args:
+            scenario_run_id: Unique identifier for the current scenario run
+            result: The final scenario result containing success/failure status
+            status: The execution status (SUCCESS, FAILED, or ERROR)
+            
+        Note:
+            This event is automatically published at the end of `_run()` and
+            signals the completion of scenario execution to any event listeners.
+            It includes detailed results for monitoring and analysis purposes.
+        &#34;&#34;&#34;
+        common_fields = self._create_common_event_fields(scenario_run_id)
+        
+        results = ScenarioRunFinishedEventResults(
+            verdict=ScenarioRunFinishedEventVerdict.SUCCESS if result.success else ScenarioRunFinishedEventVerdict.FAILURE,
+            reasoning=result.reasoning or &#34;&#34;,
+            met_criteria=result.passed_criteria,
+            unmet_criteria=result.failed_criteria,
+        )
+        
+        event = ScenarioRunFinishedEvent(
+            **common_fields,
+            status=status,
+            results=results,
+        )
+        self.event_bus.publish(event)</code></pre>
 </details>
 <h3>Class variables</h3>
 <dl>
 <dt id="scenario.ScenarioExecutor.agents"><code class="name">var <span class="ident">agents</span> : List[<a title="scenario.agent_adapter.AgentAdapter" href="agent_adapter.html#scenario.agent_adapter.AgentAdapter">AgentAdapter</a>]</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.ScenarioExecutor.batch_run_id"><code class="name">var <span class="ident">batch_run_id</span> : str</code></dt>
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
@@ -3926,6 +4145,10 @@ Overrides global configuration for this scenario.</dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
 <dt id="scenario.ScenarioExecutor.description"><code class="name">var <span class="ident">description</span> : str</code></dt>
+<dd>
+<div class="desc"><p>The type of the None singleton.</p></div>
+</dd>
+<dt id="scenario.ScenarioExecutor.event_bus"><code class="name">var <span class="ident">event_bus</span> : <a title="scenario.events.event_bus.ScenarioEventBus" href="events/event_bus.html#scenario.events.event_bus.ScenarioEventBus">ScenarioEventBus</a></code></dt>
 <dd>
 <div class="desc"><p>The type of the None singleton.</p></div>
 </dd>
@@ -4102,7 +4325,9 @@ result = await scenario.run(
             continue
         if idx not in self._pending_messages:
             self._pending_messages[idx] = []
-        self._pending_messages[idx].append(message)</code></pre>
+        self._pending_messages[idx].append(message)
+
+    self._emit_message_snapshot_event()</code></pre>
 </details>
 </dd>
 <dt id="scenario.ScenarioExecutor.add_messages"><code class="name flex">
@@ -5620,6 +5845,8 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 <ul>
 <li><code><a title="scenario.agent_adapter" href="agent_adapter.html">scenario.agent_adapter</a></code></li>
 <li><code><a title="scenario.config" href="config.html">scenario.config</a></code></li>
+<li><code><a title="scenario.events" href="events/index.html">scenario.events</a></code></li>
+<li><code><a title="scenario.generated" href="generated/index.html">scenario.generated</a></code></li>
 <li><code><a title="scenario.judge_agent" href="judge_agent.html">scenario.judge_agent</a></code></li>
 <li><code><a title="scenario.pytest_plugin" href="pytest_plugin.html">scenario.pytest_plugin</a></code></li>
 <li><code><a title="scenario.scenario_executor" href="scenario_executor.html">scenario.scenario_executor</a></code></li>
@@ -5627,6 +5854,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 <li><code><a title="scenario.script" href="script.html">scenario.script</a></code></li>
 <li><code><a title="scenario.types" href="types.html">scenario.types</a></code></li>
 <li><code><a title="scenario.user_simulator_agent" href="user_simulator_agent.html">scenario.user_simulator_agent</a></code></li>
+<li><code><a title="scenario.utils" href="utils/index.html">scenario.utils</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
@@ -5693,8 +5921,10 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 <li><code><a title="scenario.ScenarioExecutor.add_messages" href="#scenario.ScenarioExecutor.add_messages">add_messages</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.agent" href="#scenario.ScenarioExecutor.agent">agent</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.agents" href="#scenario.ScenarioExecutor.agents">agents</a></code></li>
+<li><code><a title="scenario.ScenarioExecutor.batch_run_id" href="#scenario.ScenarioExecutor.batch_run_id">batch_run_id</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.config" href="#scenario.ScenarioExecutor.config">config</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.description" href="#scenario.ScenarioExecutor.description">description</a></code></li>
+<li><code><a title="scenario.ScenarioExecutor.event_bus" href="#scenario.ScenarioExecutor.event_bus">event_bus</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.fail" href="#scenario.ScenarioExecutor.fail">fail</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.judge" href="#scenario.ScenarioExecutor.judge">judge</a></code></li>
 <li><code><a title="scenario.ScenarioExecutor.message" href="#scenario.ScenarioExecutor.message">message</a></code></li>

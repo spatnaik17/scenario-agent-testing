@@ -418,7 +418,7 @@
     <script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
   % endif
 
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="https://langwatch.github.io/scenario/favicon.ico" type="image/x-icon" />
 </head>
 <body>
 
