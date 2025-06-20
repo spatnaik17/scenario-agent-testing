@@ -3,7 +3,6 @@ import { defineConfig } from "@langwatch/scenario";
 
 export default defineConfig({
   defaultModel: {
-    model: openai("gpt-4.1-nano"),
+    model: openai("gpt-4.1-mini"),
   },
-  langwatchEndpoint: "http://localhost:5560",
 });
