@@ -8,39 +8,32 @@ the backend, and provides a single import location for event models.
 If you need to add custom logic or helpers, you can extend or wrap these models here.
 """
 
-from typing import Union, Any, Optional
-from scenario.generated.langwatch_api_client.lang_watch_api_client.models import (
+from typing import Union, Any, Optional, TypeAlias
+from scenario._generated.langwatch_api_client.lang_watch_api_client.models import (
     PostApiScenarioEventsBodyType0,
-    PostApiScenarioEventsBodyType0Metadata as ScenarioRunStartedEventMetadata,
+    PostApiScenarioEventsBodyType0Metadata,
     PostApiScenarioEventsBodyType1,
-    PostApiScenarioEventsBodyType1ResultsType0 as ScenarioRunFinishedEventResults,
-    PostApiScenarioEventsBodyType1ResultsType0Verdict as ScenarioRunFinishedEventVerdict,
-    PostApiScenarioEventsBodyType1Status as ScenarioRunFinishedEventStatus,
+    PostApiScenarioEventsBodyType1ResultsType0,
+    PostApiScenarioEventsBodyType1ResultsType0Verdict,
+    PostApiScenarioEventsBodyType1Status,
     PostApiScenarioEventsBodyType2,
-    # Message types for the snapshot event
-    PostApiScenarioEventsBodyType2MessagesItemType0,
-    PostApiScenarioEventsBodyType2MessagesItemType1,
-    PostApiScenarioEventsBodyType2MessagesItemType2,
-    PostApiScenarioEventsBodyType2MessagesItemType3,
-    PostApiScenarioEventsBodyType2MessagesItemType4,
 )
+from .messages import MessageType
 
-# Type alias for message types
-MessageType = Union[
-    PostApiScenarioEventsBodyType2MessagesItemType0,
-    PostApiScenarioEventsBodyType2MessagesItemType1, 
-    PostApiScenarioEventsBodyType2MessagesItemType2,
-    PostApiScenarioEventsBodyType2MessagesItemType3,
-    PostApiScenarioEventsBodyType2MessagesItemType4,
-]
+# Create alias for cleaner naming
+ScenarioRunStartedEventMetadata: TypeAlias = PostApiScenarioEventsBodyType0Metadata
+ScenarioRunFinishedEventResults: TypeAlias = PostApiScenarioEventsBodyType1ResultsType0
+ScenarioRunFinishedEventVerdict: TypeAlias = PostApiScenarioEventsBodyType1ResultsType0Verdict
+ScenarioRunFinishedEventStatus: TypeAlias = PostApiScenarioEventsBodyType1Status
+
 
 class ScenarioRunStartedEvent(PostApiScenarioEventsBodyType0):
     """
     Event published when a scenario run begins execution.
-    
+
     Automatically sets type_ to "SCENARIO_RUN_STARTED" and includes metadata
     about the scenario (name, description, etc.).
-    
+
     Args:
         batch_run_id (str): Unique identifier for the batch of scenario runs
         scenario_id (str): Unique identifier for the scenario definition
@@ -74,10 +67,10 @@ class ScenarioRunStartedEvent(PostApiScenarioEventsBodyType0):
 class ScenarioRunFinishedEvent(PostApiScenarioEventsBodyType1):
     """
     Event published when a scenario run completes execution.
-    
+
     Automatically sets type_ to "SCENARIO_RUN_FINISHED" and includes results
     with verdict (PASS/FAIL/SUCCESS) and reasoning.
-    
+
     Args:
         batch_run_id (str): Unique identifier for the batch of scenario runs
         scenario_id (str): Unique identifier for the scenario definition
@@ -114,10 +107,10 @@ class ScenarioRunFinishedEvent(PostApiScenarioEventsBodyType1):
 class ScenarioMessageSnapshotEvent(PostApiScenarioEventsBodyType2):
     """
     Event published to capture intermediate state during scenario execution.
-    
+
     Automatically sets type_ to "SCENARIO_MESSAGE_SNAPSHOT" and allows tracking
     of messages, context, or other runtime data during scenario processing.
-    
+
     Args:
         batch_run_id (str): Unique identifier for the batch of scenario runs
         scenario_id (str): Unique identifier for the scenario definition
@@ -151,7 +144,7 @@ class ScenarioMessageSnapshotEvent(PostApiScenarioEventsBodyType2):
 # Union type for all supported event types
 ScenarioEvent = Union[
     ScenarioRunStartedEvent,
-    ScenarioRunFinishedEvent, 
+    ScenarioRunFinishedEvent,
     ScenarioMessageSnapshotEvent
 ]
 

@@ -15,6 +15,7 @@ from .events import (
     ScenarioRunFinishedEventVerdict,
     ScenarioRunFinishedEventStatus,
     ScenarioMessageSnapshotEvent,
+    MessageType,
 )
 
 # Event processing infrastructure
@@ -39,24 +40,25 @@ __all__ = [
     "ScenarioEvent",
     "ScenarioRunStartedEvent",
     "ScenarioRunStartedEventMetadata",
-    "ScenarioRunFinishedEvent", 
+    "ScenarioRunFinishedEvent",
     "ScenarioRunFinishedEventResults",
     "ScenarioRunFinishedEventVerdict",
     "ScenarioRunFinishedEventStatus",
     "ScenarioMessageSnapshotEvent",
-    
+
     # Event processing
     "ScenarioEventBus",
     "EventReporter",
-    
+
     # Messages
+    "MessageType",
     "UserMessage",
-    "AssistantMessage", 
+    "AssistantMessage",
     "SystemMessage",
     "ToolMessage",
     "ToolCall",
     "FunctionCall",
-    
+
     # Utils
     "convert_messages_to_api_client_messages",
-] 
+]

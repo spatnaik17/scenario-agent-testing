@@ -3,8 +3,8 @@ import respx
 import logging
 import time
 from _pytest.logging import LogCaptureFixture
-from scenario.events.event_reporter import EventReporter
-from scenario.events.events import (
+from scenario._events.event_reporter import EventReporter
+from scenario._events.events import (
     ScenarioRunStartedEvent,
     ScenarioRunStartedEventMetadata,
 )
@@ -42,7 +42,7 @@ async def test_post_event_sends_correct_request(caplog: LogCaptureFixture) -> No
 
         # Assert
         assert route.called
-        request = route.calls[0].request
+        request: httpx.Request = route.calls[0].request # type: ignore
         assert request.headers["X-Auth-Token"] == api_key
         assert request.headers["Content-Type"] == "application/json"
         assert (
