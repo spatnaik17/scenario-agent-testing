@@ -1,11 +1,13 @@
 ![scenario](https://github.com/langwatch/scenario/raw/main/assets/scenario-wide.webp)
 
 <p align="center">
-	<a href="https://discord.gg/kT4PhDS2gH" target="_blank"><img src="https://img.shields.io/discord/1227886780536324106?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb" alt="chat on Discord"></a>
-	<a href="https://pypi.python.org/pypi/langwatch-scenario" target="_blank"><img src="https://img.shields.io/pypi/dm/langwatch-scenario?logo=python&logoColor=white&label=pypi%20langwatch-scenario&color=blue" alt="Scenario Python package on PyPi"></a>
-	<a href="https://www.npmjs.com/package/@langwatch/scenario" target="_blank"><img src="https://img.shields.io/npm/dm/@langwatch/scenario?logo=npm&logoColor=white&label=npm%20@langwatch/scenario&color=blue" alt="Scenario JavaScript package on npm"></a>
-	<a href="https://twitter.com/intent/follow?screen_name=langwatchai" target="_blank">
-	<img src="https://img.shields.io/twitter/follow/langwatchai?logo=X&color=%20%23f5f5f5" alt="follow on X(Twitter)"></a>
+    <a href="https://discord.gg/kT4PhDS2gH" target="_blank"><img src="https://img.shields.io/discord/1227886780536324106?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb" alt="chat on Discord"></a>
+    <a href="https://pypi.python.org/pypi/langwatch-scenario" target="_blank"><img src="https://img.shields.io/pypi/dm/langwatch-scenario?logo=python&logoColor=white&label=pypi%20langwatch-scenario&color=blue" alt="Scenario Python package on PyPi"></a>
+    <a href="https://www.npmjs.com/package/@langwatch/scenario" target="_blank"><img src="https://img.shields.io/npm/dm/@langwatch/scenario?logo=npm&logoColor=white&label=npm%20@langwatch/scenario&color=blue" alt="Scenario JavaScript package on npm"></a>
+    <a href="https://github.com/langwatch/scenario/actions/workflows/python-ci.yml"><img src="https://github.com/langwatch/scenario/actions/workflows/python-ci.yml/badge.svg" alt="Python Tests" /></a>
+    <a href="https://github.com/langwatch/scenario/actions/workflows/javascript-ci.yml"><img src="https://github.com/langwatch/scenario/actions/workflows/javascript-ci.yml/badge.svg" alt="JavaScript Tests" /></a>
+    <a href="https://twitter.com/intent/follow?screen_name=langwatchai" target="_blank">
+    <img src="https://img.shields.io/twitter/follow/langwatchai?logo=X&color=%20%23f5f5f5" alt="follow on X(Twitter)"></a>
 </p>
 
 # Scenario
