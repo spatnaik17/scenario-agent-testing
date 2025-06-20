@@ -47,15 +47,15 @@ from .script import proceed
 from pksuid import PKSUID
 from .scenario_state import ScenarioState
 from .events import (
-    ScenarioEventBus, 
+    ScenarioEventBus,
     ScenarioEvent,
-    ScenarioRunStartedEvent, 
-    ScenarioMessageSnapshotEvent, 
-    ScenarioRunFinishedEvent, 
-    ScenarioRunStartedEventMetadata, 
-    ScenarioRunFinishedEventResults, 
-    ScenarioRunFinishedEventVerdict, 
-    ScenarioRunFinishedEventStatus, 
+    ScenarioRunStartedEvent,
+    ScenarioMessageSnapshotEvent,
+    ScenarioRunFinishedEvent,
+    ScenarioRunStartedEventMetadata,
+    ScenarioRunFinishedEventResults,
+    ScenarioRunFinishedEventVerdict,
+    ScenarioRunFinishedEventStatus,
     convert_messages_to_api_client_messages,
 )
 from rx.subject.subject import Subject
@@ -83,40 +83,6 @@ class ScenarioExecutor:
         agents: List of agent adapters participating in the scenario
         script: Optional list of script steps to control scenario flow
         config: Configuration settings for execution behavior
-
-    Example:
-        ```
-        # Direct instantiation (less common)
-        executor = ScenarioExecutor(
-           name="weather query test",
-           description="User asks about weather, agent should provide helpful response",
-           agents=[
-               weather_agent,
-               scenario.UserSimulatorAgent(),
-               scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
-           ],
-           max_turns=10,
-           verbose=True
-        )
-        result = await executor._run()
-
-        # Preferred high-level API
-        result = await scenario.run(
-           name="weather query test",
-           description="User asks about weather, agent should provide helpful response",
-           agents=[
-               weather_agent,
-               scenario.UserSimulatorAgent(),
-               scenario.JudgeAgent(criteria=["Agent provides helpful weather info"])
-           ]
-        )
-        ```
-
-    Note:
-        - Scenarios run in isolated thread pools to support parallel execution
-        - All agent interactions are cached when cache_key is configured
-        - Debug mode allows step-by-step execution with user intervention
-        - Results include detailed timing information and conversation history
     """
 
     name: str
@@ -190,7 +156,7 @@ class ScenarioExecutor:
 
         # Create executor's own event stream
         self._events = Subject()
-        
+
         # Create and configure event bus to subscribe to our events
         self.event_bus = event_bus or ScenarioEventBus()
         self.event_bus.subscribe_to_events(self._events)
@@ -205,11 +171,11 @@ class ScenarioExecutor:
     def _emit_event(self, event: ScenarioEvent) -> None:
         """
         Emit a domain event to all subscribers.
-        
+
         This method publishes scenario events to the internal event stream,
         which subscribers (like the event bus) can observe and react to.
         The timestamp is automatically set to the current time.
-        
+
         Args:
             event: The scenario event to emit
         """
@@ -286,12 +252,6 @@ class ScenarioExecutor:
             print(f"Reasoning: {result.reasoning}")
             print(f"Conversation had {len(result.messages)} messages")
             ```
-
-        Note:
-            - Runs in isolated thread pool to support parallel execution
-            - Blocks until scenario completes or times out
-            - All agent calls are automatically cached when cache_key is set
-            - Exception handling ensures clean resource cleanup
         """
         scenario = cls(
             name=name,
@@ -826,10 +786,10 @@ class ScenarioExecutor:
     class _CommonEventFields(TypedDict):
         """
         Common fields shared across all scenario events.
-        
+
         These fields provide consistent identification and timing information
         for all events emitted during scenario execution.
-        
+
         Attributes:
             batch_run_id: Unique identifier for the batch of scenario runs
             scenario_run_id: Unique identifier for this specific scenario run
@@ -844,13 +804,13 @@ class ScenarioExecutor:
     def _create_common_event_fields(self, scenario_run_id: str) -> _CommonEventFields:
         """
         Create common fields used across all scenario events.
-        
+
         This method generates the standard fields that every scenario event
         must include for proper identification and timing.
-        
+
         Args:
             scenario_run_id: Unique identifier for the current scenario run
-            
+
         Returns:
             Dictionary containing common event fields with current timestamp
         """
@@ -864,11 +824,11 @@ class ScenarioExecutor:
     def _emit_run_started_event(self, scenario_run_id: str) -> None:
         """
         Emit a scenario run started event.
-        
+
         This event is published when a scenario begins execution. It includes
         metadata about the scenario such as name and description, and is used
         to track the start of scenario runs in monitoring systems.
-        
+
         Args:
             scenario_run_id: Unique identifier for the current scenario run
         """
@@ -877,7 +837,7 @@ class ScenarioExecutor:
             name=self.name,
             description=self.description,
         )
-        
+
         event = ScenarioRunStartedEvent(
             **common_fields,
             metadata=metadata,
@@ -887,13 +847,13 @@ class ScenarioExecutor:
     def _emit_message_snapshot_event(self, scenario_run_id: str) -> None:
         """
         Emit a message snapshot event.
-        
+
         This event captures the current state of the conversation during
         scenario execution. It's published whenever messages are added to
         the conversation, allowing real-time tracking of scenario progress.
         """
         common_fields = self._create_common_event_fields(scenario_run_id)
-        
+
         event = ScenarioMessageSnapshotEvent(
             **common_fields,
             messages=convert_messages_to_api_client_messages(self._state.messages),
@@ -901,38 +861,38 @@ class ScenarioExecutor:
         self._emit_event(event)
 
     def _emit_run_finished_event(
-        self, 
-        scenario_run_id: str, 
-        result: ScenarioResult, 
+        self,
+        scenario_run_id: str,
+        result: ScenarioResult,
         status: ScenarioRunFinishedEventStatus
     ) -> None:
         """
         Emit a scenario run finished event.
-        
+
         This event is published when a scenario completes execution, whether
         successfully or with an error. It includes the final results, verdict,
         and reasoning for the scenario outcome.
-        
+
         Args:
             scenario_run_id: Unique identifier for the current scenario run
             result: The final scenario result containing success/failure status
             status: The execution status (SUCCESS, FAILED, or ERROR)
         """
         common_fields = self._create_common_event_fields(scenario_run_id)
-        
+
         results = ScenarioRunFinishedEventResults(
             verdict=ScenarioRunFinishedEventVerdict.SUCCESS if result.success else ScenarioRunFinishedEventVerdict.FAILURE,
             reasoning=result.reasoning or "",
             met_criteria=result.passed_criteria,
             unmet_criteria=result.failed_criteria,
         )
-        
+
         event = ScenarioRunFinishedEvent(
             **common_fields,
             status=status,
             results=results,
         )
         self._emit_event(event)
-        
+
         # Signal end of event stream
         self._events.on_completed()
