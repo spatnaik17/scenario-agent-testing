@@ -4,10 +4,13 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "javascript/**"
+      - ".github/workflows/javascript-ci.yml"
   pull_request:
     paths:
       - "javascript/**"
-      - ".github/workflows/**"
+      - ".github/workflows/javascript-ci.yml"
   workflow_dispatch:
 
 jobs:
