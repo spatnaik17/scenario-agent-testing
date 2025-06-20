@@ -7,7 +7,13 @@ export default defineConfig({
   logoUrl: "/images/logo.png",
   iconUrl: "/favicon.ico",
   ogImageUrl:
-    "https://vocs.dev/api/og?logo=%logo&title=%title&description=%description",
+    "https://langwatch.mintlify.app/api/og?division=Documentation&mode=system&title=%title&description=%description&logoLight=https://scenario.langwatch.ai/images/logo.png&logoDark=https://scenario.langwatch.ai/images/logo.png&primaryColor=%232D1720&lightColor=%23EDC790&darkColor=%23EDC790&amp;w=1200&amp;q=100",
+  head: (
+    <>
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+    </>
+  ),
   editLink: {
     pattern:
       "https://github.com/langwatch/scenario/edit/main/docs/docs/pages/:path",
