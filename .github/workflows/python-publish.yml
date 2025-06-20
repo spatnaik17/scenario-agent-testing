@@ -31,6 +31,10 @@ jobs:
           uv pip install build
         working-directory: python
 
+      - name: Copy README.md
+        run: |
+          cp README.md python/README.md
+
       - name: Build package
         run: uv run python -m build
         working-directory: python

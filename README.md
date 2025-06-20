@@ -1,4 +1,4 @@
-![scenario](./assets/scenario-wide.webp)
+![scenario](https://github.com/langwatch/scenario/raw/main/assets/scenario-wide.webp)
 
 <p align="center">
 	<a href="https://discord.gg/kT4PhDS2gH" target="_blank"><img src="https://img.shields.io/discord/1227886780536324106?logo=discord&labelColor=%20%235462eb&logoColor=%20%23f5f5f5&color=%20%235462eb" alt="chat on Discord"></a>
@@ -182,7 +182,7 @@ pytest -s tests/test_vegetarian_recipe_agent.py
 
 This is how it will look like:
 
-[![asciicast](./assets/ascii-cinema.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
+[![asciicast](https://github.com/langwatch/scenario/raw/main/assets/ascii-cinema.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
 
 You can find the same code example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
 
