@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "SCENARIO_BATCH_RUN_ID=scenariobatchrun_$(nanoid) dotenv -e .env -- vitest --watch=false"
+    "test": "SCENARIO_BATCH_RUN_ID=scenariobatchrun_$(nanoid) dotenv -e .env -- vitest run"
   },
   "keywords": [],
   "author": "",

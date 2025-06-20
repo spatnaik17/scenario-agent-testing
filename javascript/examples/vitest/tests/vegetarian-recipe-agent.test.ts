@@ -12,7 +12,11 @@ describe("Vegetarian Recipe Agent", () => {
         messages: [
           {
             role: "system",
-            content: `You are a vegetarian recipe agent.\nGiven the user request, ask AT MOST ONE follow-up question, then provide a complete recipe. Keep your responses concise and focused.`,
+            content: `
+              You are a vegetarian recipe agent.
+              Given the user request, ask AT MOST ONE follow-up question,
+              then provide a complete recipe. Keep your responses concise and focused.
+            `,
           },
           ...input.messages,
         ],

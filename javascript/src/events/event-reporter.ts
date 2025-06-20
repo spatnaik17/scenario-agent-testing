@@ -17,16 +17,22 @@ export class EventReporter {
     this.apiKey = config.apiKey ?? "";
 
     if (!process.env.SCENARIO_DISABLE_SIMULATION_REPORT_INFO) {
-      console.log("=== Scenario Simulation Reporting ===");
       if (!this.apiKey) {
-        console.warn("LangWatch API key not configured, simulations will be local");
-        console.warn(`To enable simulation reporting in the LangWatch dashboard, configure your LangWatch API key (via LANGWATCH_API_KEY, or scenario.config.js)`);
+        console.log(
+          "➡️  LangWatch API key not configured, simulations will only output the final result"
+        );
+        console.log(
+          "To visualize the conversations in real time, configure your LangWatch API key (via LANGWATCH_API_KEY, or scenario.config.js)"
+        );
       } else {
         console.log("Simulation reporting is enabled");
-        console.log(`Endpoint: ${config.endpoint} -> ${this.eventsEndpoint.href}`);
-        console.log(`API Key: ${!this.apiKey ? "not configured" : "configured"}`);
+        console.log(
+          `Endpoint: ${config.endpoint} -> ${this.eventsEndpoint.href}`
+        );
+        console.log(
+          `API Key: ${!this.apiKey ? "not configured" : "configured"}`
+        );
       }
-      console.log("=== Scenario Simulation Reporting ===");
     }
   }
 

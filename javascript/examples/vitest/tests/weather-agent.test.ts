@@ -27,7 +27,10 @@ const weatherAgent: scenario.AgentAdapter = {
       messages: [
         {
           role: "system",
-          content: `You are a helpful assistant that may help the user with weather information. Do not guess the city if they don't provide it.`,
+          content: `
+            You are a helpful assistant that may help the user with weather information.
+            Do not guess the city if they don't provide it.
+          `,
         },
         ...input.messages,
       ],
@@ -43,12 +46,14 @@ const weatherAgent: scenario.AgentAdapter = {
         return {
           role: "tool",
           toolCallId: toolCall.toolCallId,
-          content: [{
-            type: "tool-result",
-            toolName: toolCallName,
-            toolCallId: toolCall.toolCallId,
-            result: toolCall.args,
-          }],
+          content: [
+            {
+              type: "tool-result",
+              toolName: toolCallName,
+              toolCallId: toolCall.toolCallId,
+              result: toolCall.args,
+            },
+          ],
         };
       }
     }
@@ -61,7 +66,10 @@ describe("Weather Agent", () => {
   it("should call the get_current_weather tool in the scenario", async () => {
     const result = await scenario.run({
       name: "checking the weather",
-      description: `The user is planning a boat trip from Barcelona to Rome, and is wondering what the weather will be like.`,
+      description: `
+        The user is planning a boat trip from Barcelona to Rome,
+        and is wondering what the weather will be like.
+      `,
       agents: [
         weatherAgent,
         scenario.userSimulatorAgent({ model: openai("gpt-4.1-mini") }),
@@ -69,7 +77,7 @@ describe("Weather Agent", () => {
       script: [
         scenario.user(),
         scenario.agent(),
-        state => expect(state.hasToolCall("get_current_weather")).toBe(true),
+        (state) => expect(state.hasToolCall("get_current_weather")).toBe(true),
         scenario.succeed(),
       ],
     });
