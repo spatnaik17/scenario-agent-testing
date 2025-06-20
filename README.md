@@ -25,7 +25,7 @@ Scenario is an Agent Testing Framework based on simulations, it can:
 
 ## Example
 
-This is how a simple simulation with tool check looks like with Scenario:
+This is how a simulation with tool check looks like with Scenario:
 
 ```python
 # Define any custom assertions
@@ -103,7 +103,12 @@ uv add langwatch-scenario pytest
 pnpm install @langwatch/scenario vitest
 ```
 
-Now create your first scenario and save it as `tests/test_vegetarian_recipe_agent.py`, copy the full working example below:
+Now create your first scenario, copy the full working example below.
+
+<details>
+<summary><strong>Quick Start - Python</strong></summary>
+
+Save it as `tests/test_vegetarian_recipe_agent.py`:
 
 ```python
 import pytest
@@ -170,28 +175,12 @@ def vegetarian_recipe_agent(messages) -> scenario.AgentReturnTypes:
     return response.choices[0].message  # type: ignore
 ```
 
-Export your OpenAI API key:
-
-```bash
-OPENAI_API_KEY=<your-api-key>
-```
-
-Now run it with pytest:
-
-```bash
-pytest -s tests/test_vegetarian_recipe_agent.py
-```
-
-This is how it will look like:
-
-[![asciicast](https://github.com/langwatch/scenario/raw/main/assets/ascii-cinema.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
-
-You can find the same code example in [examples/test_vegetarian_recipe_agent.py](examples/test_vegetarian_recipe_agent.py).
+</details>
 
 <details>
 <summary><strong>Quick Start - TypeScript</strong></summary>
 
-Create your first test (`tests/vegetarian-recipe-agent.test.ts`), copy the full working example below:
+Save it as `tests/vegetarian-recipe-agent.test.ts`:
 
 ```typescript
 import { openai } from "@ai-sdk/openai";
@@ -242,6 +231,28 @@ describe("Vegetarian Recipe Agent", () => {
 ```
 
 </details>
+
+Export your OpenAI API key:
+
+```bash
+OPENAI_API_KEY=<your-api-key>
+```
+
+Now run it the test:
+
+```bash
+# on python
+pytest -s tests/test_vegetarian_recipe_agent.py
+
+# on typescript
+npx vitest run tests/vegetarian-recipe-agent.test.ts
+```
+
+This is how it will look like:
+
+[![asciicast](https://github.com/langwatch/scenario/raw/main/assets/ascii-cinema.svg)](https://asciinema.org/a/nvO5GWGzqKTTCd8gtNSezQw11)
+
+You can find the same code example in [python/examples/](python/examples/test_vegetarian_recipe_agent.py) or [javascript/examples/](javascript/examples/vitest/tests/vegetarian-recipe-agent.test.ts).
 
 Now check out the [full documentation](https://scenario.langwatch.ai) to learn more and next steps.
 
