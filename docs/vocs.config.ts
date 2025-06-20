@@ -4,8 +4,29 @@ import { GithubStars } from "./docs/components/GithubStars";
 export default defineConfig({
   title: "Scenario",
   description: "Agent Testing Framework",
-  logoUrl: "/images/logo.webp",
+  logoUrl: "/images/logo.png",
   iconUrl: "/favicon.ico",
+  ogImageUrl:
+    "https://vocs.dev/api/og?logo=%logo&title=%title&description=%description",
+  editLink: {
+    pattern:
+      "https://github.com/langwatch/scenario/edit/main/docs/docs/pages/:path",
+    text: "Suggest changes to this page",
+  },
+  socials: [
+    {
+      icon: "discord",
+      link: "https://discord.gg/kT4PhDS2gH",
+    },
+    {
+      icon: "github",
+      link: "https://github.com/langwatch/scenario",
+    },
+    {
+      icon: "x",
+      link: "https://x.com/langwatchai",
+    },
+  ],
   sidebar: [
     {
       text: "Introduction",
@@ -63,7 +84,9 @@ export default defineConfig({
       items: [
         {
           text: "Python",
-          link: `${process.env.BASE_URL ?? "http://localhost:5173"}${process.env.BASE_PATH ?? ""}/reference/python/scenario/index.html`,
+          link: `${process.env.BASE_URL ?? "http://localhost:5173"}${
+            process.env.BASE_PATH ?? ""
+          }/reference/python/scenario/index.html`,
         },
       ],
     },
