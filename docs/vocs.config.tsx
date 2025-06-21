@@ -56,6 +56,10 @@ export default defineConfig({
           text: "Simulation-Based Testing",
           link: "/introduction/simulation-based-testing",
         },
+        {
+          text: "Community & Support",
+          link: "/community-support",
+        },
       ],
     },
     {
@@ -100,6 +104,12 @@ export default defineConfig({
           link: `${process.env.BASE_URL ?? "http://localhost:5173"}${
             process.env.BASE_PATH ?? ""
           }/reference/python/scenario/index.html`,
+        },
+        {
+          text: "TypeScript",
+          link: `${process.env.BASE_URL ?? "http://localhost:5173"}${
+            process.env.BASE_PATH ?? ""
+          }/reference/javascript/scenario/index.html`,
         },
       ],
     },
