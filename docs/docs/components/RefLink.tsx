@@ -9,9 +9,7 @@ export const RefLink = ({
     <a
       href={`/reference/python/scenario/${link}`}
       target="reference"
-      style={{
-        color: "var(--vocs-color_textAccent)",
-      }}
+      className="underline decoration-dotted decoration-gray-400 hover:no-underline"
     >
       {children}
     </a>

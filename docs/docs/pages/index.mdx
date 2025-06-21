@@ -1,21 +1,34 @@
 import { Image } from "../components/Image";
+import { BlockLink } from "../components/BlockLink";
+import { HStack } from "../components/HStack";
+import { Link } from "../components/Link";
 
 # What is Scenario? [Scenario is an Agent Testing Framework based on simulations]
 
-<div style={{ display: "flex", justifyContent: "center", backgroundColor: "black" }}>
-  <Image src="/images/scenario.webp" alt="Scenario" style={{ maxWidth: "600px", width: "100%" }} />
+<div
+  style={{
+    display: "flex",
+    justifyContent: "center",
+    backgroundColor: "black",
+  }}
+>
+  <Image
+    src="/images/scenario.webp"
+    alt="Scenario"
+    style={{ maxWidth: "600px", width: "100%" }}
+  />
 </div>
 
 Engineers and Researchers use Scenario in combination of evals to guarantee the 3 levels of quality to their agents:
 
 - **Level 1: Unit tests**\
-Traditional unit and integration software tests to guarantee that e.g. the agent tools are working correctly from a software point of view
+  Traditional unit and integration software tests to guarantee that e.g. the agent tools are working correctly from a software point of view
 
 - **Level 2: Evals, Finetunning and Prompt Optimization**\
-Measuring the performance of individual non-deterministic components of the agent, for example maximizing RAG accuracy with evals, or approximating human preference with GRPO
+  Measuring the performance of individual non-deterministic components of the agent, for example maximizing RAG accuracy with evals, or approximating human preference with GRPO
 
 - **Level 3: Agent Simulations**\
-End-to-end testing of the agent in different scenarios and edge cases, guaranteeing the whole agent achieves more than the sum of its parts, simulating a wide range of situations
+  End-to-end testing of the agent in different scenarios and edge cases, guaranteeing the whole agent achieves more than the sum of its parts, simulating a wide range of situations
 
 Scenario is a must-have tool for agent development, it allows you to change your agents prompts, tools and structure while making sure regressions don't happen without requiring a dataset, and it's compatible with all AI Agent Frameworks.
 
@@ -23,6 +36,27 @@ Scenario is a must-have tool for agent development, it allows you to change your
 
 If you are new to Scenario, you can start by writing your [first scenario](./introduction/getting-started), then
 learn how to [integrate your agent](./agent-integration) and dive deeper into the [core concepts](./basics/concepts).
+
+<HStack className="gap-4">
+  <BlockLink
+    icon="theater"
+    title="Getting Started"
+    description="Your First Scenario"
+    href="/introduction/getting-started"
+  />
+  <BlockLink
+    icon="bot"
+    title="Agent Integration"
+    description="Integrate your agent with Scenario"
+    href="/agent-integration"
+  />
+  <BlockLink
+    icon="blocks"
+    title="Core Concepts"
+    description="Learn the core concepts and capabilities"
+    href="/basics/concepts"
+  />
+</HStack>
 
 ## Why Scenario?
 
@@ -32,7 +66,30 @@ debugging through issues and fighting regressions. Here are some of the key feat
 - Test real agent behavior by simulating users in different scenarios and edge cases
 - Evaluate and judge at any point of the conversation, powerful multi-turn control
 - Combine it with any LLM eval framework or custom evals, agnostic by design
-- Integrate your Agent by implementing just one [`call()`](./agent-integration#the-agentadapter-interface) method
+- Integrate your Agent by implementing just one <Link href="/agent-integration#the-agentadapter-interface" className="underline decoration-dotted decoration-gray-400 hover:no-underline">`call()`</Link> method
 - Available in Python, TypeScript and Go
 
 Read more about the reasoning behind Scenario in [Simulation-Based Testing](./introduction/simulation-based-testing).
+
+## Dive deeper
+
+<HStack className="gap-4">
+  <BlockLink
+    icon="notebook-pen"
+    title="Writing Scenarios"
+    description="Learn how to create effective scenario tests"
+    href="/basics/writing-scenarios"
+  />
+  <BlockLink
+    icon="scroll-text"
+    title="Scripted Simulations"
+    description="Precise control over the conversation flow"
+    href="/basics/scripted-simulations"
+  />
+  <BlockLink
+    icon="bug"
+    title="Debug Mode"
+    description="Step through scenarios interactively"
+    href="/basics/debug-mode"
+  />
+</HStack>

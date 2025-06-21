@@ -1,5 +1,6 @@
 import { defineConfig } from "vocs";
 import { GithubStars } from "./docs/components/GithubStars";
+import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   title: "Scenario",
@@ -14,6 +15,12 @@ export default defineConfig({
       <meta property="og:image:height" content="630" />
     </>
   ),
+  theme: {
+    accentColor: {
+      light: "#ce2c31",
+      dark: "#fc5028",
+    },
+  },
   editLink: {
     pattern:
       "https://github.com/langwatch/scenario/edit/main/docs/docs/pages/:path",
@@ -104,4 +111,7 @@ export default defineConfig({
       element: GithubStars({ repo: "langwatch/scenario" }),
     },
   ],
+  vite: {
+    plugins: [tailwindcss()],
+  },
 });

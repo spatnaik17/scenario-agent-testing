@@ -10,9 +10,13 @@
     "build:preview": "vocs build --preview && vocs preview"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.1.10",
     "lucide-react": "^0.518.0",
     "react": "latest",
     "react-dom": "latest",
+    "react-router": "^7.6.2",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss": "^4.1.10",
     "vocs": "latest"
   },
   "devDependencies": {

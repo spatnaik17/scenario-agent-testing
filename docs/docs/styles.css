@@ -1,3 +1,71 @@
+@import "tailwindcss";
+
+.vocs_Sidebar_item[data-active="true"] {
+  color: #c98c49;
+}
+
+.dark .vocs_Sidebar_item[data-active="true"] {
+  color: #EAC58B;
+}
+
+.vocs_Code {
+  color: var(--vocs-color_text)!important;
+}
+
+@theme {
+  /* Background colors */
+  --color-white: var(--vocs-color_white);
+  --color-black: var(--vocs-color_black);
+  --color-background: var(--vocs-color_background);
+  --color-background-2: var(--vocs-color_background2);
+  --color-background-3: var(--vocs-color_background3);
+  --color-background-4: var(--vocs-color_background4);
+  --color-background-5: var(--vocs-color_background5);
+  --color-background-accent: var(--vocs-color_backgroundAccent);
+  --color-background-accent-hover: var(--vocs-color_backgroundAccentHover);
+  --color-background-accent-text: var(--vocs-color_backgroundAccentText);
+  --color-background-blue-tint: var(--vocs-color_backgroundBlueTint);
+  --color-background-dark: var(--vocs-color_backgroundDark);
+  --color-background-green-tint: var(--vocs-color_backgroundGreenTint);
+  --color-background-green-tint-2: var(--vocs-color_backgroundGreenTint2);
+  --color-background-iris-tint: var(--vocs-color_backgroundIrisTint);
+  --color-background-red-tint: var(--vocs-color_backgroundRedTint);
+  --color-background-red-tint-2: var(--vocs-color_backgroundRedTint2);
+  --color-background-yellow-tint: var(--vocs-color_backgroundYellowTint);
+
+  /* Border colors */
+  --color-border: var(--vocs-color_border);
+  --color-border-2: var(--vocs-color_border2);
+  --color-border-accent: var(--vocs-color_borderAccent);
+  --color-border-blue: var(--vocs-color_borderBlue);
+  --color-border-green: var(--vocs-color_borderGreen);
+  --color-border-iris: var(--vocs-color_borderIris);
+  --color-border-red: var(--vocs-color_borderRed);
+  --color-border-yellow: var(--vocs-color_borderYellow);
+
+  /* Text colors */
+  --color-heading: var(--vocs-color_heading);
+  --color-text: var(--vocs-color_text);
+  --color-text-2: var(--vocs-color_text2);
+  --color-text-3: var(--vocs-color_text3);
+  --color-text-4: var(--vocs-color_text4);
+  --color-accent: var(--vocs-color_textAccent);
+  --color-accent-hover: var(--vocs-color_textAccentHover);
+  --color-blue: var(--vocs-color_textBlue);
+  --color-blue-hover: var(--vocs-color_textBlueHover);
+  --color-green: var(--vocs-color_textGreen);
+  --color-green-hover: var(--vocs-color_textGreenHover);
+  --color-iris: var(--vocs-color_textIris);
+  --color-iris-hover: var(--vocs-color_textIrisHover);
+  --color-red: var(--vocs-color_textRed);
+  --color-red-hover: var(--vocs-color_textRedHover);
+  --color-yellow: var(--vocs-color_textYellow);
+  --color-yellow-hover: var(--vocs-color_textYellowHover);
+
+  /* Shadow */
+  --color-shadow: var(--vocs-color_shadow);
+}
+
 .accent-hover:hover {
   color: var(--vocs-color_textAccent);
 }

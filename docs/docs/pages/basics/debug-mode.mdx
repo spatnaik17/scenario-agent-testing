@@ -1,6 +1,10 @@
-# Debug Mode
+# Debug Mode [Step through scenarios interactively]
 
 Debug mode allows you to step through scenarios interactively, inspecting agent responses and intervening with your own inputs. This is invaluable for understanding how your agent behaves and debugging issues in complex conversations.
+
+:::info
+Debug mode is only available in the Python SDK for now, TypeScript support is coming soon.
+:::
 
 ## What is Debug Mode?
 
@@ -8,17 +12,8 @@ Debug mode pauses scenario execution before each user message, allowing you to:
 
 - **Step through conversations**: See exactly how the dialogue unfolds
 - **Intervene with custom messages**: Override the user simulator with your own inputs
-- **Inspect agent responses**: Examine how your agent responds to different inputs
 - **Test edge cases**: Try specific inputs that might cause issues
 - **Understand failure modes**: See where and why scenarios fail
-
-:::note
-Debug mode only pauses before user messages, not agent or judge responses. This allows you to control the user input while observing how agents react.
-:::
-
-:::info
-Debug mode is only available in the Python SDK for now, TypeScript support is coming soon.
-:::
 
 ## Enabling Debug Mode
 

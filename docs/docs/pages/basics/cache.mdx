@@ -4,6 +4,10 @@ import { RefLink } from "../../components/RefLink";
 
 Scenario's caching system ensures consistent results across test runs while dramatically improving execution speed.
 
+:::info
+Scenario caching is only available in the Python SDK for now, TypeScript support is coming soon.
+:::
+
 ## Why Cache?
 
 ### The Non-Deterministic Problem
@@ -18,6 +22,7 @@ response3 = llm.complete("What's 2+2?")  # "That would be 4!"
 ```
 
 This creates challenges for testing:
+
 - **Flaky tests**: Tests might pass or fail randomly
 - **Slow execution**: Every test run makes expensive API calls
 - **Hard to debug**: Different outputs make issues difficult to reproduce
@@ -36,10 +41,6 @@ result = await scenario.run(...)  # Takes 30 seconds
 # Subsequent runs: uses cached results
 result = await scenario.run(...)  # Takes 2 seconds, identical results
 ```
-
-:::info
-Scenario caching is only available in the Python SDK for now, TypeScript support is coming soon.
-:::
 
 ## Basic Caching Setup
 

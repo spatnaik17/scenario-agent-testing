@@ -7,7 +7,7 @@ export const GithubStars = ({ repo }: { repo: string }) => {
         href={`https://github.com/${repo}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="accent-hover"
+        className="hover:text-accent"
         style={{
           display: "inline-flex",
           alignItems: "center",
