@@ -1,3 +1,5 @@
+import { RefLink } from "../../components/RefLink";
+
 # Scenario Basics [Learn the core concepts and capabilities of the Scenario agent testing framework]
 
 ## Overview
@@ -7,6 +9,7 @@ Scenario is designed to test AI agents through **simulation testing** - a method
 ## Core Components
 
 ### 1. Scenarios
+
 A **scenario** defines the test case - the situation, context, and expected behavior you want to validate:
 
 ```python
@@ -22,6 +25,7 @@ result = await scenario.run(
 ```
 
 ### 2. Agents
+
 Three types of agents can participate in a scenario:
 
 - **Agent Under Test**: Your AI agent that you want to test
@@ -33,30 +37,85 @@ agents=[
     MyAgent(),                    # Your agent
     scenario.UserSimulatorAgent(), # Simulates user behavior
     scenario.JudgeAgent(criteria=[ # Evaluates success
-        "Agent responds professionally",
+        "Agent asks for user account number or email",
         "Agent addresses the billing issue",
-        "Agent offers appropriate solutions"
+        "Agent provides a timeline for issue resolution"
     ])
 ]
 ```
 
-### 3. Evaluation Criteria
-The judge agent evaluates conversations based on criteria you define:
+### 3. Evaluation
+
+There are two ways to evaluate a scenario:
+
+- **Automatically**, by the judge agent
+- **Manually**, by specifying assertions on scripted scenarios
 
 ```python
 scenario.JudgeAgent(criteria=[
-    "Agent uses appropriate tone",
-    "Agent gathers necessary information",
-    "Agent provides helpful solutions",
-    "Agent asks clarifying questions when needed"
+    "Agent asks for user account number or email",
+    "Agent addresses the billing issue",
+    "Agent provides a timeline for issue resolution"
 ])
+
+assert state.has_tool_call("get_billing_info") # manual assertion
 ```
+
+## The Simulation Loop
+
+Understanding how the simulation works helps you write better scenarios:
+
+::::steps
+
+### Step 1: User Simulator Generates Message
+
+Based on the scenario description, the user simulator creates a realistic opening message:
+
+```python
+# Scenario description guides the user simulator
+description="User is frustrated with slow internet and needs technical help"
+
+# User simulator might generate:
+# "my internet is slow"
+```
+
+### Step 2: Agent Under Test Responds
+
+Your agent receives the conversation history and generates a response:
+
+```python
+class TechSupportAgent(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        # Agent sees: [{"role": "user", "content": "my internet is slow"}]
+        return await my_tech_support_agent.process(input.messages)
+```
+
+### Step 3: Judge Evaluates
+
+The judge agent reviews the conversation and decides whether to:
+
+- **Continue**: The conversation should proceed
+- **Succeed**: All criteria are met, end with success
+- **Fail**: Criteria are not met, end with failure
+
+```python
+# Judge considers criteria like:
+# - "Agent asks if user has tried to turn it off and on again"
+# - "Agent provides specific troubleshooting steps"
+```
+
+### Step 4: Next Turn or End
+
+If the judge decides to continue, the next turn starts from Step 1. The user simulator generates a follow-up message based on the agent's response and the ongoing conversation context.
+
+::::
 
 ## Testing Approaches
 
 Scenario supports two main testing approaches:
 
 ### Automatic Simulation
+
 Let the agents interact naturally until the judge decides the outcome:
 
 ```python
@@ -73,6 +132,7 @@ result = await scenario.run(
 ```
 
 ### Scripted Control
+
 Control the exact flow of conversation with custom scripts:
 
 ```python
@@ -95,6 +155,200 @@ result = await scenario.run(
         scenario.proceed(turns=2),
         scenario.succeed("Edge case handled correctly")
     ]
+)
+```
+
+## Turns vs Steps
+
+Understanding the difference between **turns** and **steps** is crucial:
+
+### Turns
+
+A **turn** represents one complete cycle of user → agent → judge evaluation:
+
+```python
+# Turn 1: User asks question → Agent responds → Judge evaluates
+# Turn 2: User follows up → Agent clarifies → Judge evaluates
+# Turn 3: User confirms → Agent concludes → Judge decides success
+```
+
+### Steps
+
+A **step** is any individual action within a turn:
+
+```python
+# Within one turn, there might be multiple steps:
+# Step 1: User message
+# Step 2: Agent makes tool call
+# Step 3: Judge decides to continue the conversation
+# Step 4: User follows up
+# Step 5: Agent responds to user
+# Step 6: Judge evaluates
+```
+
+You can control both with <RefLink link={{ python: "index.html#scenario.proceed", typescript: "index.html#scenario.proceed" }} code={{ python: "on_turn", typescript: "onTurn" }} /> and <RefLink
+link={{
+    python: "index.html#scenario.proceed",
+    typescript: "index.html#scenario.proceed",
+  }}
+code={{ python: "on_step", typescript: "onStep" }}
+/>
+:
+
+```python
+result = await scenario.run(
+    name="controlled conversation",
+    description="User needs help with account settings",
+    agents=[...],
+    max_turns=5,  # Limit conversation length
+    script=[
+        scenario.proceed(
+            turns=2,
+            on_turn=lambda state: print(f"Completed turn {state.current_turn}")
+            on_step=lambda state: print(f"Completed step {state.current_step}")
+        )
+    ]
+)
+```
+
+## The User Simulator Agent
+
+The user simulator is an AI agent that role-plays as a user based on your scenario description.
+
+### Default Behavior
+
+By default, the user simulator:
+
+- Writes like a user would
+- Responds to agent messages
+- Follow the scenario description
+
+```python
+# Default user simulator
+scenario.UserSimulatorAgent()
+```
+
+### Customizing the User Simulator
+
+You can customize the user simulator's behavior:
+
+```python
+scenario.UserSimulatorAgent(
+    model="openai/o3",  # Use different model
+    system_prompt="""
+        <role>
+        You are pretending to be a user, you are testing an AI Agent (shown as the user role) based on a scenario.
+        Approach this naturally, as a human user would, with very short inputs, few words, all lowercase, imperative, not periods, like when they google or talk to chatgpt.
+        </role>
+
+        <goal>
+        Your goal (assistant) is to interact with the Agent Under Test (user) as if you were a human user.
+        </goal>
+
+        <scenario>
+        You are trying to get a refund for a purchase you made.
+        You are a busy executive who speaks concisely and directly.
+        You get impatient with long explanations and prefer bullet points.
+        You often interrupt to ask specific questions.
+        </scenario>
+
+        <rules>
+        - DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, you are the user
+        </rules>
+    """
+)
+```
+
+### User Simulator Strategies
+
+The user simulator automatically adapts its strategy based on your scenario description:
+
+```python
+# Scenario: "User is confused about their bill"
+# → User simulator will ask unclear questions, express confusion
+
+# Scenario: "User is an expert developer reporting a bug"
+# → User simulator will use technical language, provide detailed info
+
+# Scenario: "User is elderly and not tech-savvy"
+# → User simulator will ask basic questions, need more guidance
+```
+
+## The Judge Agent
+
+The judge agent evaluates conversations against your success criteria.
+
+### Writing Effective Criteria
+
+Good criteria are:
+
+- **Specific**: Clearly describe what success looks like
+- **Measurable**: Can be objectively evaluated
+- **Relevant**: Related to your agent's purpose
+- **Achievable**: Realistic given the agent's capabilities
+
+```python
+# Good criteria
+scenario.JudgeAgent(criteria=[
+    "Agent asks for the user's account number or email",
+    "Agent explains the billing issue in simple terms",
+    "Agent offers at least two resolution options",
+    "Agent provides a timeline for issue resolution"
+])
+
+# Avoid vague criteria
+scenario.JudgeAgent(criteria=[
+    "Agent is helpful",  # Too vague
+    "Agent solves everything",  # Too broad
+    "Agent is perfect"  # Unrealistic
+])
+```
+
+### Multiple Evaluation Points
+
+The judge evaluates after each agent response, allowing it to:
+
+- End the conversation early if criteria are met
+- Fail immediately if something goes wrong
+- Continue if more interaction is needed
+
+```python
+# Judge evaluation happens after each agent response:
+# Turn 1: Agent asks clarifying question → Judge: "Continue, need more info"
+# Turn 2: Agent provides solution → Judge: "Success, all criteria met"
+```
+
+### Customizing the Judge
+
+You can customize judge behavior:
+
+```python
+scenario.JudgeAgent(
+    criteria=["Agent provides accurate information"],
+    model="openai/o3",  # Use different model
+    system_prompt="""
+        <role>
+        You are an LLM as a judge watching a simulated conversation as it plays out live to determine if the agent under test meets the criteria or not.
+        </role>
+
+        <goal>
+        Your goal is to determine if you already have enough information to make a verdict of the scenario below, or if the conversation should continue for longer.
+        If you do have enough information, use the finish_test tool to determine if all the criteria have been met, if not, use the continue_test tool to let the next step play out.
+        </goal>
+
+        <scenario>
+        {description}
+        </scenario>
+
+        <criteria>
+        {"\n".join(criteria)}
+        </criteria>
+
+        <rules>
+        - Be strict, do not let the conversation continue if the agent already broke one of the "do not" or "should not" criterias.
+        - DO NOT make any judgment calls that are not explicitly listed in the success or failure criteria, withhold judgement if necessary
+        </rules>
+    """
 )
 ```
 

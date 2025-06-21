@@ -39,7 +39,7 @@ result = await scenario.run(
 
 ## Script Commands
 
-### <RefLink link="script.html#scenario.script.user">`scenario.user()`</RefLink>
+### <RefLink link={{ python: "script.html#scenario.script.user", typescript: "script.html#scenario.script.user" }} code={{ python: "scenario.user()", typescript: "scenario.user()" }} />
 Generate or specify user messages:
 
 ```python
@@ -59,7 +59,7 @@ script=[
 ]
 ```
 
-### <RefLink link="script.html#scenario.script.agent">`scenario.agent()`</RefLink>
+### <RefLink link={{ python: "script.html#scenario.script.agent", typescript: "script.html#scenario.script.agent" }} code={{ python: "scenario.agent()", typescript: "scenario.agent()" }} />
 Generate or specify agent responses:
 
 ```python
@@ -81,7 +81,7 @@ script=[
 ]
 ```
 
-### <RefLink link="script.html#scenario.script.message">`scenario.message()`</RefLink>
+### <RefLink link={{ python: "script.html#scenario.script.message", typescript: "script.html#scenario.script.message" }} code={{ python: "scenario.message()", typescript: "scenario.message()" }} />
 Add any OpenAI-compatible message directly to the conversation:
 
 ```python
@@ -131,10 +131,10 @@ script=[
 ```
 
 :::tip
-Use <RefLink link="script.html#scenario.script.message">`scenario.message()`</RefLink> when you need precise control over message structure. For simple text messages, <RefLink link="script.html#scenario.script.user">`scenario.user()`</RefLink> and <RefLink link="script.html#scenario.script.agent">`scenario.agent()`</RefLink> are more convenient.
+Use <RefLink link={{ python: "script.html#scenario.script.message", typescript: "script.html#scenario.script.message" }} code={{ python: "scenario.message()", typescript: "scenario.message()" }} /> when you need precise control over message structure. For simple text messages, <RefLink link={{ python: "script.html#scenario.script.user", typescript: "script.html#scenario.script.user" }} code={{ python: "scenario.user()", typescript: "scenario.user()" }} /> and <RefLink link={{ python: "script.html#scenario.script.agent", typescript: "script.html#scenario.script.agent" }} code={{ python: "scenario.agent()", typescript: "scenario.agent()" }} /> are more convenient.
 :::
 
-### <RefLink link="script.html#scenario.script.judge">`scenario.judge()`</RefLink>
+### <RefLink link={{ python: "script.html#scenario.script.judge", typescript: "script.html#scenario.script.judge" }} code={{ python: "scenario.judge()", typescript: "scenario.judge()" }} />
 Force judge evaluation at specific points:
 
 ```python
@@ -152,7 +152,7 @@ script=[
 ]
 ```
 
-### <RefLink link="script.html#scenario.script.proceed">`scenario.proceed()`</RefLink>
+### <RefLink link={{ python: "script.html#scenario.script.proceed", typescript: "script.html#scenario.script.proceed" }} code={{ python: "scenario.proceed()", typescript: "scenario.proceed()" }} />
 Let the conversation flow automatically for a specified number of turns:
 
 ```python
@@ -170,7 +170,7 @@ script=[
 ]
 ```
 
-### <RefLink link="script.html#scenario.script.succeed">`scenario.succeed()`</RefLink> and <RefLink link="script.html#scenario.script.fail">`scenario.fail()`</RefLink>
+### <RefLink link={{ python: "script.html#scenario.script.succeed", typescript: "script.html#scenario.script.succeed" }} code={{ python: "scenario.succeed()", typescript: "scenario.succeed()" }} /> and <RefLink link={{ python: "script.html#scenario.script.fail", typescript: "script.html#scenario.script.fail" }} code={{ python: "scenario.fail()", typescript: "scenario.fail()" }} />
 End the scenario with a specific result:
 
 ```python
