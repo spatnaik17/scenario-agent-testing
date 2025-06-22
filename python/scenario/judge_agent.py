@@ -93,6 +93,7 @@ class JudgeAgent(AgentAdapter):
         - Provide detailed reasoning for their decisions
         - Support both positive criteria (things that should happen) and negative criteria (things that shouldn't)
     """
+
     role = AgentRole.JUDGE
 
     model: str
@@ -217,6 +218,10 @@ class JudgeAgent(AgentAdapter):
 
         scenario = input.scenario_state
 
+        criteria_str = "\n".join(
+            [f"{idx + 1}. {criterion}" for idx, criterion in enumerate(self.criteria)]
+        )
+
         messages = [
             {
                 "role": "system",
@@ -236,7 +241,7 @@ If you do have enough information, use the finish_test tool to determine if all 
 </scenario>
 
 <criteria>
-{"\n".join([f"{idx + 1}. {criterion}" for idx, criterion in enumerate(self.criteria)])}
+{criteria_str}
 </criteria>
 
 <rules>
