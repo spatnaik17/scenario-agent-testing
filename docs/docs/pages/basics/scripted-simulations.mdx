@@ -27,19 +27,20 @@ result = await scenario.run(
 
 ### Commands List
 
-| Command | Description |
-|---------|-------------|
-| [`scenario.user()`](#scenariouser) | Generate or add user messages |
-| [`scenario.agent()`](#scenarioagent) | Generate or add agent messages |
-| [`scenario.message()`](#scenariomessage) | Add any openai-message format messages to the conversation |
-| [`scenario.judge()`](#scenariojudge) | Force judge evaluation at specific points |
-| [`scenario.proceed()`](#scenarioprocceed) | Let the conversation flow automatically for a specified number of turns |
-| [`scenario.succeed()`](#scenariosucceed-and-scenariofail) | End the scenario with a specific result |
-| [`scenario.fail()`](#scenariosucceed-and-scenariofail) | End the scenario with a specific result |
+| Command                                                   | Description                                                             |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| [`scenario.user()`](#scenariouser)                        | Generate or add user messages                                           |
+| [`scenario.agent()`](#scenarioagent)                      | Generate or add agent messages                                          |
+| [`scenario.message()`](#scenariomessage)                  | Add any openai-message format messages to the conversation              |
+| [`scenario.judge()`](#scenariojudge)                      | Force judge evaluation at specific points                               |
+| [`scenario.proceed()`](#scenarioprocceed)                 | Let the conversation flow automatically for a specified number of turns |
+| [`scenario.succeed()`](#scenariosucceed-and-scenariofail) | End the scenario with a specific result                                 |
+| [`scenario.fail()`](#scenariosucceed-and-scenariofail)    | End the scenario with a specific result                                 |
 
 ## Script Commands
 
-### <RefLink link={{ python: "script.html#scenario.script.user", typescript: "script.html#scenario.script.user" }} code={{ python: "scenario.user()", typescript: "scenario.user()" }} />
+### <RefLink link={{ python: "script.html#scenario.script.user", typescript: "script.html#scenario.script.user" }}>`scenario.user()`</RefLink>
+
 Generate or specify user messages:
 
 ```python
@@ -59,7 +60,8 @@ script=[
 ]
 ```
 
-### <RefLink link={{ python: "script.html#scenario.script.agent", typescript: "script.html#scenario.script.agent" }} code={{ python: "scenario.agent()", typescript: "scenario.agent()" }} />
+### <RefLink link={{ python: "script.html#scenario.script.agent", typescript: "script.html#scenario.script.agent" }}>`scenario.agent()`</RefLink>
+
 Generate or specify agent responses:
 
 ```python
@@ -81,7 +83,8 @@ script=[
 ]
 ```
 
-### <RefLink link={{ python: "script.html#scenario.script.message", typescript: "script.html#scenario.script.message" }} code={{ python: "scenario.message()", typescript: "scenario.message()" }} />
+### <RefLink link={{ python: "script.html#scenario.script.message", typescript: "script.html#scenario.script.message" }}>`scenario.message()`</RefLink>
+
 Add any OpenAI-compatible message directly to the conversation:
 
 ```python
@@ -134,7 +137,8 @@ script=[
 Use <RefLink link={{ python: "script.html#scenario.script.message", typescript: "script.html#scenario.script.message" }} code={{ python: "scenario.message()", typescript: "scenario.message()" }} /> when you need precise control over message structure. For simple text messages, <RefLink link={{ python: "script.html#scenario.script.user", typescript: "script.html#scenario.script.user" }} code={{ python: "scenario.user()", typescript: "scenario.user()" }} /> and <RefLink link={{ python: "script.html#scenario.script.agent", typescript: "script.html#scenario.script.agent" }} code={{ python: "scenario.agent()", typescript: "scenario.agent()" }} /> are more convenient.
 :::
 
-### <RefLink link={{ python: "script.html#scenario.script.judge", typescript: "script.html#scenario.script.judge" }} code={{ python: "scenario.judge()", typescript: "scenario.judge()" }} />
+### <RefLink link={{ python: "script.html#scenario.script.judge", typescript: "script.html#scenario.script.judge" }}>`scenario.judge()`</RefLink>
+
 Force judge evaluation at specific points:
 
 ```python
@@ -152,7 +156,8 @@ script=[
 ]
 ```
 
-### <RefLink link={{ python: "script.html#scenario.script.proceed", typescript: "script.html#scenario.script.proceed" }} code={{ python: "scenario.proceed()", typescript: "scenario.proceed()" }} />
+### <RefLink link={{ python: "script.html#scenario.script.proceed", typescript: "script.html#scenario.script.proceed" }}>`scenario.proceed()`</RefLink>
+
 Let the conversation flow automatically for a specified number of turns:
 
 ```python
@@ -170,7 +175,8 @@ script=[
 ]
 ```
 
-### <RefLink link={{ python: "script.html#scenario.script.succeed", typescript: "script.html#scenario.script.succeed" }} code={{ python: "scenario.succeed()", typescript: "scenario.succeed()" }} /> and <RefLink link={{ python: "script.html#scenario.script.fail", typescript: "script.html#scenario.script.fail" }} code={{ python: "scenario.fail()", typescript: "scenario.fail()" }} />
+### <RefLink link={{ python: "script.html#scenario.script.succeed", typescript: "script.html#scenario.script.succeed" }}>`scenario.succeed()`</RefLink> and <RefLink link={{ python: "script.html#scenario.script.fail", typescript: "script.html#scenario.script.fail" }}>`scenario.fail()`</RefLink>
+
 End the scenario with a specific result:
 
 ```python
@@ -434,6 +440,7 @@ script=[
 ## Best Practices
 
 ### 1. Start Simple
+
 Begin with basic scripts and add complexity gradually:
 
 ```python
@@ -458,6 +465,7 @@ When just starting out, [debug mode](./debug-mode) can be very helpful for you t
 :::
 
 ### 2. Use Descriptive Function Names
+
 Make your custom steps self-documenting:
 
 ```python
@@ -473,6 +481,7 @@ def verify_agent_asks_for_clarification(state: scenario.ScenarioState) -> None:
 ```
 
 ### 3. Balance Control and Realism
+
 Don't over-script; leave room for natural conversation:
 
 ```python
