@@ -19,6 +19,7 @@ from typing import (
     TypedDict,
 )
 import time
+import warnings
 import termcolor
 import asyncio
 import concurrent.futures
@@ -491,16 +492,19 @@ class ScenarioExecutor:
         ):
             start_time = time.time()
 
-            agent_response = agent.call(
-                AgentInput(
-                    # TODO: test thread_id
-                    thread_id=self._state.thread_id,
-                    messages=self._state.messages,
-                    new_messages=self._pending_messages.get(idx, []),
-                    judgment_request=request_judgment,
-                    scenario_state=self._state,
+            # Prevent pydantic validation warnings which should already be disabled
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                agent_response = agent.call(
+                    AgentInput(
+                        # TODO: test thread_id
+                        thread_id=self._state.thread_id,
+                        messages=self._state.messages,
+                        new_messages=self._pending_messages.get(idx, []),
+                        judgment_request=request_judgment,
+                        scenario_state=self._state,
+                    )
                 )
-            )
             if not isinstance(agent_response, Awaitable):
                 raise Exception(
                     agent_response_not_awaitable(agent.__class__.__name__),

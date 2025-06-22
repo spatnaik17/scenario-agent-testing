@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field, SkipValidation
+from pydantic import BaseModel, SkipValidation
 from typing import (
     TYPE_CHECKING,
     Annotated,
@@ -35,6 +35,7 @@ class AgentRole(Enum):
         AGENT: Represents the agent under test that responds to user inputs
         JUDGE: Represents a judge agent that evaluates the conversation and determines success/failure
     """
+
     USER = "User"
     AGENT = "Agent"
     JUDGE = "Judge"
@@ -71,6 +72,7 @@ class AgentInput(BaseModel):
                 return response
         ```
     """
+
     thread_id: str
     # Prevent pydantic from validating/parsing the messages and causing issues: https://github.com/pydantic/pydantic/issues/9541
     messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
@@ -168,7 +170,8 @@ class ScenarioResult(BaseModel):
     """
 
     success: bool
-    messages: List[ChatCompletionMessageParam]
+    # Prevent issues with slightly inconsistent message types for example when comming from Gemini right at the result level
+    messages: Annotated[List[ChatCompletionMessageParam], SkipValidation]
     reasoning: Optional[str] = None
     passed_criteria: List[str] = []
     failed_criteria: List[str] = []

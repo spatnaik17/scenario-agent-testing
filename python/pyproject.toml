@@ -53,6 +53,13 @@ dev = [
 "Homepage" = "https://github.com/langwatch/scenario"
 "Bug Tracker" = "https://github.com/langwatch/scenario/issues"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["scenario*"]
+
+[tool.setuptools.package-data]
+"scenario" = ["_generated/**/*"]
+
 [tool.pytest.ini_options]
 markers = ["agent_test: marks tests as agent scenario tests"]
 

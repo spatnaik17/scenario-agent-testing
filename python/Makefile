@@ -12,6 +12,10 @@ install: ensure-uv
 	uv run pre-commit install --hook-type commit-msg
 	uv run pre-commit install
 
+build:
+	uv pip install build
+	uv run python -m build
+
 ensure-uv:
 	@if ! command -v uv &> /dev/null; then \
 		curl -LsSf https://astral.sh/uv/install.sh | sh; \

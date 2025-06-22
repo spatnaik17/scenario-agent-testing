@@ -100,4 +100,4 @@ def convert_agent_return_types_to_openai_messages(
             for message in agent_response
         ]
     else:
-        return [ensure_dict(convert_maybe_object_to_openai_message(agent_response))] 
+        return [ensure_dict(convert_maybe_object_to_openai_message(agent_response))]
