@@ -90,6 +90,7 @@ export class ScenarioExecution implements ScenarioExecutionLike {
       verbose: config.verbose ?? false,
       maxTurns: config.maxTurns ?? 10,
       threadId: config.threadId ?? generateThreadId(),
+      setId: config.setId,
     } satisfies ScenarioConfigFinal;
 
     this.state = new ScenarioExecutionState(this.config);
@@ -245,13 +246,20 @@ export class ScenarioExecution implements ScenarioExecutionLike {
     this.addAgentTime(idx, endTime - startTime);
     this.pendingMessages.delete(idx);
 
-    if (typeof agentResponse === "object" && agentResponse && "success" in agentResponse) {
+    if (
+      agentResponse &&
+      typeof agentResponse === "object" &&
+      "success" in agentResponse
+    ) {
       return agentResponse as ScenarioResult;
     }
 
+    const currentAgentTime = this.agentTimes.get(idx) ?? 0;
+    this.agentTimes.set(idx, currentAgentTime + (Date.now() - startTime));
+
     const messages = convertAgentReturnTypesToMessages(
       agentResponse,
-      role === AgentRole.USER ? "user" : "assistant"
+      role === AgentRole.USER ? "user" : "assistant",
     );
 
     for (const message of messages) {
@@ -449,10 +457,14 @@ export class ScenarioExecution implements ScenarioExecutionLike {
     }
 
     const result = await this.callAgent(index, role, judgmentRequest);
-    if (Array.isArray(result))
-      return null;
+    if (result && typeof result === "object" && "success" in result) {
+      return result as ScenarioResult;
+    }
 
-    return result;
+    // The result is a set of messages, which have already been added to the state
+    // by callAgent, so we don't need to do anything with them here.
+
+    return null;
   }
 
   private reset(): void {
@@ -562,11 +574,12 @@ export class ScenarioExecution implements ScenarioExecutionLike {
    */
   private makeBaseEvent({ scenarioRunId }: { scenarioRunId: string }) {
     return {
-      batchRunId: batchRunId,
-      scenarioId: this.config.id!,
-      scenarioRunId,
+      type: "placeholder", // This will be replaced by the specific event type
       timestamp: Date.now(),
-      rawEvent: void 0,
+      batchRunId,
+      scenarioId: this.config.id,
+      scenarioRunId,
+      scenarioSetId: this.config.setId,
     };
   }
 
