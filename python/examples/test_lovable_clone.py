@@ -47,7 +47,8 @@ async def test_lovable_clone():
                 ],
             ),
         ],
-        max_turns=5, # optional
+        max_turns=5,  # optional
+        set_id="python-examples",  # Add set_id parameter
     )
 
     assert result.success

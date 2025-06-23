@@ -38,6 +38,7 @@ async def test_vegetarian_recipe_agent():
                 ]
             ),
         ],
+        set_id="python-examples",
     )
 
     # Assert for pytest to know whether the test passed

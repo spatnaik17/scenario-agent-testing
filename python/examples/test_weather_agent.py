@@ -39,6 +39,7 @@ async def test_weather_agent():
             check_for_weather_tool_call,
             scenario.succeed(),
         ],
+        set_id="python-examples",
     )
 
     # Assert the simulation was successful
