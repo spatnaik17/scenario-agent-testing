@@ -23,6 +23,7 @@ classifiers = [
 dependencies = [
     "pytest>=8.1.1",
     "litellm>=1.49.0",
+    "openai>=1.88.0",
     "python-dotenv>=1.0.1",
     "termcolor>=2.4.0",
     "pydantic>=2.7.0",
@@ -33,6 +34,7 @@ dependencies = [
     "pksuid>=1.1.2",
     "httpx>=0.27.0",
     "rx>=3.2.0",
+    "python-dateutil>=2.9.0.post0",
 ]
 
 [project.optional-dependencies]
