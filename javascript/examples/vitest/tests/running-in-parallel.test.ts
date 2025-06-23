@@ -39,7 +39,7 @@ describe("Vegetarian Recipe Agent (Parallel)", () => {
         }),
       ],
       maxTurns: 5,
-      verbose: true,
+      setId: "javascript-examples",
     });
     expect(result.success).toBe(true);
   });
@@ -62,7 +62,7 @@ describe("Vegetarian Recipe Agent (Parallel)", () => {
         }),
       ],
       maxTurns: 5,
-      verbose: true,
+      setId: "javascript-examples",
     });
     expect(result.success).toBe(true);
   });

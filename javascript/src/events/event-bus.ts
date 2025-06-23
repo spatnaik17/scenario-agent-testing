@@ -7,13 +7,29 @@ import { Logger } from "../utils/logger";
  * Manages scenario event publishing, subscription, and processing pipeline.
  */
 export class EventBus {
+  private static registry = new Set<EventBus>();
   private events$ = new Subject<ScenarioEvent>();
   private eventReporter: EventReporter;
   private processingPromise: Promise<void> | null = null;
   private logger = new Logger("scenario.events.EventBus");
+  private static globalListeners: Array<(bus: EventBus) => void> = [];
 
   constructor(config: { endpoint: string; apiKey: string | undefined }) {
     this.eventReporter = new EventReporter(config);
+    EventBus.registry.add(this);
+
+    // Notify global listeners
+    for (const listener of EventBus.globalListeners) {
+      listener(this);
+    }
+  }
+
+  static getAllBuses(): Set<EventBus> {
+    return EventBus.registry;
+  }
+
+  static addGlobalListener(listener: (bus: EventBus) => void) {
+    EventBus.globalListeners.push(listener);
   }
 
   /**
@@ -79,7 +95,9 @@ export class EventBus {
    */
   async drain(): Promise<void> {
     this.logger.debug("Draining event stream");
-    this.events$.unsubscribe();
+
+    // Complete the stream, but don't unsubscribe the Subject itself!!!
+    this.events$.complete();
 
     if (this.processingPromise) {
       await this.processingPromise;
@@ -94,5 +112,12 @@ export class EventBus {
     this.logger.debug("Subscribing to event stream");
 
     return source$.subscribe(this.events$);
+  }
+
+  /**
+   * Expose the events$ observable for external subscription (read-only).
+   */
+  get eventsObservable(): Observable<ScenarioEvent> {
+    return this.events$.asObservable();
   }
 }
