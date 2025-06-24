@@ -234,7 +234,7 @@ result = await scenario.run(
     description="User wants help with a technical issue",
     agents=[
         TechSupportAgent(),
-        scenario.UserSimulatorAgent(),
+        scenario.UserSimulatorAgent(temperature=0.7),
         scenario.JudgeAgent(criteria=["Agent resolves the technical issue"])
     ],
     max_turns=10  # Optional limit
@@ -247,7 +247,7 @@ const result = await scenario.run({
   description: "User wants help with a technical issue",
   agents: [
     techSupportAgent,
-    scenario.userSimulatorAgent(),
+    scenario.userSimulatorAgent({ temperature: 0.7 }),
     scenario.judgeAgent({ criteria: ["Agent resolves the technical issue"] }),
   ],
   maxTurns: 10, // Optional limit
@@ -410,6 +410,7 @@ You can customize the user simulator's behavior:
 ```python
 scenario.UserSimulatorAgent(
     model="openai/o3",  # Use different model
+    temperature=0.7, # Increase the temperature to vary the user messages
     system_prompt="""
         <role>
         You are pretending to be a user, you are testing an AI Agent (shown as the user role) based on a scenario.
