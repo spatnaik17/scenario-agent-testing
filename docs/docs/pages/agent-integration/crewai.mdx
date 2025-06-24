@@ -1,0 +1,74 @@
+import { RefLink } from "../../components/RefLink";
+
+# CrewAI Integration [Learn how to integrate CrewAI crews with the Scenario testing framework]
+
+CrewAI crews work seamlessly with Scenario through the <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter", typescript: "agent_adapter.html#scenario.agent_adapter.AgentAdapter" }} code={{ python: "AgentAdapter", typescript: "AgentAdapter" }} /> interface. The key is handling CrewAI's crew and task structure properly.
+
+## Basic Integration Pattern
+
+Given this CrewAI crew example:
+
+```python
+from crewai import Agent, Crew, Task
+
+# Create your agent with tools
+customer_support_agent = Agent(
+    role="Customer Support",
+    goal="Help customers with their inquiries",
+    backstory=SYSTEM_PROMPT,
+    tools=[
+        get_customer_order_history_tool,
+        get_order_status_tool,
+        get_company_policy_tool,
+        escalate_to_human_tool,
+    ],
+)
+
+async def call_crew(message: str, context: dict) -> str:
+    # Create a task for the customer message
+    customer_support_task = Task(
+        description=message,
+        agent=customer_support_agent,
+        expected_output="Response to customer inquiry",
+    )
+
+    # Create and run the crew
+    crew = Crew(
+        agents=[customer_support_agent],
+        tasks=[customer_support_task],
+        verbose=False,
+    )
+
+    result = crew.kickoff()
+
+    # Extract response from CrewAI result
+    if hasattr(result, "raw"):
+        return result.raw
+    return str(result)
+```
+
+You can integrate it with Scenario like this:
+
+```python
+import scenario
+import uuid
+
+class CrewAIAgentAdapter(scenario.AgentAdapter):
+    async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
+        context = {"thread_id": input.thread_id or str(uuid.uuid4())}
+        response_content = await call_crew(
+            input.last_new_user_message_str(),
+            context
+        )
+        return response_content
+```
+
+## Full Example Project
+
+For a complete working example with a customer support crew, including tools, system prompts, and comprehensive tests, check out the [create-agent-app project](https://github.com/langwatch/create-agent-app/blob/main/crewai_example/tests/test_customer_support_crew.py).
+
+## Next Steps
+
+- Explore [Scenario Basics](/basics/concepts) for advanced testing patterns
+- Learn about [Scripted Simulations](/basics/scripted-simulations) for precise control
+- Check out more [Agent Integration patterns](/agent-integration) for other frameworks

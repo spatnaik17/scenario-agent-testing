@@ -99,6 +99,10 @@ export default defineConfig({
           link: "/agent-integration/agno",
         },
         {
+          text: "CrewAI",
+          link: "/agent-integration/crewai",
+        },
+        {
           text: "Google ADK",
           link: "/agent-integration/google-adk",
         },
