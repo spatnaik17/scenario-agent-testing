@@ -203,7 +203,7 @@ Your goal (assistant) is to interact with the Agent Under Test (user) as if you 
 </scenario>
 
 <rules>
-- DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, you are the user
+- DO NOT carry over any requests yourself, YOU ARE NOT the assistant today, you are the user, send the user message and just STOP.
 </rules>
 """,
             },
