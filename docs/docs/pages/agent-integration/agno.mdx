@@ -35,7 +35,9 @@ You can very easily integrate it with Scenario like this:
 ```python
 class Agent(scenario.AgentAdapter):
     async def call(self, input: scenario.AgentInput) -> scenario.AgentReturnTypes:
-        result = agent.run(input.last_new_user_message_str())
+        result = agent.run(
+            input.last_new_user_message_str(), session_id=input.thread_id
+        )
         return str(result.content)
 ```
 
