@@ -17,6 +17,7 @@ import {
 import { ScenarioEvent, ScenarioEventType, ScenarioMessageSnapshotEvent, ScenarioRunFinishedEvent, ScenarioRunStartedEvent, ScenarioRunStatus, Verdict } from "../events/schema";
 import { generateScenarioId, generateScenarioRunId, generateThreadId, getBatchRunId } from "../utils/ids";
 import { Logger } from "../utils/logger";
+import convertCoreMessagesToAguiMessages from "../utils/message-conversion";
 
 const batchRunId = getBatchRunId();
 
@@ -604,7 +605,7 @@ export class ScenarioExecution implements ScenarioExecutionLike {
     this.emitEvent({
       ...this.makeBaseEvent({ scenarioRunId }),
       type: ScenarioEventType.MESSAGE_SNAPSHOT,
-      messages: this.state.messages,
+      messages: convertCoreMessagesToAguiMessages(this.state.messages),
       // Add any other required fields from MessagesSnapshotEventSchema
     } as ScenarioMessageSnapshotEvent);
   }
