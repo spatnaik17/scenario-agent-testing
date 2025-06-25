@@ -129,6 +129,15 @@ export default defineConfig({
       ],
     },
     {
+      text: "Best Practices",
+      items: [
+        {
+          text: "The Agent Testing Pyramid",
+          link: "/best-practices/the-agent-testing-pyramid",
+        },
+      ],
+    },
+    {
       text: "API Reference",
       items: [
         {
