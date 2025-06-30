@@ -19,11 +19,11 @@ jobs:
       # releases_created: ${{ steps.release.outputs.releases_created }}
       # paths_released: ${{ steps.release.outputs.paths_released }}
       # JavaScript outputs
-      javascript--release_created: ${{ steps.release.outputs['javascript--release_created'] }}
-      javascript--tag_name: ${{ steps.release.outputs['javascript--tag_name'] }}
+      js_release_created: ${{ steps.release.outputs['javascript--release_created'] }}
+      js_tag_name: ${{ steps.release.outputs['javascript--tag_name'] }}
       # Python outputs
-      python--release_created: ${{ steps.release.outputs['python--release_created'] }}
-      python--tag_name: ${{ steps.release.outputs['python--tag_name'] }}
+      py_release_created: ${{ steps.release.outputs['python--release_created'] }}
+      py_tag_name: ${{ steps.release.outputs['python--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -40,10 +40,14 @@ jobs:
           echo "All release-please outputs:"
           printf '%s\n' "$RELEASE_OUTPUTS"
 
-      - name: Publish JavaScript
-        if: ${{ steps.release.outputs.javascript--release_created }}
-        uses: ./.github/workflows/javascript-publish.yml
+  # Call the JavaScript publish workflow as a job
+  publish-javascript:
+    if: ${{ needs.release-please.outputs.js_release_created }}
+    needs: release-please
+    uses: ./.github/workflows/javascript-publish.yml
 
-      - name: Publish Python
-        if: ${{ steps.release.outputs.python--release_created }}
-        uses: ./.github/workflows/python-publish.yml
+  # Call the Python publish workflow as a job
+  publish-python:
+    if: ${{ needs.release-please.outputs.py_release_created }}
+    needs: release-please
+    uses: ./.github/workflows/python-publish.yml
