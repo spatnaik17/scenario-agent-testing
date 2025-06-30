@@ -5,6 +5,7 @@ import scenario, { type AgentAdapter, AgentRole } from "@langwatch/scenario";
 import { CoreUserMessage, generateText } from "ai";
 import { describe, it, expect } from "vitest";
 
+// Use setId to group tests together for visualizing in the UI
 const setId = "multimodal-images-test";
 
 // Helper function to encode image to base64
