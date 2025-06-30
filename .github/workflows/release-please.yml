@@ -34,10 +34,8 @@ jobs:
 
       - name: Echo outputs
         run: |
-          echo "javascript--release_created: ${{ steps.release.outputs.javascript--release_created }}"
-          echo "javascript--tag_name: ${{ steps.release.outputs.javascript--tag_name }}"
-          echo "python--release_created: ${{ steps.release.outputs.python--release_created }}"
-          echo "python--tag_name: ${{ steps.release.outputs.python--tag_name }}"
+          echo "All release-please outputs:"
+          echo "${{ toJSON(steps.release.outputs) }}"
 
       - name: Publish JavaScript
         if: ${{ steps.release.outputs.javascript--release_created }}
