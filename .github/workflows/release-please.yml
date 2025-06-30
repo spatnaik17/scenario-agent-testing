@@ -32,26 +32,17 @@ jobs:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
 
-  echo:
-    runs-on: ubuntu-latest
-    needs: release-please
-    steps:
-      - name: Echo
+      - name: Echo outputs
         run: |
           echo "javascript--release_created: ${{ steps.release.outputs.javascript--release_created }}"
           echo "javascript--tag_name: ${{ steps.release.outputs.javascript--tag_name }}"
           echo "python--release_created: ${{ steps.release.outputs.python--release_created }}"
           echo "python--tag_name: ${{ steps.release.outputs.python--tag_name }}"
 
-  # Call existing publish workflows when releases are created
-  publish-javascript:
-    if: needs.release-please.outputs.javascript--release_created
-    needs: release-please
-    uses: ./.github/workflows/javascript-publish.yml
-    secrets: inherit
+      - name: Publish JavaScript
+        if: ${{ steps.release.outputs.javascript--release_created }}
+        uses: ./.github/workflows/javascript-publish.yml
 
-  publish-python:
-    if: needs.release-please.outputs.python--release_created
-    needs: release-please
-    uses: ./.github/workflows/python-publish.yml
-    secrets: inherit
+      - name: Publish Python
+        if: ${{ steps.release.outputs.python--release_created }}
+        uses: ./.github/workflows/python-publish.yml
