@@ -33,9 +33,12 @@ jobs:
           manifest-file: .release-please-manifest.json
 
       - name: Echo outputs
+        shell: bash
+        env:
+          RELEASE_OUTPUTS: ${{ toJSON(steps.release.outputs) }}
         run: |
           echo "All release-please outputs:"
-          echo "${{ toJSON(steps.release.outputs) }}"
+          printf '%s\n' "$RELEASE_OUTPUTS"
 
       - name: Publish JavaScript
         if: ${{ steps.release.outputs.javascript--release_created }}
