@@ -15,7 +15,7 @@ jobs:
     if: |
       (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'python/')) ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_call' && github.ref == 'refs/heads/main')
+      (github.event_name == 'workflow_call')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
