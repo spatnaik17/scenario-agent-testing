@@ -32,10 +32,15 @@ jobs:
           config-file: .release-please-config.json
           manifest-file: .release-please-manifest.json
 
+  # Debug job to echo release-please outputs
+  debug-outputs:
+    needs: release-please
+    runs-on: ubuntu-latest
+    steps:
       - name: Echo outputs
         shell: bash
         env:
-          RELEASE_OUTPUTS: ${{ toJSON(steps.release.outputs) }}
+          RELEASE_OUTPUTS: ${{ toJSON(needs.release-please.outputs) }}
         run: |
           echo "All release-please outputs:"
           printf '%s\n' "$RELEASE_OUTPUTS"
