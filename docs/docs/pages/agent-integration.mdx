@@ -7,10 +7,11 @@ Scenario is designed to be framework-agnostic, supporting any agent architecture
 ## Overview
 
 > **See Also:**
-> - [Configuration](../basics/configuration)
-> - [Test Runner Integration](../basics/test-runner-integration)
 
-Scenario works with any agent implementation through the <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter", typescript: "agent_adapter.html#scenario.agent_adapter.AgentAdapter" }} code={{ python: "AgentAdapter", typescript: "AgentAdapter" }} />
+- [Configuration](./basics/configuration)
+- [Test Runner Integration](./basics/test-runner-integration)
+
+Scenario works with any agent implementation through the <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter", typescript: "classes/AgentAdapter.html" }} code={{ python: "AgentAdapter", typescript: "AgentAdapter" }} />
 interface. This adapter pattern allows you to:
 
 - **Integrate existing agents** without modifying their code
@@ -20,10 +21,10 @@ interface. This adapter pattern allows you to:
 
 ## The AgentAdapter Interface
 
-All agents in Scenario implement the <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter", typescript: "agent_adapter.html#scenario.agent_adapter.AgentAdapter" }} code={{ python: "AgentAdapter", typescript: "AgentAdapter" }} />
-interface with an async <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter.call", typescript: "agent_adapter.html#scenario.agent_adapter.AgentAdapter.call" }} code={{ python: "call", typescript: "call" }} />
-method, which receives an <RefLink link={{ python: "types.html#scenario.types.AgentInput", typescript: "types.html#scenario.types.AgentInput" }} code={{ python: "AgentInput", typescript: "AgentInput" }} />
-and returns <RefLink link={{ python: "types.html#scenario.types.AgentReturnTypes", typescript: "types.html#scenario.types.AgentReturnTypes" }} code={{ python: "AgentReturnTypes", typescript: "AgentReturnTypes" }} />:
+All agents in Scenario implement the <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter", typescript: "classes/AgentAdapter.html" }} code={{ python: "AgentAdapter", typescript: "AgentAdapter" }} />
+interface with an async <RefLink link={{ python: "agent_adapter.html#scenario.agent_adapter.AgentAdapter.call", typescript: "classes/AgentAdapter.html#call" }} code={{ python: "call", typescript: "call" }} />
+method, which receives an <RefLink link={{ python: "types.html#scenario.types.AgentInput", typescript: "interfaces/AgentInput.html" }} code={{ python: "AgentInput", typescript: "AgentInput" }} />
+and returns <RefLink link={{ python: "types.html#scenario.types.AgentReturnTypes", typescript: "types/AgentReturnTypes.html" }} code={{ python: "AgentReturnTypes", typescript: "AgentReturnTypes" }} />:
 
 :::code-group
 
@@ -97,7 +98,9 @@ import type { AgentInput } from "@langwatch/scenario";
 const agent: AgentAdapter = {
   role: AgentRole.AGENT,
   async call(input) {
-    const lastUserMessage = input.messages.filter(m => m.role === "user").at(-1)?.content;
+    const lastUserMessage = input.messages
+      .filter((m) => m.role === "user")
+      .at(-1)?.content;
     return `You said: ${lastUserMessage}`;
   },
 };
@@ -119,7 +122,11 @@ AgentReturnTypes = Union[
 ```
 
 ```typescript [typescript]
-import type { AgentReturnTypes, CoreMessage, ScenarioResult } from "@langwatch/scenario";
+import type {
+  AgentReturnTypes,
+  CoreMessage,
+  ScenarioResult,
+} from "@langwatch/scenario";
 
 // AgentReturnTypes can be:
 // - string
@@ -169,7 +176,9 @@ class SimpleAgent(scenario.AgentAdapter):
 const mySimpleAgent: AgentAdapter = {
   role: AgentRole.AGENT,
   async call(input) {
-    const lastUserMessage = input.messages.filter(m => m.role === "user").at(-1)?.content;
+    const lastUserMessage = input.messages
+      .filter((m) => m.role === "user")
+      .at(-1)?.content;
     return `Here's my response to: ${lastUserMessage}`;
   },
 };
@@ -270,7 +279,8 @@ class MultiStepAgent(scenario.AgentAdapter):
 const multiStepAgent: AgentAdapter = {
   role: AgentRole.AGENT,
   async call(input) {
-    const lastUserMessage = input.messages.filter(m => m.role === "user").at(-1)?.content || "";
+    const lastUserMessage =
+      input.messages.filter((m) => m.role === "user").at(-1)?.content || "";
     if (lastUserMessage.toLowerCase().includes("complex task")) {
       return [
         { role: "assistant", content: "I'll help you with that complex task." },
@@ -278,7 +288,10 @@ const multiStepAgent: AgentAdapter = {
         { role: "assistant", content: "Here's your complete solution:" },
       ];
     }
-    return { role: "assistant", content: `Here's a simple response to: ${lastUserMessage}` };
+    return {
+      role: "assistant",
+      content: `Here's a simple response to: ${lastUserMessage}`,
+    };
   },
 };
 ```

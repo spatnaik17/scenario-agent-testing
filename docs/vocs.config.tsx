@@ -64,10 +64,12 @@ export default defineConfig({
     },
     {
       text: "Visualization",
-      items: [{
-        text: "Simulations Visualizer",
-        link: "/visualizations",
-      }],
+      items: [
+        {
+          text: "Simulations Visualizer",
+          link: "/visualizations",
+        },
+      ],
     },
     {
       text: "Scenario Basics",
@@ -91,6 +93,10 @@ export default defineConfig({
         {
           text: "Test Runner Integration",
           link: "/basics/test-runner-integration",
+        },
+        {
+          text: "Fixtures",
+          link: "/basics/fixtures",
         },
         {
           text: "Cache",
@@ -149,6 +155,32 @@ export default defineConfig({
         {
           text: "The Agent Testing Pyramid",
           link: "/best-practices/the-agent-testing-pyramid",
+        },
+      ],
+    },
+    {
+      text: "Examples",
+      items: [
+        {
+          text: "Multimodal",
+          items: [
+            {
+              text: "Overview",
+              link: "/examples/multimodal/overview",
+            },
+            {
+              text: "Images",
+              link: "/examples/multimodal/multimodal-images",
+            },
+            {
+              text: "Files (coming soon)",
+              link: "/examples/multimodal/multimodal-files",
+            },
+            {
+              text: "Audio (coming soon)",
+              link: "/examples/multimodal/multimodal-audio",
+            },
+          ],
         },
       ],
     },

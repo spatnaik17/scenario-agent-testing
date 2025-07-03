@@ -1,0 +1,169 @@
+import { RefLink } from "../../../components/RefLink";
+
+# Multimodal Image Analysis [Use Case]
+
+This page shows how to write a Scenario test where the user provides **text _and_ an image** in the same message and the agent must respond appropriately.
+
+## Overview
+
+Your scenario tests can cover any image testing situation, for example:
+
+1. User sends text _and_ an image (agent should describe the image and answer the question).
+2. User sends **only** an image (agent should produce a useful description without textual hints).
+3. User asks a **complex multi-part** question about the image (agent should address every sub-question).
+
+Success is judged automatically by a <RefLink link={{ python: "judge_agent.html#scenario.judge_agent.JudgeAgent", typescript: "functions/judgeAgent.html" }} code={{ python: "JudgeAgent", typescript: "judgeAgent" }} /> with explicit criteria.
+
+## Code Walk-through
+
+:::code-group
+
+```typescript [typescript]
+import * as fs from "fs";
+import * as path from "path";
+import { openai } from "@ai-sdk/openai";
+import scenario, { type AgentAdapter, AgentRole } from "@langwatch/scenario";
+import { generateText } from "ai";
+
+// 1️⃣ Build an image-capable agent
+const imageAgent: AgentAdapter = {
+  role: AgentRole.AGENT,
+  async call(input) {
+    const response = await generateText({
+      model: openai("gpt-4o"),
+      messages: [
+        {
+          role: "system",
+          content: `You are a helpful assistant that can describe images.`,
+        },
+        ...input.messages,
+      ],
+    });
+    return response.text;
+  },
+};
+
+// 2️⃣ Utility to embed the fixture image as a data-URL
+function getDataURLFromFixture(filename: string, filetype: string): string {
+  const imagePath = path.join(__dirname, "fixtures", filename);
+  const buffer = fs.readFileSync(imagePath);
+  return `data:${filetype};base64,${buffer.toString("base64")}`;
+}
+
+// 3️⃣ Test scenarios
+const imageDataURL = getDataURLFromFixture("scenario.webp", "image/webp");
+
+// Scenario 1: Text + Image
+await scenario.run({
+  name: "text and image analysis",
+  agents: [
+    imageAgent,
+    scenario.userSimulatorAgent(),
+    scenario.judgeAgent({
+      criteria: [
+        "Agent acknowledges the image",
+        "Agent answers the user question",
+      ],
+    }),
+  ],
+  script: [
+    scenario.message({
+      role: "user",
+      content: [
+        { type: "text", text: "What do you see here?" },
+        { type: "image", image: imageDataURL },
+      ],
+    }),
+    scenario.agent(),
+    scenario.judge(),
+  ],
+});
+
+// Scenario 2: Image only
+await scenario.run({
+  name: "image-only analysis",
+  agents: [
+    imageAgent,
+    scenario.userSimulatorAgent(),
+    scenario.judgeAgent({
+      criteria: [
+        "Agent recognizes the image",
+        "Agent provides meaningful analysis",
+      ],
+    }),
+  ],
+  script: [
+    scenario.message({
+      role: "user",
+      content: [{ type: "image", image: imageDataURL }],
+    }),
+    scenario.agent(),
+    scenario.judge(),
+  ],
+});
+
+// Scenario 3: Complex multi-part question
+await scenario.run({
+  name: "complex image analysis",
+  agents: [
+    imageAgent,
+    scenario.userSimulatorAgent(),
+    scenario.judgeAgent({
+      criteria: [
+        "Agent identifies colors",
+        "Agent recognizes shapes",
+        "Agent addresses all aspects",
+      ],
+    }),
+  ],
+  script: [
+    scenario.message({
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: "Analyze this image and tell me what colors are present, what shapes you see, and what this might represent.",
+        },
+        { type: "image", image: imageDataURL },
+      ],
+    }),
+    scenario.agent(),
+    scenario.judge(),
+  ],
+});
+```
+
+```python [python]
+# Coming soon
+```
+
+:::
+
+### Why Data URLs?
+
+Scenario expects image content in the OpenAI **image message** format. The simplest way to keep the test self-contained is to read the fixture file, base-64-encode it, and prefix it with the correct `data:image/<ext>;base64,` header.
+
+See more about working with fixtures [here](../../basics/fixtures).
+
+:::tip
+Keep fixture images **small** (&lt;100&nbsp;KB) to avoid bloated test files and slow CI runs.
+:::
+
+## Best Practices
+
+When creating criteria for multimodal tests:
+
+- Be **explicit** about what the agent must mention (e.g. _"recognises the image contains a pyramid"_).
+- Cover _success_ and _failure_ paths (blurred images, wrong description, ignores image, etc.).
+- Keep the list concise so a judge LLM can reason effectively.
+
+## Next Steps
+
+- Check out [files](./multimodal-files) and [audio](./multimodal-audio) examples.
+
+---
+
+### Complete Source
+
+Check out the full test in the repository
+[here](https://github.com/langwatch/scenario/blob/main/javascript/examples/vitest/tests/multimodal-images.test.ts).
