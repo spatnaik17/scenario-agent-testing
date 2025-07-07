@@ -1,43 +1,14 @@
 """
-Configuration module for Scenario.
+Scenario configuration for Scenario.
 
-This module provides configuration classes for customizing the behavior of the
-Scenario testing framework, including LLM model settings, execution parameters,
-and debugging options.
+This module provides the main configuration class for customizing the behavior
+of the Scenario testing framework, including execution parameters and debugging options.
 """
 
 from typing import Optional, Union, ClassVar
 from pydantic import BaseModel
 
-
-class ModelConfig(BaseModel):
-    """
-    Configuration for LLM model settings.
-
-    This class encapsulates all the parameters needed to configure an LLM model
-    for use with user simulator and judge agents in the Scenario framework.
-
-    Attributes:
-        model: The model identifier (e.g., "openai/gpt-4.1", "anthropic/claude-3-sonnet")
-        api_key: Optional API key for the model provider
-        temperature: Sampling temperature for response generation (0.0 = deterministic, 1.0 = creative)
-        max_tokens: Maximum number of tokens to generate in responses
-
-    Example:
-        ```
-        model_config = ModelConfig(
-            model="openai/gpt-4.1",
-            api_key="your-api-key",
-            temperature=0.1,
-            max_tokens=1000
-        )
-        ```
-    """
-
-    model: str
-    api_key: Optional[str] = None
-    temperature: float = 0.0
-    max_tokens: Optional[int] = None
+from .model import ModelConfig
 
 
 class ScenarioConfig(BaseModel):
@@ -59,7 +30,7 @@ class ScenarioConfig(BaseModel):
         ```
         # Configure globally for all scenarios
         scenario.configure(
-            default_model="openai/gpt-4.1",
+            default_model="openai/gpt-4.1-mini",
             max_turns=15,
             verbose=True,
             cache_key="my-test-suite-v1",
@@ -113,7 +84,7 @@ class ScenarioConfig(BaseModel):
 
             # Set up default configuration
             scenario.configure(
-                default_model="openai/gpt-4.1",
+                default_model="openai/gpt-4.1-mini",
                 max_turns=15,
                 verbose=True,
                 debug=False
