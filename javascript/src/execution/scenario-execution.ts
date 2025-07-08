@@ -34,8 +34,6 @@ import {
 import { Logger } from "../utils/logger";
 import convertCoreMessagesToAguiMessages from "../utils/message-conversion";
 
-const batchRunId = getBatchRunId();
-
 /**
  * Manages the execution of a single scenario.
  *
@@ -625,7 +623,7 @@ export class ScenarioExecution implements ScenarioExecutionLike {
     return {
       type: "placeholder", // This will be replaced by the specific event type
       timestamp: Date.now(),
-      batchRunId,
+      batchRunId: getBatchRunId(),
       scenarioId: this.config.id,
       scenarioRunId,
       scenarioSetId: this.config.setId,

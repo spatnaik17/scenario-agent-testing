@@ -19,14 +19,12 @@ export class EventAlertMessageLogger {
       return;
     }
 
-    const batchRunId = getBatchRunId();
-
-    if (EventAlertMessageLogger.shownBatchIds.has(batchRunId)) {
+    if (EventAlertMessageLogger.shownBatchIds.has(getBatchRunId())) {
       return;
     }
 
-    EventAlertMessageLogger.shownBatchIds.add(batchRunId);
-    this.displayGreeting(batchRunId);
+    EventAlertMessageLogger.shownBatchIds.add(getBatchRunId());
+    this.displayGreeting();
   }
 
   /**
@@ -49,7 +47,7 @@ export class EventAlertMessageLogger {
     return env.SCENARIO_DISABLE_SIMULATION_REPORT_INFO === true;
   }
 
-  private displayGreeting(batchRunId: string): void {
+  private displayGreeting(): void {
     const separator = "─".repeat(60);
 
     if (!env.LANGWATCH_API_KEY) {
@@ -63,7 +61,7 @@ export class EventAlertMessageLogger {
       console.log("   • Set LANGWATCH_API_KEY environment variable");
       console.log("   • Or configure apiKey in scenario.config.js");
       console.log("");
-      console.log(`📦 Batch Run ID: ${batchRunId}`);
+      console.log(`📦 Batch Run ID: ${getBatchRunId()}`);
       console.log("");
       console.log("🔇 To disable these messages:");
       console.log("   • Set SCENARIO_DISABLE_SIMULATION_REPORT_INFO=true");
@@ -80,7 +78,7 @@ export class EventAlertMessageLogger {
         }`
       );
       console.log("");
-      console.log(`📦 Batch Run ID: ${batchRunId}`);
+      console.log(`📦 Batch Run ID: ${getBatchRunId()}`);
       console.log("");
       console.log("🔇 To disable these messages:");
       console.log("   • Set SCENARIO_DISABLE_SIMULATION_REPORT_INFO=true");
