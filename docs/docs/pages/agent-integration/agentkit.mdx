@@ -1,8 +1,10 @@
 import { RefLink } from "../../components/RefLink";
 
-# AgentKit Integration [Learn how to integrate AgentKit agents with the Scenario testing framework]
+# Inngest AgentKit Integration [Learn how to integrate AgentKit agents with the Scenario testing framework]
 
-AgentKit makes it easy to build LLM-powered agents and connect them to Scenario using the <RefLink link={{typescript: "classes/AgentAdapter.html" }} code={{ typescript: "AgentAdapter" }} /> interface.
+[Inngest AgentKit](https://agentkit.inngest.com/) makes it easy to build multi-agent systems and orchestrate them in an event-driven architecture.
+
+AgentKit agents work seamlessly with Scenario through the <RefLink link={{typescript: "classes/AgentAdapter.html" }} code={{ typescript: "AgentAdapter" }} /> interface.
 
 ## Basic Integration Pattern
 
@@ -43,7 +45,10 @@ const createAgent = (): AgentAdapter => {
     role: AgentRole.AGENT,
     call: async (input) => {
       const latestMessage = input.messages.at(-1)?.content || "";
-      const messageContent = typeof latestMessage === "string" ? latestMessage : JSON.stringify(latestMessage);
+      const messageContent =
+        typeof latestMessage === "string"
+          ? latestMessage
+          : JSON.stringify(latestMessage);
 
       let lastMessage: Message | undefined;
       while (!lastMessage || lastMessage?.type === "tool_call") {
@@ -53,11 +58,11 @@ const createAgent = (): AgentAdapter => {
         agentState.appendResult(result);
         lastMessage = result.output.at(-1);
       }
-  
+
       if (lastMessage?.type === "text") {
         return lastMessage.content as string;
       }
-      
+
       return JSON.stringify(lastMessage);
     },
   };

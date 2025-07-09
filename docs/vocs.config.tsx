@@ -128,6 +128,10 @@ export default defineConfig({
           link: "/agent-integration/google-adk",
         },
         {
+          text: "Inngest AgentKit",
+          link: "/agent-integration/agentkit",
+        },
+        {
           text: "LangGraph",
           link: "/agent-integration/langgraph",
         },
@@ -146,10 +150,6 @@ export default defineConfig({
         {
           text: "Pydantic AI",
           link: "/agent-integration/pydantic-ai",
-        },
-        {
-          text: "AgentKit",
-          link: "/agent-integration/agentkit",
         },
       ],
     },
