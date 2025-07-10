@@ -1,6 +1,6 @@
 import { openai } from "@ai-sdk/openai";
 import scenario, { type AgentAdapter, AgentRole } from "@langwatch/scenario";
-import { generateText, tool } from "ai";
+import { generateText, tool, ToolCallPart } from "ai";
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 
@@ -40,25 +40,41 @@ const weatherAgent: AgentAdapter = {
 
     if (response.toolCalls && response.toolCalls.length > 0) {
       const toolCall = response.toolCalls[0];
-      const toolCallName = toolCall.toolName;
-
-      if (toolCallName === "get_current_weather") {
-        return {
+      // Agent executes the tool directly and returns both messages
+      const toolResult = await getCurrentWeather.execute(toolCall.args, {
+        toolCallId: toolCall.toolCallId,
+        messages: input.messages,
+      });
+      return [
+        {
+          role: "assistant",
+          content: [
+            {
+              type: "tool-call",
+              toolName: toolCall.toolName,
+              toolCallId: toolCall.toolCallId,
+              args: toolCall.args,
+            },
+          ],
+        },
+        {
           role: "tool",
-          toolCallId: toolCall.toolCallId,
           content: [
             {
               type: "tool-result",
-              toolName: toolCallName,
+              toolName: toolCall.toolName,
               toolCallId: toolCall.toolCallId,
-              result: toolCall.args,
+              result: toolResult,
             },
           ],
-        };
-      }
+        },
+      ];
     }
 
-    return response.text;
+    return {
+      role: "assistant",
+      content: response.text,
+    };
   },
 };
 
@@ -67,7 +83,7 @@ describe("Weather Agent", () => {
     const result = await scenario.run({
       name: "checking the weather",
       description: `
-        The user is planning a boat trip from Barcelona to Rome,
+        The user is planning a boat trip from Barcelona to Rome today,
         and is wondering what the weather will be like.
       `,
       agents: [
@@ -78,6 +94,17 @@ describe("Weather Agent", () => {
         scenario.user(),
         scenario.agent(),
         (state) => expect(state.hasToolCall("get_current_weather")).toBe(true),
+        (state) => {
+          const assistantMessage = state.lastAgentMessage();
+          const assistantMessageContent = assistantMessage.content[0] as ToolCallPart;
+          const toolCallResult = state.lastToolCall("get_current_weather");
+
+          expect(toolCallResult.content[0].toolName).toBe("get_current_weather");
+          expect(toolCallResult.content[0].result).toContain("Barcelona");
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          expect((assistantMessageContent.args as any).city).toBe("Barcelona");
+        },
         scenario.succeed(),
       ],
       setId: "javascript-examples",
