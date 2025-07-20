@@ -156,6 +156,10 @@ export default defineConfig({
           text: "The Agent Testing Pyramid",
           link: "/best-practices/the-agent-testing-pyramid",
         },
+        {
+          text: "The Vibe-Eval Loop",
+          link: "/best-practices/the-vibe-eval-loop",
+        },
       ],
     },
     {
