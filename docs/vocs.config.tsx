@@ -105,23 +105,6 @@ export default defineConfig({
       ],
     },
     {
-      text: "Testing guides",
-      items: [
-        {
-          text: "Tool calling",
-          link: "/testing-guides/tool-calling",
-        },
-        {
-          text: "Fixtures",
-          link: "/testing-guides/fixtures",
-        },
-        {
-          text: "Mocks",
-          link: "/testing-guides/mocks",
-        },
-      ],
-    },
-    {
       text: "Agent Integration",
       items: [
         {
@@ -176,8 +159,20 @@ export default defineConfig({
       ],
     },
     {
-      text: "Examples",
+      text: "Examples & Guides",
       items: [
+        {
+          text: "Tool calling",
+          link: "/testing-guides/tool-calling",
+        },
+        {
+          text: "Fixtures",
+          link: "/testing-guides/fixtures",
+        },
+        {
+          text: "Mocks",
+          link: "/testing-guides/mocks",
+        },
         {
           text: "Multimodal",
           items: [
