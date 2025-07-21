@@ -1,4 +1,9 @@
-import { CoreAssistantMessage, CoreMessage, CoreToolMessage, CoreUserMessage } from "ai";
+import {
+  CoreAssistantMessage,
+  CoreMessage,
+  CoreToolMessage,
+  CoreUserMessage,
+} from "ai";
 import type { ScenarioConfig } from "../scenarios";
 
 /**
