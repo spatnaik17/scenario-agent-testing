@@ -35,7 +35,7 @@ async def test_vibe_coding():
             scenario.UserSimulatorAgent(),
             scenario.JudgeAgent(
                 criteria=[
-                    "agent reads the files before go and making changes",
+                    "agent reads the file before making changes",
                     "agent modified the index.css file",
                     "agent modified the Index.tsx file",
                     "agent created a comprehensive landing page",
@@ -101,7 +101,7 @@ To develop AI agents with confidence:
 
 This will give you both the trust you need that your agent works, and freedom to refactor or iterate, knowing it won't break silently again.
 
-Pro tip: This is also the best approach when developing new features or responding to bug reports. Don't jump into code or prompt changes: **write a scenario first**. You can even use [Debug Mode](https://scenario.langwatch.ai/basics/debug-mode) to vibe-debug directly in the terminal.
+Pro tip: This is also the best approach when developing new features or responding to bug reports. Don't jump into code or prompt changes: **write a scenario first**. You can even use [Debug Mode](/basics/debug-mode) to vibe-debug directly in the terminal.
 
 Writing the test **first** has also the advantage of trying different fixes faster, and then being really done once you found one. There is no need to write a new test before merging it because the test has already been written upfront.
 
@@ -113,4 +113,4 @@ If you see yourself testing just a specific part of your agent, where **there se
 
 In cases like _routing to the right agent_, or _retrieving the right chunks_ or _detecting the right language_, what you really need are **accuracy** **metrics**, and those are best measured with a **dataset evaluation** before integrating back into full agent scenarios.
 
-Check out the [Agent Testing Pyramid Guide](<[https://scenario.langwatch.ai/best-practices/the-agent-testing-pyramid](https://scenario.langwatch.ai/best-practices/the-agent-testing-pyramid)>), that shows how to combine different testing strategies, so you can really cover your agent quality from all angles.
+Check out the [Agent Testing Pyramid Guide](/best-practices/the-agent-testing-pyramid), that shows how to combine different testing strategies, so you can really cover your agent quality from all angles.
