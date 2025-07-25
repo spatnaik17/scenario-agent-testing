@@ -1,19 +1,15 @@
 import { RefLink } from "../../../components/RefLink";
 
-# Multimodal Audio Analysis [Use Case]
+# Testing Voice Agents [Evaluate your voice agent with Scenario]
 
-Scenario lets you write **end-to-end tests** for agents that listen to audio, think, and respond with either text _or_ audio.  
+Scenario lets you write **end-to-end tests** for agents that listen to audio, think, and respond with either text _or_ audio.
 This page shows three common patterns and how to test them.
-
----
 
 ## Overview
 
 1. **Audio ➜ Text** – the agent receives an audio file (e.g. WAV) and replies with a textual answer.
 2. **Audio ➜ Audio** – the agent listens and replies _in audio_ (great for voice assistants).
 3. **Voice-to-Voice Conversation** – both the user simulator _and_ the agent speak over multiple turns (came out **before** OpenAI’s real-time audio API and still works today).
-
----
 
 ## Use-case comparison
 
@@ -23,8 +19,6 @@ This page shows three common patterns and how to test them.
 | Audio ➜ Audio               | `file` part (audio) + optional prompt         | Audio (voice response) | `gpt-4o-audio-preview` (handles audio)               |
 | Voice-to-Voice Conversation | Multiple turns, both sides send/receive audio | Audio dialogue         | Same as above; judge runs after conversation         |
 
----
-
 ## Prerequisites & Setup
 
 Before running the examples you’ll need a couple of things in place:
@@ -32,11 +26,9 @@ Before running the examples you’ll need a couple of things in place:
 1. **Node.js ≥ 18** – the OpenAI `gpt-4o` voice model uses modern `fetch`.
 2. **OPENAI_API_KEY** – export an API key that has access to `gpt-4o-audio-preview`:
 
-   ```bash
-   export OPENAI_API_KEY="sk-…"
-   ```
-
----
+```bash
+export OPENAI_API_KEY="sk-…"
+```
 
 ## Code Walk-through
 
@@ -242,7 +234,7 @@ Below is the actual audio produced by the **voice-to-voice** test above. Click p
   Your browser does not support the audio element.
 </audio>
 
-### Helper utilities & caveats
+## Helper utilities & caveats
 
 The examples above rely on several helper utilities that handle the complexity of working with OpenAI's voice models:
 
@@ -266,28 +258,24 @@ These helpers handle the technical details like audio encoding, file management,
 
 💡 **Caveat**: When the assistant responds with audio, some judge models may ignore the audio chunk unless the role is set to `"user"`. Pass `forceUserRole: true` to `OpenAiVoiceAgent` when you hit that edge-case.
 
----
-
 ## Troubleshooting & FAQs
 
-**Judge ignores assistant audio**  
+**Judge ignores assistant audio**
 Some judge models drop the audio chunk when it comes from the _assistant_ role. Pass `forceUserRole: true` to `OpenAiVoiceAgent`—this wraps the audio in a `"user"` message so the judge evaluates it correctly.
 
-**Tests time-out or hang**  
+**Tests time-out or hang**
 Voice models are slower than text-only ones. Bump Vitest’s timeout (`--timeout 60000`) or reduce concurrency (`VITEST_MAX_WORKERS=1`) when running in CI.
 
-**“Unsupported media type” errors**  
+**“Unsupported media type” errors**
 `convertCoreMessagesToOpenAIMessages` currently supports WAV/MP3.
 
-**CI machines without audio hardware**  
+**CI machines without audio hardware**
 All examples work headlessly—no speakers or microphone required.
 
-**Python equivalent?**  
+**Python equivalent?**
 Coming soon!
 
 💸 **Cost tip**: each voice request is billed the same as a standard GPT-4 audio-preview call. Keep fixture lengths and turn counts reasonable.
-
----
 
 ## Complete Sources
 
