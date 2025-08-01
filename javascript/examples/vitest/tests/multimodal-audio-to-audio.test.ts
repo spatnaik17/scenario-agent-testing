@@ -68,7 +68,7 @@ describe("Multimodal Audio to Audio Tests", () => {
 
     const result = await scenario.run({
       setId,
-      name: "multimodal audio analysis",
+      name: "multimodal audio to audio",
       description:
         "User sends audio file, agent analyzes and transcribes the content",
       agents: [myAgent, scenario.userSimulatorAgent(), audioJudge],
