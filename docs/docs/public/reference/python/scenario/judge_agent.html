@@ -527,7 +527,7 @@ if you don&#39;t have enough information to make a verdict, say inconclusive wit
                         failed_criteria = [
                             self.criteria[idx]
                             for idx, criterion in enumerate(criteria.values())
-                            if criterion == False
+                            if criterion == False or criterion == &#34;inconclusive&#34;
                         ]
 
                         # Return the appropriate ScenarioResult based on the verdict
@@ -1069,7 +1069,7 @@ if you don&#39;t have enough information to make a verdict, say inconclusive wit
                         failed_criteria = [
                             self.criteria[idx]
                             for idx, criterion in enumerate(criteria.values())
-                            if criterion == False
+                            if criterion == False or criterion == &#34;inconclusive&#34;
                         ]
 
                         # Return the appropriate ScenarioResult based on the verdict
@@ -1379,7 +1379,7 @@ if you don&#39;t have enough information to make a verdict, say inconclusive wit
                         failed_criteria = [
                             self.criteria[idx]
                             for idx, criterion in enumerate(criteria.values())
-                            if criterion == False
+                            if criterion == False or criterion == &#34;inconclusive&#34;
                         ]
 
                         # Return the appropriate ScenarioResult based on the verdict
