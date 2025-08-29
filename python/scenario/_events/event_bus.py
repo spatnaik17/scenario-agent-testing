@@ -3,6 +3,7 @@ from typing import Optional, Any, Dict
 from .events import ScenarioEvent
 from .event_reporter import EventReporter
 from .event_alert_message_logger import EventAlertMessageLogger
+from ..config.scenario import ScenarioConfig
 
 import asyncio
 import queue
@@ -35,7 +36,9 @@ class ScenarioEventBus:
     """
 
     def __init__(
-        self, event_reporter: Optional[EventReporter] = None, max_retries: int = 3
+        self,
+        event_reporter: Optional[EventReporter] = None,
+        max_retries: int = 3,
     ):
         """
         Initialize the event bus with optional event reporter and retry configuration.

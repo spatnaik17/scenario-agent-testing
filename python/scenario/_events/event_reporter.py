@@ -3,7 +3,7 @@ import httpx
 from typing import Optional, Dict, Any
 from .events import ScenarioEvent
 from .event_alert_message_logger import EventAlertMessageLogger
-from scenario.config import LangWatchSettings
+from scenario.config import LangWatchSettings, ScenarioConfig
 
 
 class EventReporter:
@@ -26,7 +26,11 @@ class EventReporter:
         reporter = EventReporter(api_key="your-api-key")
     """
 
-    def __init__(self, endpoint: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        endpoint: Optional[str] = None,
+        api_key: Optional[str] = None,
+    ):
         # Load settings from environment variables
         langwatch_settings = LangWatchSettings()
 
@@ -69,6 +73,7 @@ class EventReporter:
                         "Content-Type": "application/json",
                         "X-Auth-Token": self.api_key,
                     },
+                    timeout=httpx.Timeout(30.0),
                 )
                 self.logger.info(
                     f"[{event_type}] POST response status: {response.status_code} ({event.scenario_run_id})"
@@ -92,7 +97,7 @@ class EventReporter:
                     )
         except Exception as error:
             self.logger.error(
-                f"[{event_type}] Event POST error: {error}, event={event}, endpoint={self.endpoint}"
+                f"[{event_type}] Event POST error: {repr(error)}, event={event}, endpoint={self.endpoint}"
             )
 
         return result

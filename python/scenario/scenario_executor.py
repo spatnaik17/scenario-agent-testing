@@ -153,6 +153,7 @@ class ScenarioExecutor:
             verbose=verbose,
             cache_key=cache_key,
             debug=debug,
+            headless=None,
         )
         self.config = (ScenarioConfig.default_config or ScenarioConfig()).merge(config)
 
@@ -198,7 +199,7 @@ class ScenarioExecutor:
         self._state = ScenarioState(
             description=self.description,
             messages=[],
-            thread_id=str(PKSUID("thread")),
+            thread_id=str(PKSUID("scenariothread")),
             current_turn=0,
             config=self.config,
             _executor=self,
