@@ -215,8 +215,12 @@ class VitestReporter implements Reporter {
     console.log();
     console.log(chalk.bold.cyan("=== Scenario Test Report ==="));
     console.log(`Total Scenarios: ${total}`);
-    console.log(chalk.green(`Passed: ${passed}`));
-    console.log(chalk.red(`Failed: ${failed}`));
+    console.log(
+      passed > 0 ? chalk.green(`Passed: ${passed}`) : `Passed: ${passed}`
+    );
+    console.log(
+      failed > 0 ? chalk.red(`Failed: ${failed}`) : `Failed: ${failed}`
+    );
     console.log(`Success Rate: ${chalk.bold(`${successRate}%`)}`);
 
     this.results.forEach((r, i) => {
