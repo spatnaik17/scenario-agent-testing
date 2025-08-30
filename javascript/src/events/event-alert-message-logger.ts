@@ -1,3 +1,6 @@
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 import open from "open";
 import { getEnv, getProjectConfig } from "../config";
 import { getBatchRunId } from "../utils/ids";
@@ -9,7 +12,25 @@ import { getBatchRunId } from "../utils/ids";
  * and simulation watching instructions.
  */
 export class EventAlertMessageLogger {
-  private static shownBatchIds = new Set<string>();
+  /**
+   * Creates a coordination file to prevent duplicate messages across processes.
+   * Returns true if this process should show the message (first one to create the file).
+   */
+  private createCoordinationFile(type: "greeting" | "watch"): boolean {
+    try {
+      const batchId = getBatchRunId();
+      const tmpDir = os.tmpdir();
+      const fileName = `scenario-${type}-${batchId}`;
+      const filePath = path.join(tmpDir, fileName);
+
+      // Try to create the file exclusively (fails if it already exists)
+      fs.writeFileSync(filePath, process.pid.toString(), { flag: "wx" });
+      return true;
+    } catch {
+      // File already exists or filesystem is read-only
+      return false;
+    }
+  }
 
   /**
    * Shows a fancy greeting message about simulation reporting status.
@@ -20,11 +41,10 @@ export class EventAlertMessageLogger {
       return;
     }
 
-    if (EventAlertMessageLogger.shownBatchIds.has(getBatchRunId())) {
+    if (!this.createCoordinationFile("greeting")) {
       return;
     }
 
-    EventAlertMessageLogger.shownBatchIds.add(getBatchRunId());
     this.displayGreeting();
   }
 
@@ -38,6 +58,10 @@ export class EventAlertMessageLogger {
     setUrl: string;
   }): Promise<void> {
     if (this.isGreetingDisabled()) {
+      return;
+    }
+
+    if (!this.createCoordinationFile("watch")) {
       return;
     }
 
