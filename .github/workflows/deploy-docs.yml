@@ -33,10 +33,49 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            .venv
+            ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+      - name: Install dependencies
+        run: uv sync --frozen
+        working-directory: python
+      - name: Generate python docs
+        run: make pdocs
+        working-directory: python
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: latest
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: "pnpm"
+          cache-dependency-path: "javascript/pnpm-lock.yaml"
+      - name: Install javascript dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: javascript
+      - name: Generate javascript docs
+        run: pnpm run generate:api-reference
+        working-directory: javascript
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

@@ -55,13 +55,3 @@ jobs:
         run: uv run pyright .
         working-directory: python
 
-      - name: Check documentation is up to date
-        run: |
-          # Generate docs and check if there are any changes
-          uv run make pdocs
-          if ! git diff --quiet; then
-            echo "Documentation is out of date. Please run 'make pdocs' and commit the changes."
-            git diff
-            exit 1
-          fi
-        working-directory: python
