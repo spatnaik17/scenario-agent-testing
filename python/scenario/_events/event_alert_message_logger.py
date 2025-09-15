@@ -77,7 +77,7 @@ class EventAlertMessageLogger:
         print(f"Follow it live: {batch_url}")
         print(f"{separator}\n")
 
-        config = ScenarioConfig.default_config
+        config = ScenarioConfig.default_config or ScenarioConfig()
         if config and not config.headless:
             # Open the URL in the default browser (cross-platform)
             try:
